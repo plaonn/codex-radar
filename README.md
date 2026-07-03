@@ -1,19 +1,16 @@
 # codex-radar
 
-A terminal radar for local Codex sessions.
+로컬 Codex 세션을 터미널에서 빠르게 확인하는 radar.
 
-`codex-radar` watches Codex lifecycle hooks, indexes local session metadata by
-project, and gives you a fast terminal workflow for checking status or skimming
-recent conversations.
+`codex-radar`는 Codex lifecycle hook을 받아 로컬 세션 metadata를 프로젝트별로 인덱싱하고, 현재 상태나 최근 대화 내용을 터미널에서 빠르게 확인할 수 있게 한다.
 
-## Status
+## 상태
 
-Early local MVP. The hook indexer, session list, transcript skim, and
-dependency-free TUI are scaffolded. Notification delivery and automatic hook
-installation are intentionally out of scope until their privacy boundaries are
-specified.
+초기 로컬 MVP 상태다. hook indexer, session list, transcript skim, dependency-free TUI scaffold가 들어가 있다.
 
-## Install for Development
+Notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
+
+## 개발 설치
 
 ```bash
 python3 -m venv .venv
@@ -21,36 +18,39 @@ python3 -m venv .venv
 python -m pip install -e .
 ```
 
-## Commands
+## 명령
 
 ```bash
-codex-radar hook              # record one hook JSON payload from stdin
-codex-radar sessions          # list indexed sessions
-codex-radar transcript <id>   # skim a transcript by session id or path
-codex-radar tui               # open the terminal dashboard
-codex-radar path              # print state directory
-codex-radar doctor            # print a short diagnostic
+codex-radar hook              # stdin의 hook JSON payload 1개 기록
+codex-radar sessions          # 인덱싱된 세션 목록 출력
+codex-radar transcript <id>   # session id 또는 path로 transcript 훑어보기
+codex-radar tui               # 터미널 dashboard 열기
+codex-radar path              # state directory 출력
+codex-radar doctor            # 짧은 로컬 진단 출력
 ```
 
-Runtime state defaults to `$CODEX_RADAR_HOME`,
-`$XDG_STATE_HOME/codex-radar`, or `~/.local/state/codex-radar`.
+runtime state 기본 위치:
 
-## Hook Setup
+```text
+$CODEX_RADAR_HOME
+or $XDG_STATE_HOME/codex-radar
+or ~/.local/state/codex-radar
+```
 
-See [docs/runbooks/install-hooks.md](docs/runbooks/install-hooks.md).
+## Hook 설정
 
-`examples/hooks.json` shows a user-level Codex hook config that routes
-`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`,
-`PermissionRequest`, and `Stop` events into `codex-radar hook`.
+[docs/runbooks/install-hooks.md](docs/runbooks/install-hooks.md)를 따른다.
 
-## RDD Surfaces
+`examples/hooks.json`은 user-level Codex hook 예시다. `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `Stop` event를 `codex-radar hook`으로 보낸다.
 
-- [docs/SPEC.md](docs/SPEC.md): current behavior, requirements, data model, and
-  automation/privacy boundary.
-- [docs/ROADMAP.md](docs/ROADMAP.md): future direction and non-goals.
-- [docs/TASKS.md](docs/TASKS.md): active RDD task dashboard.
+## RDD 표면
 
-## Verify
+- [docs/SPEC.md](docs/SPEC.md): 현재 동작, requirement, data model, automation/privacy boundary.
+- [docs/ROADMAP.md](docs/ROADMAP.md): 미래 방향과 non-goal.
+
+Active task tracking은 tracked public 파일에 저장하지 않는다.
+
+## 검증
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover

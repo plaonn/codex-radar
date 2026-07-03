@@ -2,34 +2,34 @@
 
 ## Root Goal
 
-`codex-radar` helps an operator see which local Codex conversations belong to which projects, what state they are in, and whether a recent transcript is worth opening.
+`codex-radar`는 로컬 Codex 대화가 어느 프로젝트에 속하는지, 현재 어떤 상태인지, 최근 transcript를 열어볼 가치가 있는지를 빠르게 확인하게 해준다.
 
 ## Requirements
 
-- Capture Codex lifecycle hook payloads without blocking Codex turns for long.
-- Index local sessions by `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, and latest assistant summary when available.
-- Provide a terminal-first workflow:
-  - `codex-radar hook` records one hook payload from stdin.
-  - `codex-radar sessions` lists known sessions.
-  - `codex-radar transcript <session-or-path>` skims a local transcript.
-  - `codex-radar tui` opens a lightweight session dashboard.
-- Avoid modifying global Codex config automatically.
-- Avoid committing or uploading local transcript contents or runtime state.
+- Codex lifecycle hook payload를 Codex turn을 오래 막지 않고 수집한다.
+- 로컬 세션을 `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, latest assistant summary 기준으로 인덱싱한다.
+- terminal-first workflow를 제공한다.
+  - `codex-radar hook`: stdin에서 hook payload 1개를 읽어 기록한다.
+  - `codex-radar sessions`: 알려진 세션 목록을 출력한다.
+  - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
+  - `codex-radar tui`: 가벼운 session dashboard를 연다.
+- 전역 Codex config를 자동 수정하지 않는다.
+- 로컬 transcript 내용이나 runtime state를 commit하거나 업로드하지 않는다.
 
 ## Rationale
 
-The Codex IDE extension can run multiple conversations across projects, but project/session ownership and completion state are hard to scan from the editor alone. Codex hooks already expose lifecycle payloads, including session and transcript metadata, so a local indexer can solve the visibility problem without depending on private IDE internals.
+Codex IDE extension에서는 여러 프로젝트의 대화가 동시에 열릴 수 있지만, 어떤 대화가 어느 repository에 속하는지와 완료/대기 상태를 한눈에 보기 어렵다. Codex hook은 이미 session과 transcript metadata를 노출하므로, private IDE 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 해결할 수 있다.
 
 ## Failure Prevented
 
-- Losing track of which Codex conversation belongs to which repository.
-- Missing turns that stopped, requested approval, or changed tool state.
-- Opening full transcripts just to identify recent context.
-- Coupling monitoring to unstable VS Code extension internals.
+- 어느 Codex 대화가 어느 repository 작업인지 잃어버리는 문제.
+- turn 종료, approval request, tool 상태 변화를 놓치는 문제.
+- 최근 context를 확인하려고 매번 전체 transcript를 여는 문제.
+- 불안정한 VS Code extension 내부 구현에 monitoring을 결합하는 문제.
 
 ## Current Architecture
 
-`codex-radar` is a stdlib-first Python CLI.
+`codex-radar`는 stdlib-first Python CLI다.
 
 ```text
 Codex hook event
@@ -39,7 +39,7 @@ Codex hook event
   -> sessions/transcript/tui commands
 ```
 
-Runtime state defaults to:
+runtime state 기본 위치:
 
 ```text
 $CODEX_RADAR_HOME
@@ -47,62 +47,64 @@ or $XDG_STATE_HOME/codex-radar
 or ~/.local/state/codex-radar
 ```
 
-The state directory contains:
+state directory 구성:
 
-- `events.jsonl`: append-only normalized hook events.
-- `sessions.json`: derived latest session cache.
-- `.lock`: coarse file lock used while appending/updating state.
+- `events.jsonl`: 정규화된 hook event append-only log.
+- `sessions.json`: latest session cache.
+- `.lock`: append/cache update 중 사용하는 coarse file lock.
 
 ## Data Model
 
-Normalized event fields:
+정규화된 event field:
 
-- `recorded_at`: local capture time in UTC ISO-8601.
-- `event_name`: hook event name such as `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, or `Stop`.
+- `recorded_at`: 로컬 capture 시간, UTC ISO-8601.
+- `event_name`: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `Stop` 같은 hook event 이름.
 - `session_id`
 - `turn_id`
-- `status`: derived status for dashboard use.
+- `status`: dashboard용 derived status.
 - `cwd`
-- `project`: basename of `cwd`.
+- `project`: `cwd` basename.
 - `transcript_path`
 - `model`
 - `permission_mode`
 - `tool_name`
 - `last_assistant_message`
-- `raw`: original hook payload.
+- `raw`: 원본 hook payload.
 
-Derived statuses:
+derived status:
 
-- `active`: session started or resumed.
-- `running`: user turn is underway.
-- `tool_running`: tool execution started.
-- `waiting_approval`: Codex requested permission.
-- `done`: turn stopped.
-- `unknown`: event did not map cleanly.
+- `active`: session 시작 또는 resume.
+- `running`: user turn 진행 중.
+- `tool_running`: tool 실행 시작.
+- `waiting_approval`: Codex가 permission을 요청함.
+- `done`: turn 종료.
+- `unknown`: event를 명확히 mapping하지 못함.
 
 ## Automation Boundary
 
-Allowed:
+허용:
 
-- Read one hook payload from stdin.
-- Write local state below the configured state directory.
-- Read local transcript files when the user runs transcript/TUI commands.
+- stdin에서 hook payload 1개 읽기.
+- 설정된 state directory 아래에 로컬 상태 쓰기.
+- 사용자가 transcript/TUI command를 실행했을 때 로컬 transcript 파일 읽기.
 
-Prohibited:
+금지:
 
-- Automatically editing `~/.codex/hooks.json`.
-- Sending notifications, telemetry, transcripts, or session metadata to external services.
-- Deleting Codex transcripts.
-- Mutating repositories observed through `cwd`.
+- `~/.codex/hooks.json` 자동 편집.
+- notification, telemetry, transcript, session metadata를 외부 서비스로 전송.
+- Codex transcript 삭제.
+- `cwd`로 관찰한 repository 수정.
 
 ## Privacy Boundary
 
-Transcripts and hook payloads may contain private paths, prompts, code, command output, and secrets. `codex-radar` treats them as local sensitive data. Transcript skim output redacts common secret-like tokens on a best-effort basis, but this is not a security boundary.
+Transcript와 hook payload에는 private path, prompt, code, command output, secret이 포함될 수 있다. `codex-radar`는 이를 민감한 로컬 데이터로 취급한다.
+
+Transcript skim output은 흔한 secret-like token을 best-effort로 redact하지만, 이것은 security boundary가 아니다.
 
 ## Non-goals
 
-- No IDE extension integration in the initial version.
-- No cloud sync.
-- No live token streaming.
-- No replacement for Codex's native transcript viewer.
-- No automatic notification delivery until a separate requirement defines channel, content, and privacy rules.
+- 초기 버전에서는 IDE extension integration을 만들지 않는다.
+- cloud sync 없음.
+- live token streaming 없음.
+- Codex native transcript viewer를 대체하지 않음.
+- 별도 requirement로 channel, content, privacy rule이 정해지기 전까지 notification delivery 없음.
