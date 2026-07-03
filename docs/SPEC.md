@@ -16,6 +16,7 @@
 - TUI는 선택한 session의 metadata와 transcript preview를 같은 terminal 안에서 보여준다.
 - TUI에서 resumable session row를 선택하고 Enter를 누르면 curses UI를 종료한 뒤 같은 terminal에서 `codex resume <session_id>`를 실행한다.
 - session id가 없거나 placeholder unknown id인 row는 resume disabled 상태로 표시하고 Enter resume을 수행하지 않는다.
+- `sessions`와 `tui`는 `active`, `running`, `tool_running` 상태의 session이 30분 넘게 update되지 않으면 cache의 원본 `status`를 바꾸지 않고 display status를 `stale`로 보여준다.
 - 전역 Codex config를 자동 수정하지 않는다.
 - 로컬 transcript 내용이나 runtime state를 commit하거나 업로드하지 않는다.
 
@@ -82,6 +83,10 @@ derived status:
 - `waiting_approval`: Codex가 permission을 요청함.
 - `done`: turn 종료.
 - `unknown`: event를 명확히 mapping하지 못함.
+
+display-only status:
+
+- `stale`: cache의 원본 status가 `active`, `running`, `tool_running`이고 `last_seen_at`이 30분보다 오래된 경우. `waiting_approval`과 `done`은 오래되어도 원 status를 유지한다.
 
 ## Automation Boundary
 

@@ -13,7 +13,6 @@
 - project, status, model, recency filter를 추가한다.
 - TUI에서 session을 선택하면 같은 terminal에서 `codex resume <session_id>`로 자연스럽게 전환한다.
 - session id가 없거나 resume할 수 없는 row는 disabled 처리하고, 필요하면 resume command만 출력한다.
-- stale session detection을 추가한다.
 
 ## Milestone 3: Notifications
 

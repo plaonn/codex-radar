@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from .store import iter_sessions
+from .store import iter_sessions, session_display_status
 from .transcript import format_skim, skim_transcript
 
 
@@ -84,9 +84,12 @@ def _preview_lines(session: Session, *, width: int, limit: int = 8) -> List[str]
 
 
 def _status_attr(session: Session) -> int:
+    display_status = session_display_status(session)
     attr = curses.A_NORMAL
-    if session.get("status") == "waiting_approval":
+    if display_status == "waiting_approval":
         attr |= curses.A_BOLD
+    if display_status == "stale":
+        attr |= curses.A_DIM
     if not _is_resumable(session):
         attr |= curses.A_DIM
     return attr
@@ -117,7 +120,7 @@ def _draw_rows(
         marker = " " if _is_resumable(session) else "-"
         line = (
             f"{marker} "
-            f"{_trim(session.get('status'), columns[0] - 2):<{columns[0] - 2}} "
+            f"{_trim(session_display_status(session), columns[0] - 2):<{columns[0] - 2}} "
             f"{_trim(session.get('project'), columns[1]):<{columns[1]}} "
             f"{_trim(session.get('last_event_name'), columns[2]):<{columns[2]}} "
             f"{_trim(session.get('model'), columns[3]):<{columns[3]}} "
@@ -140,7 +143,7 @@ def _draw_detail(
     lines = [
         (
             f"Selected: {session.get('project') or '-'}  "
-            f"{session.get('status') or '-'}  "
+            f"{session_display_status(session) or '-'}  "
             f"{session.get('model') or '-'}"
         ),
         f"CWD: {session.get('cwd') or '-'}",

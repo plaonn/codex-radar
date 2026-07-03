@@ -1,9 +1,10 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
-from codex_radar.store import load_sessions, normalize_event, record_hook_event
+from codex_radar.store import is_stale_session, load_sessions, normalize_event, record_hook_event, session_display_status
 
 
 class StoreTests(unittest.TestCase):
@@ -69,6 +70,34 @@ class StoreTests(unittest.TestCase):
 
             self.assertEqual("done", session["status"])
             self.assertEqual("", session["current_tool"])
+
+    def test_session_display_status_marks_old_running_session_stale(self) -> None:
+        session = {
+            "status": "running",
+            "last_seen_at": "2026-07-03T00:00:00+00:00",
+        }
+        now = datetime(2026, 7, 3, 0, 31, tzinfo=timezone.utc)
+
+        self.assertTrue(is_stale_session(session, now=now))
+        self.assertEqual("stale", session_display_status(session, now=now))
+
+    def test_session_display_status_keeps_done_and_approval_statuses(self) -> None:
+        now = datetime(2026, 7, 3, 0, 31, tzinfo=timezone.utc)
+
+        self.assertEqual(
+            "done",
+            session_display_status(
+                {"status": "done", "last_seen_at": "2026-07-03T00:00:00+00:00"},
+                now=now,
+            ),
+        )
+        self.assertEqual(
+            "waiting_approval",
+            session_display_status(
+                {"status": "waiting_approval", "last_seen_at": "2026-07-03T00:00:00+00:00"},
+                now=now,
+            ),
+        )
 
 
 if __name__ == "__main__":

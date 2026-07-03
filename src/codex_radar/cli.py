@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-from .store import default_state_dir, iter_sessions, load_sessions, record_hook_event
+from .store import default_state_dir, iter_sessions, load_sessions, record_hook_event, session_display_status
 from .transcript import format_skim, skim_transcript
 from .tui import run_tui
 
@@ -32,7 +32,11 @@ def _read_stdin_json() -> Dict[str, Any]:
 def _print_sessions(sessions: Iterable[Dict[str, Any]], *, as_json: bool = False, limit: int = 50) -> int:
     rows = list(sessions)[:limit]
     if as_json:
-        print(json.dumps(rows, ensure_ascii=False, indent=2, sort_keys=True))
+        payload = [
+            {**row, "display_status": session_display_status(row)}
+            for row in rows
+        ]
+        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
 
     terminal_width = shutil.get_terminal_size((120, 24)).columns
@@ -48,7 +52,7 @@ def _print_sessions(sessions: Iterable[Dict[str, Any]], *, as_json: bool = False
     for row in rows:
         session_id = row.get("session_id", "")
         print(
-            f"{_clip(row.get('status', ''), widths[0]):<{widths[0]}} "
+            f"{_clip(session_display_status(row), widths[0]):<{widths[0]}} "
             f"{_clip(row.get('project', ''), widths[1]):<{widths[1]}} "
             f"{_clip(row.get('last_seen_at', ''), widths[2]):<{widths[2]}} "
             f"{_clip(row.get('model', ''), widths[3]):<{widths[3]}} "
@@ -80,7 +84,7 @@ def cmd_sessions(args: argparse.Namespace) -> int:
     if args.project:
         sessions = (item for item in sessions if item.get("project") == args.project)
     if args.status:
-        sessions = (item for item in sessions if item.get("status") == args.status)
+        sessions = (item for item in sessions if session_display_status(item) == args.status)
     return _print_sessions(sessions, as_json=args.json, limit=args.limit)
 
 

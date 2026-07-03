@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, Optional
 
@@ -19,9 +19,56 @@ EVENT_STATUS = {
     "SubagentStop": "done",
 }
 
+STALE_SESSION_SECONDS = 30 * 60
+STALE_ELIGIBLE_STATUSES = {"active", "running", "tool_running"}
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _parse_timestamp(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def is_stale_session(
+    session: Dict[str, Any],
+    *,
+    now: Optional[datetime] = None,
+    stale_seconds: int = STALE_SESSION_SECONDS,
+) -> bool:
+    status = _string(session.get("status"))
+    if status not in STALE_ELIGIBLE_STATUSES:
+        return False
+
+    last_seen = _parse_timestamp(session.get("last_seen_at"))
+    if last_seen is None:
+        return False
+
+    reference = now or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    reference = reference.astimezone(timezone.utc)
+    return reference - last_seen > timedelta(seconds=stale_seconds)
+
+
+def session_display_status(
+    session: Dict[str, Any],
+    *,
+    now: Optional[datetime] = None,
+    stale_seconds: int = STALE_SESSION_SECONDS,
+) -> str:
+    if is_stale_session(session, now=now, stale_seconds=stale_seconds):
+        return "stale"
+    return _string(session.get("status"))
 
 
 def default_state_dir() -> Path:
