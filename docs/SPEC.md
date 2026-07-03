@@ -2,13 +2,13 @@
 
 ## Root Goal
 
-`codex-radar`는 로컬 Codex 대화가 어느 프로젝트에 속하는지, 현재 어떤 상태인지, 최근 transcript를 열어볼 가치가 있는지를 빠르게 확인하게 해준다.
+`codex-radar`는 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 로컬 Codex를 함께 사용할 때, Codex thread의 프로젝트 소속, 대기/완료/승인요청 상태, 확인할 가치가 있는 최근 transcript를 빠르게 파악하게 해준다.
 
-## Requirements
+## Requirement
 
 - Codex lifecycle hook payload를 Codex turn을 오래 막지 않고 수집한다.
 - 로컬 세션을 `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, latest assistant summary 기준으로 인덱싱한다.
-- terminal-first workflow를 제공한다.
+- 초기 MVP와 fallback으로 terminal-first workflow를 제공한다.
   - `codex-radar hook`: stdin에서 hook payload 1개를 읽어 기록한다.
   - `codex-radar sessions`: 알려진 세션 목록을 출력한다.
   - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
@@ -22,14 +22,19 @@
 - 전역 Codex config를 자동 수정하지 않는다.
 - 로컬 transcript 내용이나 runtime state를 commit하거나 업로드하지 않는다.
 
+## Spec
+
+현재 spec은 local-only hook indexer, append-only event log, derived session cache, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
+
 ## Rationale
 
-Codex IDE extension에서는 여러 프로젝트의 대화가 동시에 열릴 수 있지만, 어떤 대화가 어느 repository에 속하는지와 완료/대기 상태를 한눈에 보기 어렵다. Codex hook은 이미 session과 transcript metadata를 노출하므로, private IDE 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 해결할 수 있다.
+VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 thread 알림과 상태 가시성만으로는 어떤 대화가 어느 repository에 속하는지, 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex hook은 이미 session과 transcript metadata를 노출하므로, private IDE 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 먼저 해결할 수 있다.
 
 ## Failure Prevented
 
 - 어느 Codex 대화가 어느 repository 작업인지 잃어버리는 문제.
 - turn 종료, approval request, tool 상태 변화를 놓치는 문제.
+- 원격 개발 중 VS Code 안에서 확인해야 할 Codex thread 상태를 놓치는 문제.
 - 최근 context를 확인하려고 매번 전체 transcript를 여는 문제.
 - 불안정한 VS Code extension 내부 구현에 monitoring을 결합하는 문제.
 
@@ -125,6 +130,7 @@ display-only status:
 - 기본 alert는 terminal bell과 한 줄 출력이다.
 - `--no-bell`을 지정하면 terminal bell 없이 한 줄만 출력한다.
 - hook path에서는 notification이나 bell을 직접 보내지 않는다.
+- 이 watcher는 terminal에서 직접 켜두는 MVP/fallback 알림 표면이며, 향후 VS Code extension notification 요구사항을 대체하지 않는다.
 
 ## Privacy Boundary
 
@@ -132,9 +138,14 @@ Transcript와 hook payload에는 private path, prompt, code, command output, sec
 
 Transcript skim output은 흔한 secret-like token을 best-effort로 redact하지만, 이것은 security boundary가 아니다.
 
+## Tests / Checks
+
+- `PYTHONPATH=src python3 -m unittest discover`
+- `python3 -m compileall src tests`
+- 현재 테스트는 hook event normalization/cache update, stale display status, session filters, transcript skim/redaction, TUI resume guard, waiting approval watcher, shell completion을 보호한다.
+
 ## Non-goals
 
-- 초기 버전에서는 IDE extension integration을 만들지 않는다.
 - cloud sync 없음.
 - live token streaming 없음.
 - Codex native transcript viewer를 대체하지 않음.
