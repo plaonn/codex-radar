@@ -6,13 +6,14 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .store import iter_sessions, session_display_status, session_seen_since
 from .transcript import format_skim, skim_transcript
 
 
 Session = Dict[str, Any]
+ViewRow = Dict[str, Any]
 
 
 def _trim(value: object, width: int) -> str:
@@ -63,6 +64,71 @@ def _filter_sessions(
     return visible
 
 
+def _project_name(session: Session) -> str:
+    return str(session.get("project") or "-")
+
+
+def _group_sessions_by_project(sessions: Sequence[Session]) -> List[Session]:
+    groups: Dict[str, List[Session]] = {}
+    order: List[str] = []
+    for session in sessions:
+        project = _project_name(session)
+        if project not in groups:
+            groups[project] = []
+            order.append(project)
+        groups[project].append(session)
+    return [session for project in order for session in groups[project]]
+
+
+def _session_view_rows(sessions: Sequence[Session]) -> List[ViewRow]:
+    rows: List[ViewRow] = []
+    current_project = None
+    counts: Dict[str, int] = {}
+    for session in sessions:
+        project = _project_name(session)
+        counts[project] = counts.get(project, 0) + 1
+
+    for session in sessions:
+        project = _project_name(session)
+        if project != current_project:
+            rows.append({"kind": "group", "project": project, "count": counts[project]})
+            current_project = project
+        rows.append({"kind": "session", "session": session})
+    return rows
+
+
+def _view_window(
+    sessions: Sequence[Session],
+    selected: int,
+    max_rows: int,
+) -> Tuple[int, Sequence[ViewRow], int]:
+    rows = _session_view_rows(sessions)
+    if max_rows <= 0 or not rows:
+        return 0, [], 0
+
+    selected = _selected_index(selected, sessions)
+    session_index = -1
+    selected_row = 0
+    for index, row in enumerate(rows):
+        if row["kind"] != "session":
+            continue
+        session_index += 1
+        if session_index == selected:
+            selected_row = index
+            break
+
+    if len(rows) <= max_rows:
+        return 0, rows, selected_row
+
+    start = min(max(0, selected_row - max_rows + 1), len(rows) - max_rows)
+    if start > 0 and rows[start]["kind"] == "session" and rows[start - 1]["kind"] == "group":
+        header_start = start - 1
+        if selected_row - header_start < max_rows:
+            start = header_start
+    visible = rows[start : start + max_rows]
+    return start, visible, max(0, selected_row - start)
+
+
 def _visible_sessions(
     state_dir: Optional[Path],
     *,
@@ -71,12 +137,14 @@ def _visible_sessions(
     model: Optional[str] = None,
     since: Optional[datetime] = None,
 ) -> List[Session]:
-    return _filter_sessions(
-        list(iter_sessions(state_dir)),
-        project=project,
-        status=status,
-        model=model,
-        since=since,
+    return _group_sessions_by_project(
+        _filter_sessions(
+            list(iter_sessions(state_dir)),
+            project=project,
+            status=status,
+            model=model,
+            since=since,
+        )
     )
 
 
@@ -150,8 +218,8 @@ def _status_attr(session: Session) -> int:
 
 def _draw_rows(
     stdscr: "curses._CursesWindow",
-    sessions: Sequence[Session],
-    selected: int,
+    rows: Sequence[ViewRow],
+    selected_row: int,
     *,
     start_row: int,
     max_rows: int,
@@ -168,8 +236,14 @@ def _draw_rows(
     )
     stdscr.addstr(start_row, 0, _trim(header, width - 1), curses.A_UNDERLINE)
 
-    for offset, session in enumerate(sessions[:max_rows]):
+    for offset, view_row in enumerate(rows[:max_rows]):
         row = start_row + 1 + offset
+        if view_row["kind"] == "group":
+            label = f"Project: {view_row['project']} ({view_row['count']})"
+            stdscr.addstr(row, 0, _trim(label, width - 1), curses.A_BOLD)
+            continue
+
+        session = view_row["session"]
         marker = " " if _is_resumable(session) else "-"
         line = (
             f"{marker} "
@@ -180,7 +254,7 @@ def _draw_rows(
             f"{_trim(session.get('session_id'), columns[4]):<{columns[4]}}"
         )
         attr = _status_attr(session)
-        if offset == selected:
+        if offset == selected_row:
             attr |= curses.A_REVERSE
         stdscr.addstr(row, 0, _trim(line, width - 1), attr)
 
@@ -244,12 +318,13 @@ def _draw(
         since=since,
     )
     selected = _selected_index(selected, sessions)
-    list_rows = max(1, min(len(sessions), max(1, height // 2 - 3)))
-    first_visible, visible_sessions = _session_window(sessions, selected, list_rows)
+    view_rows = _session_view_rows(sessions)
+    list_rows = max(1, min(len(view_rows), max(1, height // 2 - 3)))
+    _, visible_rows, selected_row = _view_window(sessions, selected, list_rows)
     _draw_rows(
         stdscr,
-        visible_sessions,
-        selected - first_visible,
+        visible_rows,
+        selected_row,
         start_row=2,
         max_rows=list_rows,
         width=width,

@@ -31,7 +31,7 @@ codex-radar doctor            # 짧은 로컬 진단 출력
 codex-radar completion <sh>   # bash, zsh, fish completion script 출력
 ```
 
-`codex-radar tui`에서는 `up/down` 또는 `j/k`로 session을 선택하고, 하단 preview에서 최근 transcript skim을 확인한다. Enter는 resumable row에서 같은 terminal을 `codex resume <session_id>`로 전환한다. session id가 없거나 placeholder unknown id인 row는 disabled로 표시된다.
+`codex-radar tui`에서는 session이 project header 아래에 묶여 표시된다. `up/down` 또는 `j/k`로 session을 선택하고, 하단 preview에서 최근 transcript skim을 확인한다. Enter는 resumable row에서 같은 terminal을 `codex resume <session_id>`로 전환한다. session id가 없거나 placeholder unknown id인 row는 disabled로 표시된다.
 
 `active`, `running`, `tool_running` session이 30분 넘게 update되지 않으면 `sessions`와 `tui`에서 `stale`로 표시된다. cache의 원본 status는 바꾸지 않는다.
 

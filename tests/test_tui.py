@@ -6,11 +6,14 @@ from pathlib import Path
 
 from codex_radar.tui import (
     _filter_sessions,
+    _group_sessions_by_project,
     _is_resumable,
     _move_selection,
     _preview_lines,
     _resume_command,
     _session_window,
+    _session_view_rows,
+    _view_window,
 )
 
 
@@ -34,6 +37,73 @@ class TuiHelperTests(unittest.TestCase):
 
         self.assertEqual(2, first)
         self.assertEqual(["2", "3", "4"], [item["session_id"] for item in visible])
+
+    def test_group_sessions_by_project_preserves_recent_project_order(self) -> None:
+        sessions = [
+            {"session_id": "a1", "project": "a"},
+            {"session_id": "b1", "project": "b"},
+            {"session_id": "a2", "project": "a"},
+            {"session_id": "b2", "project": "b"},
+        ]
+
+        grouped = _group_sessions_by_project(sessions)
+
+        self.assertEqual(["a1", "a2", "b1", "b2"], [session["session_id"] for session in grouped])
+
+    def test_session_view_rows_adds_project_headers(self) -> None:
+        sessions = [
+            {"session_id": "a1", "project": "a"},
+            {"session_id": "a2", "project": "a"},
+            {"session_id": "b1", "project": "b"},
+        ]
+
+        rows = _session_view_rows(sessions)
+
+        self.assertEqual(
+            [
+                ("group", "a", 2),
+                ("session", "a1", None),
+                ("session", "a2", None),
+                ("group", "b", 1),
+                ("session", "b1", None),
+            ],
+            [
+                (
+                    row["kind"],
+                    row.get("project") or row.get("session", {}).get("session_id"),
+                    row.get("count"),
+                )
+                for row in rows
+            ],
+        )
+
+    def test_view_window_keeps_selected_session_visible_with_group_header(self) -> None:
+        sessions = [
+            {"session_id": "a1", "project": "a"},
+            {"session_id": "a2", "project": "a"},
+            {"session_id": "b1", "project": "b"},
+        ]
+
+        _, rows, selected_row = _view_window(sessions, selected=2, max_rows=3)
+
+        self.assertEqual(["group", "session"], [row["kind"] for row in rows[-2:]])
+        self.assertEqual("b", rows[-2]["project"])
+        self.assertEqual("b1", rows[-1]["session"]["session_id"])
+        self.assertEqual(2, selected_row)
+        self.assertLess(selected_row, len(rows))
+
+    def test_view_window_does_not_include_header_when_it_would_hide_selection(self) -> None:
+        sessions = [
+            {"session_id": "a1", "project": "a"},
+            {"session_id": "b1", "project": "b"},
+            {"session_id": "b2", "project": "b"},
+            {"session_id": "b3", "project": "b"},
+        ]
+
+        _, rows, selected_row = _view_window(sessions, selected=3, max_rows=3)
+
+        self.assertEqual("b3", rows[selected_row]["session"]["session_id"])
+        self.assertLess(selected_row, len(rows))
 
     def test_filter_sessions_matches_project_model_status_and_since(self) -> None:
         sessions = [
