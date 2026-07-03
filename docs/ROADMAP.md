@@ -11,4 +11,3 @@
 - stdlib MVP가 유용하다는 것이 확인된 뒤 Rich/Textual TUI 검토.
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
-- shell completion.

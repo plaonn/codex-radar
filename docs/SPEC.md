@@ -14,6 +14,7 @@
   - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
   - `codex-radar tui`: 가벼운 session dashboard를 연다.
   - `codex-radar watch`: foreground watcher를 실행해 새 `waiting_approval` session을 terminal bell과 최소 metadata line으로 알린다.
+  - `codex-radar completion <bash|zsh|fish>`: shell completion script를 stdout으로 출력한다.
 - TUI는 선택한 session의 metadata와 transcript preview를 같은 terminal 안에서 보여준다.
 - TUI에서 resumable session row를 선택하고 Enter를 누르면 curses UI를 종료한 뒤 같은 terminal에서 `codex resume <session_id>`를 실행한다.
 - session id가 없거나 placeholder unknown id인 row는 resume disabled 상태로 표시하고 Enter resume을 수행하지 않는다.

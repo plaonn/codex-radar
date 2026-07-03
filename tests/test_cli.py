@@ -188,6 +188,15 @@ class CliTests(unittest.TestCase):
                 out.getvalue(),
             )
 
+    def test_completion_prints_shell_script(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main(["completion", "fish"])
+
+        output = out.getvalue()
+        self.assertIn("complete -c codex-radar", output)
+        self.assertIn("sessions tui", output)
+
 
 if __name__ == "__main__":
     unittest.main()

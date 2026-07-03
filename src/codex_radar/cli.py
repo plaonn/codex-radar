@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
+from .completion import COMPLETIONS, completion_script
 from .store import (
     default_state_dir,
     iter_sessions,
@@ -183,6 +184,11 @@ def cmd_watch(args: argparse.Namespace) -> int:
     )
 
 
+def cmd_completion(args: argparse.Namespace) -> int:
+    print(completion_script(args.shell), end="")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="codex-radar")
     parser.add_argument("--state-dir", help="Override codex-radar state directory")
@@ -235,6 +241,10 @@ def build_parser() -> argparse.ArgumentParser:
     watch.add_argument("--once", action="store_true", help="Check once and exit")
     watch.add_argument("--no-bell", action="store_true", help="Print alerts without terminal bell")
     watch.set_defaults(func=cmd_watch)
+
+    completion = subparsers.add_parser("completion", help="Print a shell completion script")
+    completion.add_argument("shell", choices=sorted(COMPLETIONS))
+    completion.set_defaults(func=cmd_completion)
 
     return parser
 
