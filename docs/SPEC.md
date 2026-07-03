@@ -2,12 +2,13 @@
 
 ## Root Goal
 
-`codex-radar`는 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 로컬 Codex를 함께 사용할 때, Codex thread의 프로젝트 소속, 대기/완료/승인요청 상태, 확인할 가치가 있는 최근 transcript를 빠르게 파악하게 해준다.
+`codex-radar`는 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 로컬 Codex를 함께 사용할 때, Codex thread를 프로젝트 단위로 구분하고, 대기/완료/승인요청 상태와 확인할 가치가 있는 최근 transcript를 빠르게 파악하게 해준다.
 
 ## Requirement
 
 - Codex lifecycle hook payload를 Codex turn을 오래 막지 않고 수집한다.
 - 로컬 세션을 `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, latest assistant summary 기준으로 인덱싱한다.
+- 대화 목록은 프로젝트 단위로 구분하고, 사용자가 프로젝트 기준으로 thread를 좁혀보거나 전환할 수 있게 한다.
 - 초기 MVP와 fallback으로 terminal-first workflow를 제공한다.
   - `codex-radar hook`: stdin에서 hook payload 1개를 읽어 기록한다.
   - `codex-radar sessions`: 알려진 세션 목록을 출력한다.
@@ -24,15 +25,16 @@
 
 ## Spec
 
-현재 spec은 local-only hook indexer, append-only event log, derived session cache, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 장기적으로는 VS Code extension 같은 GUI surface와의 통합을 지향하지만, 현재 spec은 terminal MVP/fallback contract를 정의한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
+현재 spec은 local-only hook indexer, append-only event log, derived session cache, project-aware session list/filtering, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 통합하는 것을 지향하지만, 현재 spec은 terminal MVP/fallback contract를 정의한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
 
 ## Rationale
 
-VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 thread 알림과 상태 가시성만으로는 어떤 대화가 어느 repository에 속하는지, 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex hook은 이미 session과 transcript metadata를 노출하므로, private IDE 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 먼저 해결할 수 있다.
+VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex hook은 이미 session과 transcript metadata를 노출하므로, private IDE 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 먼저 해결할 수 있다.
 
 ## Failure Prevented
 
 - 어느 Codex 대화가 어느 repository 작업인지 잃어버리는 문제.
+- VS Code 안의 Codex 대화 목록에서 프로젝트별 thread를 찾거나 전환하기 어려운 문제.
 - turn 종료, approval request, tool 상태 변화를 놓치는 문제.
 - 원격 개발 중 VS Code 안에서 확인해야 할 Codex thread 상태를 놓치는 문제.
 - 최근 context를 확인하려고 매번 전체 transcript를 여는 문제.
@@ -103,6 +105,8 @@ display-only status:
 - `--since <when>`: `last_seen_at`이 기준 시각 이상인 session만 출력한다. `<when>`은 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration이며 duration unit은 seconds/minutes/hours/days를 뜻하는 `s`, `m`, `h`, `d`를 지원한다.
 
 `tui` filter는 dashboard를 열 때 적용되며, TUI title line에 active filter summary를 표시한다.
+
+현재 terminal MVP는 project column과 `--project` filter로 프로젝트 단위 구분과 narrowing을 제공한다. 향후 GUI 통합에서는 프로젝트 단위로 묶인 conversation list가 primary navigation surface가 되어야 한다.
 
 ## Automation Boundary
 

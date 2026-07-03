@@ -2,7 +2,7 @@
 
 원격 개발 환경에서 로컬 Codex thread 상태를 빠르게 확인하는 radar.
 
-`codex-radar`는 VS Code Remote SSH와 로컬 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 최종적으로는 VS Code extension 같은 GUI surface와 통합하는 것을 지향하지만, 초기 MVP는 terminal-first workflow를 제공한다.
+`codex-radar`는 VS Code Remote SSH와 로컬 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 프로젝트 단위로 thread를 구분해 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 최종적으로는 VS Code extension 같은 GUI surface와 통합하는 것을 지향하지만, 초기 MVP는 terminal-first workflow를 제공한다.
 
 ## 상태
 
@@ -35,7 +35,7 @@ codex-radar completion <sh>   # bash, zsh, fish completion script 출력
 
 `active`, `running`, `tool_running` session이 30분 넘게 update되지 않으면 `sessions`와 `tui`에서 `stale`로 표시된다. cache의 원본 status는 바꾸지 않는다.
 
-`codex-radar sessions`와 `codex-radar tui`는 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
+`codex-radar sessions`와 `codex-radar tui`는 project column과 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
 
 ```bash
 codex-radar sessions --model gpt-5 --since 2h
