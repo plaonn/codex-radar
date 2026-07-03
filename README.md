@@ -6,7 +6,7 @@
 
 ## 상태
 
-초기 로컬 MVP 상태다. hook indexer, session list, transcript skim, dependency-free TUI scaffold가 들어가 있다.
+초기 로컬 MVP 상태다. hook indexer, session list, transcript skim, dependency-free TUI가 들어가 있다.
 
 Notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
 
@@ -28,6 +28,8 @@ codex-radar tui               # 터미널 dashboard 열기
 codex-radar path              # state directory 출력
 codex-radar doctor            # 짧은 로컬 진단 출력
 ```
+
+`codex-radar tui`에서는 `up/down` 또는 `j/k`로 session을 선택하고, 하단 preview에서 최근 transcript skim을 확인한다. Enter는 resumable row에서 같은 terminal을 `codex resume <session_id>`로 전환한다. session id가 없거나 placeholder unknown id인 row는 disabled로 표시된다.
 
 runtime state 기본 위치:
 

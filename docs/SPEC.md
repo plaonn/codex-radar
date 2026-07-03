@@ -13,6 +13,9 @@
   - `codex-radar sessions`: 알려진 세션 목록을 출력한다.
   - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
   - `codex-radar tui`: 가벼운 session dashboard를 연다.
+- TUI는 선택한 session의 metadata와 transcript preview를 같은 terminal 안에서 보여준다.
+- TUI에서 resumable session row를 선택하고 Enter를 누르면 curses UI를 종료한 뒤 같은 terminal에서 `codex resume <session_id>`를 실행한다.
+- session id가 없거나 placeholder unknown id인 row는 resume disabled 상태로 표시하고 Enter resume을 수행하지 않는다.
 - 전역 Codex config를 자동 수정하지 않는다.
 - 로컬 transcript 내용이나 runtime state를 commit하거나 업로드하지 않는다.
 
@@ -87,6 +90,7 @@ derived status:
 - stdin에서 hook payload 1개 읽기.
 - 설정된 state directory 아래에 로컬 상태 쓰기.
 - 사용자가 transcript/TUI command를 실행했을 때 로컬 transcript 파일 읽기.
+- 사용자가 TUI에서 resumable row를 선택하고 Enter를 눌렀을 때 같은 terminal process를 `codex resume <session_id>`로 교체하기.
 
 금지:
 
