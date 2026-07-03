@@ -24,7 +24,7 @@
 
 ## Spec
 
-현재 spec은 local-only hook indexer, append-only event log, derived session cache, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
+현재 spec은 local-only hook indexer, append-only event log, derived session cache, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 장기적으로는 VS Code extension 같은 GUI surface와의 통합을 지향하지만, 현재 spec은 terminal MVP/fallback contract를 정의한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
 
 ## Rationale
 
@@ -130,7 +130,7 @@ display-only status:
 - 기본 alert는 terminal bell과 한 줄 출력이다.
 - `--no-bell`을 지정하면 terminal bell 없이 한 줄만 출력한다.
 - hook path에서는 notification이나 bell을 직접 보내지 않는다.
-- 이 watcher는 terminal에서 직접 켜두는 MVP/fallback 알림 표면이며, 향후 VS Code extension notification 요구사항을 대체하지 않는다.
+- 이 watcher는 terminal에서 직접 켜두는 MVP/fallback 알림 표면이며, 향후 VS Code extension 같은 GUI 통합 요구사항을 대체하지 않는다.
 
 ## Privacy Boundary
 

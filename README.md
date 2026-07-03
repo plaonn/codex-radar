@@ -2,13 +2,13 @@
 
 원격 개발 환경에서 로컬 Codex thread 상태를 빠르게 확인하는 radar.
 
-`codex-radar`는 VS Code Remote SSH와 로컬 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 초기 MVP는 terminal-first workflow를 제공한다.
+`codex-radar`는 VS Code Remote SSH와 로컬 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 최종적으로는 VS Code extension 같은 GUI surface와 통합하는 것을 지향하지만, 초기 MVP는 terminal-first workflow를 제공한다.
 
 ## 상태
 
 초기 로컬 MVP 상태다. hook indexer, session list, transcript skim, dependency-free TUI가 들어가 있다.
 
-VS Code extension notification은 future direction이다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
+VS Code extension 또는 유사 GUI 통합은 future direction이다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
 
 ## 개발 설치
 
@@ -43,7 +43,7 @@ codex-radar sessions --status stale
 codex-radar tui --project codex-radar --since 1d
 ```
 
-`codex-radar watch`는 opt-in foreground watcher다. state cache를 polling하다가 새 `waiting_approval` session을 보면 terminal bell과 최소 metadata line을 출력한다. hook path에서는 notification을 보내지 않는다. 이 command는 terminal MVP/fallback이며 future VS Code extension notification을 대체하지 않는다.
+`codex-radar watch`는 opt-in foreground watcher다. state cache를 polling하다가 새 `waiting_approval` session을 보면 terminal bell과 최소 metadata line을 출력한다. hook path에서는 notification을 보내지 않는다. 이 command는 terminal MVP/fallback이며 future GUI integration을 대체하지 않는다.
 
 Shell completion은 script를 출력해서 사용한다.
 
