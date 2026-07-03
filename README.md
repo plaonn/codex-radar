@@ -35,11 +35,12 @@ codex-radar completion <sh>   # bash, zsh, fish completion script 출력
 
 `active`, `running`, `tool_running` session이 30분 넘게 update되지 않으면 `sessions`와 `tui`에서 `stale`로 표시된다. cache의 원본 status는 바꾸지 않는다.
 
-`codex-radar sessions`와 `codex-radar tui`는 project column과 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
+`codex-radar sessions`와 `codex-radar tui`는 project column과 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `codex-radar sessions --group-project`는 text output을 project header로 묶어 보여주며 JSON output shape는 바꾸지 않는다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
 
 ```bash
 codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
+codex-radar sessions --group-project
 codex-radar tui --project codex-radar --since 1d
 ```
 

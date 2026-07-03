@@ -21,7 +21,7 @@
 - Requirement: 대화 목록은 프로젝트 단위로 구분되어야 하며, 사용자가 프로젝트 기준으로 thread를 좁혀보거나 전환할 수 있어야 한다.
 - Rationale: VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread switching이 어렵다.
 - Failure prevented: VS Code 안의 Codex 대화 목록에서 프로젝트별 thread를 찾거나 전환하기 어려운 문제.
-- Derived specs/tests: `project` field, project column, TUI project group headers, `--project` filter, TUI active filter summary.
+- Derived specs/tests: `project` field, project column, TUI project group headers, `sessions --group-project`, `--project` filter, TUI active filter summary.
 - Revisit when: GUI 통합에서 프로젝트 grouping의 primary navigation UX를 설계할 때.
 
 ### R2: local-only hook session index
@@ -85,7 +85,7 @@
 현재 terminal MVP command contract:
 
 - `codex-radar hook`: stdin에서 hook payload 1개를 읽어 기록한다.
-- `codex-radar sessions`: 알려진 세션 목록을 출력한다.
+- `codex-radar sessions`: 알려진 세션 목록을 출력한다. `--group-project`는 text output을 project header로 묶고 JSON output shape는 바꾸지 않는다.
 - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
 - `codex-radar tui`: 가벼운 session dashboard를 연다.
 - `codex-radar watch`: foreground watcher를 실행해 새 `waiting_approval` session을 terminal bell과 최소 metadata line으로 알린다.
@@ -174,7 +174,7 @@ display-only status:
 
 `tui` filter는 dashboard를 열 때 적용되며, TUI title line에 active filter summary를 표시한다.
 
-현재 terminal MVP는 project column, TUI project group header, `--project` filter로 프로젝트 단위 구분과 narrowing을 제공한다. 향후 GUI 통합에서는 프로젝트 단위로 묶인 conversation list가 primary navigation surface가 되어야 한다.
+현재 terminal MVP는 project column, TUI project group header, `sessions --group-project`, `--project` filter로 프로젝트 단위 구분과 narrowing을 제공한다. 향후 GUI 통합에서는 프로젝트 단위로 묶인 conversation list가 primary navigation surface가 되어야 한다.
 
 ## Automation Boundary
 

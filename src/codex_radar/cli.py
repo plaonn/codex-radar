@@ -66,7 +66,40 @@ def _read_stdin_json() -> Dict[str, Any]:
     return payload
 
 
-def _print_sessions(sessions: Iterable[Dict[str, Any]], *, as_json: bool = False, limit: int = 50) -> int:
+def _project_name(session: Dict[str, Any]) -> str:
+    return str(session.get("project") or "-")
+
+
+def _group_rows_by_project(rows: Iterable[Dict[str, Any]]) -> list[tuple[str, list[Dict[str, Any]]]]:
+    groups: dict[str, list[Dict[str, Any]]] = {}
+    order: list[str] = []
+    for row in rows:
+        project = _project_name(row)
+        if project not in groups:
+            groups[project] = []
+            order.append(project)
+        groups[project].append(row)
+    return [(project, groups[project]) for project in order]
+
+
+def _print_session_row(row: Dict[str, Any], widths: tuple[int, int, int, int, int]) -> None:
+    session_id = row.get("session_id", "")
+    print(
+        f"{_clip(session_display_status(row), widths[0]):<{widths[0]}} "
+        f"{_clip(row.get('project', ''), widths[1]):<{widths[1]}} "
+        f"{_clip(row.get('last_seen_at', ''), widths[2]):<{widths[2]}} "
+        f"{_clip(row.get('model', ''), widths[3]):<{widths[3]}} "
+        f"{_clip(session_id, widths[4])}"
+    )
+
+
+def _print_sessions(
+    sessions: Iterable[Dict[str, Any]],
+    *,
+    as_json: bool = False,
+    limit: int = 50,
+    group_project: bool = False,
+) -> int:
     rows = list(sessions)[:limit]
     if as_json:
         payload = [
@@ -86,15 +119,14 @@ def _print_sessions(sessions: Iterable[Dict[str, Any]], *, as_json: bool = False
         f"SESSION"
     )
     print("-" * min(terminal_width, sum(widths) + 4))
-    for row in rows:
-        session_id = row.get("session_id", "")
-        print(
-            f"{_clip(session_display_status(row), widths[0]):<{widths[0]}} "
-            f"{_clip(row.get('project', ''), widths[1]):<{widths[1]}} "
-            f"{_clip(row.get('last_seen_at', ''), widths[2]):<{widths[2]}} "
-            f"{_clip(row.get('model', ''), widths[3]):<{widths[3]}} "
-            f"{_clip(session_id, widths[4])}"
-        )
+    if group_project:
+        for project, group_rows in _group_rows_by_project(rows):
+            print(f"Project: {project} ({len(group_rows)})")
+            for row in group_rows:
+                _print_session_row(row, widths)
+    else:
+        for row in rows:
+            _print_session_row(row, widths)
     if not rows:
         print("No sessions indexed yet.")
     return 0
@@ -126,7 +158,12 @@ def cmd_sessions(args: argparse.Namespace) -> int:
         sessions = (item for item in sessions if session_display_status(item) == args.status)
     if args.since:
         sessions = (item for item in sessions if session_seen_since(item, args.since))
-    return _print_sessions(sessions, as_json=args.json, limit=args.limit)
+    return _print_sessions(
+        sessions,
+        as_json=args.json,
+        limit=args.limit,
+        group_project=args.group_project,
+    )
 
 
 def _resolve_transcript(target: str, state_dir: Optional[Path]) -> Path:
@@ -201,6 +238,7 @@ def build_parser() -> argparse.ArgumentParser:
     sessions = subparsers.add_parser("sessions", help="List indexed sessions")
     sessions.add_argument("--json", action="store_true", help="Print JSON")
     sessions.add_argument("--limit", type=int, default=50)
+    sessions.add_argument("--group-project", action="store_true", help="Group text output by project")
     sessions.add_argument("--project")
     sessions.add_argument("--model")
     sessions.add_argument("--status")

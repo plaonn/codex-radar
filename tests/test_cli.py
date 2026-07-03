@@ -70,6 +70,74 @@ class CliTests(unittest.TestCase):
             payload = json.loads(out.getvalue())
             self.assertEqual("done", payload[0]["display_status"])
 
+    def test_sessions_group_project_groups_text_output_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "a1": {
+                                "session_id": "a1",
+                                "status": "done",
+                                "project": "project-a",
+                                "last_seen_at": "2026-07-03T03:00:00+00:00",
+                            },
+                            "b1": {
+                                "session_id": "b1",
+                                "status": "done",
+                                "project": "project-b",
+                                "last_seen_at": "2026-07-03T02:00:00+00:00",
+                            },
+                            "a2": {
+                                "session_id": "a2",
+                                "status": "done",
+                                "project": "project-a",
+                                "last_seen_at": "2026-07-03T01:00:00+00:00",
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "sessions", "--group-project"])
+
+        output = out.getvalue()
+        self.assertIn("Project: project-a (2)", output)
+        self.assertIn("Project: project-b (1)", output)
+        self.assertLess(output.index("Project: project-a"), output.index("Project: project-b"))
+        self.assertLess(output.index("a1"), output.index("a2"))
+
+    def test_sessions_json_ignores_group_project_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "session-1": {
+                                "session_id": "session-1",
+                                "status": "done",
+                                "project": "project-a",
+                                "last_seen_at": "2026-07-03T00:00:00+00:00",
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "sessions", "--json", "--group-project"])
+
+        payload = json.loads(out.getvalue())
+        self.assertIsInstance(payload, list)
+        self.assertEqual("session-1", payload[0]["session_id"])
+
     def test_sessions_filters_by_model_and_recent_duration(self) -> None:
         now = datetime.now(timezone.utc).replace(microsecond=0)
         with tempfile.TemporaryDirectory() as tmp:
@@ -196,6 +264,7 @@ class CliTests(unittest.TestCase):
         output = out.getvalue()
         self.assertIn("complete -c codex-radar", output)
         self.assertIn("sessions tui", output)
+        self.assertIn("group-project", output)
 
 
 if __name__ == "__main__":
