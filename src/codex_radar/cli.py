@@ -20,6 +20,7 @@ from .store import (
 )
 from .transcript import format_skim, skim_transcript
 from .tui import run_tui
+from .watch import run_watch
 
 _SINCE_DURATION = re.compile(r"^(?P<amount>\d+)(?P<unit>[smhd])$")
 _SINCE_UNITS = {
@@ -173,6 +174,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_watch(args: argparse.Namespace) -> int:
+    return run_watch(
+        _state_dir_arg(args.state_dir),
+        interval_seconds=args.interval,
+        once=args.once,
+        bell=not args.no_bell,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="codex-radar")
     parser.add_argument("--state-dir", help="Override codex-radar state directory")
@@ -219,6 +229,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Print a short local diagnostic")
     doctor.set_defaults(func=cmd_doctor)
+
+    watch = subparsers.add_parser("watch", help="Watch for local waiting approval sessions")
+    watch.add_argument("--interval", type=float, default=2.0)
+    watch.add_argument("--once", action="store_true", help="Check once and exit")
+    watch.add_argument("--no-bell", action="store_true", help="Print alerts without terminal bell")
+    watch.set_defaults(func=cmd_watch)
 
     return parser
 

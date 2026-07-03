@@ -159,6 +159,35 @@ class CliTests(unittest.TestCase):
             payload = json.loads(out.getvalue())
             self.assertEqual(["after"], [row["session_id"] for row in payload])
 
+    def test_watch_once_reports_waiting_approval(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "session-1": {
+                                "session_id": "session-1",
+                                "status": "waiting_approval",
+                                "project": "project-a",
+                                "last_event_name": "PermissionRequest",
+                                "last_seen_at": "2026-07-03T00:00:00+00:00",
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "watch", "--once", "--no-bell"])
+
+            self.assertEqual(
+                "codex-radar: waiting_approval project=project-a event=PermissionRequest\n",
+                out.getvalue(),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,6 +25,7 @@ codex-radar hook              # stdin의 hook JSON payload 1개 기록
 codex-radar sessions          # 인덱싱된 세션 목록 출력
 codex-radar transcript <id>   # session id 또는 path로 transcript 훑어보기
 codex-radar tui               # 터미널 dashboard 열기
+codex-radar watch             # waiting_approval foreground watcher 실행
 codex-radar path              # state directory 출력
 codex-radar doctor            # 짧은 로컬 진단 출력
 ```
@@ -40,6 +41,8 @@ codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
 codex-radar tui --project codex-radar --since 1d
 ```
+
+`codex-radar watch`는 opt-in foreground watcher다. state cache를 polling하다가 새 `waiting_approval` session을 보면 terminal bell과 최소 metadata line을 출력한다. hook path에서는 notification을 보내지 않는다.
 
 runtime state 기본 위치:
 
