@@ -4,10 +4,11 @@ import curses
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from .store import iter_sessions, session_display_status
+from .store import iter_sessions, session_display_status, session_seen_since
 from .transcript import format_skim, skim_transcript
 
 
@@ -23,8 +24,60 @@ def _trim(value: object, width: int) -> str:
     return text[: max(0, width - 3)] + "..."
 
 
-def _visible_sessions(state_dir: Optional[Path]) -> List[Session]:
-    return list(iter_sessions(state_dir))
+def _filter_summary(
+    *,
+    project: Optional[str] = None,
+    status: Optional[str] = None,
+    model: Optional[str] = None,
+    since: Optional[datetime] = None,
+) -> str:
+    parts: List[str] = []
+    if project:
+        parts.append(f"project={project}")
+    if status:
+        parts.append(f"status={status}")
+    if model:
+        parts.append(f"model={model}")
+    if since:
+        parts.append(f"since={since.isoformat()}")
+    return " ".join(parts)
+
+
+def _filter_sessions(
+    sessions: Sequence[Session],
+    *,
+    project: Optional[str] = None,
+    status: Optional[str] = None,
+    model: Optional[str] = None,
+    since: Optional[datetime] = None,
+) -> List[Session]:
+    visible = list(sessions)
+    if project:
+        visible = [session for session in visible if session.get("project") == project]
+    if model:
+        visible = [session for session in visible if session.get("model") == model]
+    if status:
+        visible = [session for session in visible if session_display_status(session) == status]
+    if since:
+        visible = [session for session in visible if session_seen_since(session, since)]
+    return visible
+
+
+def _visible_sessions(
+    state_dir: Optional[Path],
+    *,
+    project: Optional[str] = None,
+    status: Optional[str] = None,
+    model: Optional[str] = None,
+    since: Optional[datetime] = None,
+) -> List[Session]:
+    return _filter_sessions(
+        list(iter_sessions(state_dir)),
+        project=project,
+        status=status,
+        model=model,
+        since=since,
+    )
 
 
 def _selected_index(current: int, sessions: Sequence[Session]) -> int:
@@ -169,13 +222,27 @@ def _draw(
     stdscr: "curses._CursesWindow",
     state_dir: Optional[Path],
     selected: int,
+    *,
+    project: Optional[str] = None,
+    status: Optional[str] = None,
+    model: Optional[str] = None,
+    since: Optional[datetime] = None,
 ) -> List[Session]:
     stdscr.erase()
     height, width = stdscr.getmaxyx()
+    filters = _filter_summary(project=project, status=status, model=model, since=since)
     title = "codex-radar  up/down: select  enter: resume  r: refresh  q: quit"
+    if filters:
+        title = f"{title}  filters: {filters}"
     stdscr.addstr(0, 0, _trim(title, width - 1), curses.A_BOLD)
 
-    sessions = _visible_sessions(state_dir)
+    sessions = _visible_sessions(
+        state_dir,
+        project=project,
+        status=status,
+        model=model,
+        since=since,
+    )
     selected = _selected_index(selected, sessions)
     list_rows = max(1, min(len(sessions), max(1, height // 2 - 3)))
     first_visible, visible_sessions = _session_window(sessions, selected, list_rows)
@@ -189,7 +256,12 @@ def _draw(
     )
 
     if not sessions:
-        stdscr.addstr(4, 0, "No sessions indexed yet. Install hooks and run a Codex turn.")
+        empty_message = (
+            "No sessions match active filters."
+            if filters
+            else "No sessions indexed yet. Install hooks and run a Codex turn."
+        )
+        stdscr.addstr(4, 0, empty_message)
     else:
         detail_row = 2 + list_rows + 2
         if detail_row < height - 1:
@@ -200,7 +272,15 @@ def _draw(
     return sessions
 
 
-def run_tui(state_dir: Optional[Path] = None, refresh_seconds: float = 2.0) -> int:
+def run_tui(
+    state_dir: Optional[Path] = None,
+    refresh_seconds: float = 2.0,
+    *,
+    project: Optional[str] = None,
+    status: Optional[str] = None,
+    model: Optional[str] = None,
+    since: Optional[datetime] = None,
+) -> int:
     def loop(stdscr: "curses._CursesWindow") -> Optional[List[str]]:
         curses.curs_set(0)
         stdscr.nodelay(True)
@@ -208,7 +288,15 @@ def run_tui(state_dir: Optional[Path] = None, refresh_seconds: float = 2.0) -> i
         sessions: List[Session] = []
         while True:
             selected = _selected_index(selected, sessions)
-            sessions = _draw(stdscr, state_dir, selected)
+            sessions = _draw(
+                stdscr,
+                state_dir,
+                selected,
+                project=project,
+                status=status,
+                model=model,
+                since=since,
+            )
             selected = _selected_index(selected, sessions)
             deadline = time.monotonic() + refresh_seconds
             while time.monotonic() < deadline:

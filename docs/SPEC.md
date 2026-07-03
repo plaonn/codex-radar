@@ -88,12 +88,14 @@ display-only status:
 
 - `stale`: cache의 원본 status가 `active`, `running`, `tool_running`이고 `last_seen_at`이 30분보다 오래된 경우. `waiting_approval`과 `done`은 오래되어도 원 status를 유지한다.
 
-`codex-radar sessions` filters:
+`codex-radar sessions` and `codex-radar tui` filters:
 
 - `--project <value>`: `project` exact match.
 - `--status <value>`: display status exact match. `stale`도 지정할 수 있다.
 - `--model <value>`: `model` exact match.
 - `--since <when>`: `last_seen_at`이 기준 시각 이상인 session만 출력한다. `<when>`은 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration이며 duration unit은 seconds/minutes/hours/days를 뜻하는 `s`, `m`, `h`, `d`를 지원한다.
+
+`tui` filter는 dashboard를 열 때 적용되며, TUI title line에 active filter summary를 표시한다.
 
 ## Automation Boundary
 

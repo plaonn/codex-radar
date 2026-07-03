@@ -71,6 +71,11 @@ def session_display_status(
     return _string(session.get("status"))
 
 
+def session_seen_since(session: Dict[str, Any], since: datetime) -> bool:
+    last_seen_at = parse_timestamp(session.get("last_seen_at"))
+    return last_seen_at is not None and last_seen_at >= since
+
+
 def default_state_dir() -> Path:
     explicit = os.environ.get("CODEX_RADAR_HOME")
     if explicit:

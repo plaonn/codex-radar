@@ -1,9 +1,11 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from codex_radar.tui import (
+    _filter_sessions,
     _is_resumable,
     _move_selection,
     _preview_lines,
@@ -32,6 +34,41 @@ class TuiHelperTests(unittest.TestCase):
 
         self.assertEqual(2, first)
         self.assertEqual(["2", "3", "4"], [item["session_id"] for item in visible])
+
+    def test_filter_sessions_matches_project_model_status_and_since(self) -> None:
+        sessions = [
+            {
+                "session_id": "target",
+                "project": "project-a",
+                "model": "gpt-5",
+                "status": "done",
+                "last_seen_at": "2026-07-03T01:00:00+00:00",
+            },
+            {
+                "session_id": "old",
+                "project": "project-a",
+                "model": "gpt-5",
+                "status": "done",
+                "last_seen_at": "2026-07-02T23:00:00+00:00",
+            },
+            {
+                "session_id": "other-model",
+                "project": "project-a",
+                "model": "gpt-4.1",
+                "status": "done",
+                "last_seen_at": "2026-07-03T01:00:00+00:00",
+            },
+        ]
+
+        visible = _filter_sessions(
+            sessions,
+            project="project-a",
+            model="gpt-5",
+            status="done",
+            since=datetime(2026, 7, 3, 0, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(["target"], [session["session_id"] for session in visible])
 
     def test_preview_lines_reads_and_redacts_transcript(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

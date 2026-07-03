@@ -16,6 +16,7 @@ from .store import (
     parse_timestamp,
     record_hook_event,
     session_display_status,
+    session_seen_since,
 )
 from .transcript import format_skim, skim_transcript
 from .tui import run_tui
@@ -97,11 +98,6 @@ def _print_sessions(sessions: Iterable[Dict[str, Any]], *, as_json: bool = False
     return 0
 
 
-def _seen_since(session: Dict[str, Any], since: datetime) -> bool:
-    last_seen_at = parse_timestamp(session.get("last_seen_at"))
-    return last_seen_at is not None and last_seen_at >= since
-
-
 def _clip(value: object, width: int) -> str:
     text = "" if value is None else str(value)
     if len(text) <= width:
@@ -127,7 +123,7 @@ def cmd_sessions(args: argparse.Namespace) -> int:
     if args.status:
         sessions = (item for item in sessions if session_display_status(item) == args.status)
     if args.since:
-        sessions = (item for item in sessions if _seen_since(item, args.since))
+        sessions = (item for item in sessions if session_seen_since(item, args.since))
     return _print_sessions(sessions, as_json=args.json, limit=args.limit)
 
 
@@ -154,7 +150,14 @@ def cmd_transcript(args: argparse.Namespace) -> int:
 
 
 def cmd_tui(args: argparse.Namespace) -> int:
-    return run_tui(_state_dir_arg(args.state_dir), refresh_seconds=args.refresh)
+    return run_tui(
+        _state_dir_arg(args.state_dir),
+        refresh_seconds=args.refresh,
+        project=args.project,
+        status=args.status,
+        model=args.model,
+        since=args.since,
+    )
 
 
 def cmd_path(args: argparse.Namespace) -> int:
@@ -200,6 +203,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     tui = subparsers.add_parser("tui", help="Open the terminal session dashboard")
     tui.add_argument("--refresh", type=float, default=2.0)
+    tui.add_argument("--project")
+    tui.add_argument("--model")
+    tui.add_argument("--status")
+    tui.add_argument(
+        "--since",
+        type=_since_arg,
+        metavar="WHEN",
+        help="Only show sessions last seen since an ISO-8601 timestamp or duration like 30m, 2h, 7d",
+    )
     tui.set_defaults(func=cmd_tui)
 
     path = subparsers.add_parser("path", help="Print the active state directory")

@@ -33,11 +33,12 @@ codex-radar doctor            # 짧은 로컬 진단 출력
 
 `active`, `running`, `tool_running` session이 30분 넘게 update되지 않으면 `sessions`와 `tui`에서 `stale`로 표시된다. cache의 원본 status는 바꾸지 않는다.
 
-`codex-radar sessions`는 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
+`codex-radar sessions`와 `codex-radar tui`는 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
 
 ```bash
 codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
+codex-radar tui --project codex-radar --since 1d
 ```
 
 runtime state 기본 위치:

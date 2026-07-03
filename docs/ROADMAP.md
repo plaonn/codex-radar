@@ -10,7 +10,6 @@
 ## Milestone 2: Operator UX
 
 - TUI navigation과 transcript preview를 개선한다.
-- `tui`에 project/status/model/recency filter controls를 추가할지 검토한다.
 - TUI에서 session을 선택하면 같은 terminal에서 `codex resume <session_id>`로 자연스럽게 전환한다.
 - session id가 없거나 resume할 수 없는 row는 disabled 처리하고, 필요하면 resume command만 출력한다.
 
