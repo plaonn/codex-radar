@@ -2,18 +2,52 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-from .store import default_state_dir, iter_sessions, load_sessions, record_hook_event, session_display_status
+from .store import (
+    default_state_dir,
+    iter_sessions,
+    load_sessions,
+    parse_timestamp,
+    record_hook_event,
+    session_display_status,
+)
 from .transcript import format_skim, skim_transcript
 from .tui import run_tui
+
+_SINCE_DURATION = re.compile(r"^(?P<amount>\d+)(?P<unit>[smhd])$")
+_SINCE_UNITS = {
+    "s": "seconds",
+    "m": "minutes",
+    "h": "hours",
+    "d": "days",
+}
 
 
 def _state_dir_arg(value: Optional[str]) -> Optional[Path]:
     return Path(value).expanduser() if value else None
+
+
+def _since_arg(value: str) -> datetime:
+    text = value.strip()
+    duration = _SINCE_DURATION.fullmatch(text)
+    if duration:
+        amount = int(duration.group("amount"))
+        unit = _SINCE_UNITS[duration.group("unit")]
+        return datetime.now(timezone.utc) - timedelta(**{unit: amount})
+
+    parsed = parse_timestamp(text)
+    if parsed is not None:
+        return parsed
+
+    raise argparse.ArgumentTypeError(
+        "expected ISO-8601 timestamp or duration like 30m, 2h, or 7d"
+    )
 
 
 def _read_stdin_json() -> Dict[str, Any]:
@@ -63,6 +97,11 @@ def _print_sessions(sessions: Iterable[Dict[str, Any]], *, as_json: bool = False
     return 0
 
 
+def _seen_since(session: Dict[str, Any], since: datetime) -> bool:
+    last_seen_at = parse_timestamp(session.get("last_seen_at"))
+    return last_seen_at is not None and last_seen_at >= since
+
+
 def _clip(value: object, width: int) -> str:
     text = "" if value is None else str(value)
     if len(text) <= width:
@@ -83,8 +122,12 @@ def cmd_sessions(args: argparse.Namespace) -> int:
     sessions = iter_sessions(state_dir)
     if args.project:
         sessions = (item for item in sessions if item.get("project") == args.project)
+    if args.model:
+        sessions = (item for item in sessions if item.get("model") == args.model)
     if args.status:
         sessions = (item for item in sessions if session_display_status(item) == args.status)
+    if args.since:
+        sessions = (item for item in sessions if _seen_since(item, args.since))
     return _print_sessions(sessions, as_json=args.json, limit=args.limit)
 
 
@@ -140,7 +183,14 @@ def build_parser() -> argparse.ArgumentParser:
     sessions.add_argument("--json", action="store_true", help="Print JSON")
     sessions.add_argument("--limit", type=int, default=50)
     sessions.add_argument("--project")
+    sessions.add_argument("--model")
     sessions.add_argument("--status")
+    sessions.add_argument(
+        "--since",
+        type=_since_arg,
+        metavar="WHEN",
+        help="Only show sessions last seen since an ISO-8601 timestamp or duration like 30m, 2h, 7d",
+    )
     sessions.set_defaults(func=cmd_sessions)
 
     transcript = subparsers.add_parser("transcript", help="Skim a transcript by session id or path")

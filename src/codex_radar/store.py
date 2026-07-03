@@ -27,7 +27,7 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def _parse_timestamp(value: Any) -> Optional[datetime]:
+def parse_timestamp(value: Any) -> Optional[datetime]:
     if not isinstance(value, str) or not value.strip():
         return None
     try:
@@ -49,7 +49,7 @@ def is_stale_session(
     if status not in STALE_ELIGIBLE_STATUSES:
         return False
 
-    last_seen = _parse_timestamp(session.get("last_seen_at"))
+    last_seen = parse_timestamp(session.get("last_seen_at"))
     if last_seen is None:
         return False
 
