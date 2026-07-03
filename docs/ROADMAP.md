@@ -1,19 +1,6 @@
 # codex-radar Roadmap
 
-## Milestone 1: Local Session Index
-
-- `codex-radar hook`으로 hook payload를 수집한다.
-- append-only event log와 latest-session cache를 유지한다.
-- terminal에서 session list와 transcript skim을 제공한다.
-- dependency-free 최소 TUI를 제공한다.
-
-## Milestone 2: Operator UX
-
-- TUI navigation과 transcript preview를 개선한다.
-- TUI에서 session을 선택하면 같은 terminal에서 `codex resume <session_id>`로 자연스럽게 전환한다.
-- session id가 없거나 resume할 수 없는 row는 disabled 처리하고, 필요하면 resume command만 출력한다.
-
-## Milestone 3: Notifications
+## Notifications
 
 - 기본값은 notification 없음으로 유지한다.
 - 첫 notification 구현은 opt-in local-only watcher에서만 지원한다.
