@@ -25,6 +25,27 @@ def _trim(value: object, width: int) -> str:
     return text[: max(0, width - 3)] + "..."
 
 
+def _safe_addstr(stdscr: "curses._CursesWindow", row: int, col: int, text: object, attr: int = 0) -> None:
+    height, width = stdscr.getmaxyx()
+    max_width = width - col - 1
+    if row < 0 or row >= height or col < 0 or col >= width or max_width <= 0:
+        return
+    try:
+        stdscr.addstr(row, col, _trim(text, max_width), attr)
+    except curses.error:
+        return
+
+
+def _safe_hline(stdscr: "curses._CursesWindow", row: int, col: int, ch: object, count: int) -> None:
+    height, width = stdscr.getmaxyx()
+    if row < 0 or row >= height or col < 0 or col >= width or count <= 0:
+        return
+    try:
+        stdscr.hline(row, col, ch, min(count, max(0, width - col - 1)))
+    except curses.error:
+        return
+
+
 def _filter_summary(
     *,
     project: Optional[str] = None,
@@ -234,13 +255,13 @@ def _draw_rows(
         f"{headers[3]:<{columns[3]}} "
         f"{headers[4]:<{columns[4]}}"
     )
-    stdscr.addstr(start_row, 0, _trim(header, width - 1), curses.A_UNDERLINE)
+    _safe_addstr(stdscr, start_row, 0, header, curses.A_UNDERLINE)
 
     for offset, view_row in enumerate(rows[:max_rows]):
         row = start_row + 1 + offset
         if view_row["kind"] == "group":
             label = f"Project: {view_row['project']} ({view_row['count']})"
-            stdscr.addstr(row, 0, _trim(label, width - 1), curses.A_BOLD)
+            _safe_addstr(stdscr, row, 0, label, curses.A_BOLD)
             continue
 
         session = view_row["session"]
@@ -256,7 +277,7 @@ def _draw_rows(
         attr = _status_attr(session)
         if offset == selected_row:
             attr |= curses.A_REVERSE
-        stdscr.addstr(row, 0, _trim(line, width - 1), attr)
+        _safe_addstr(stdscr, row, 0, line, attr)
 
 
 def _draw_detail(
@@ -289,7 +310,7 @@ def _draw_detail(
     lines.extend(_preview_lines(session, width=width))
 
     for offset, line in enumerate(lines[: max(0, height - start_row - 1)]):
-        stdscr.addstr(start_row + offset, 0, _trim(line, width - 1))
+        _safe_addstr(stdscr, start_row + offset, 0, line)
 
 
 def _draw(
@@ -308,7 +329,7 @@ def _draw(
     title = "codex-radar  up/down: select  enter: resume  r: refresh  q: quit"
     if filters:
         title = f"{title}  filters: {filters}"
-    stdscr.addstr(0, 0, _trim(title, width - 1), curses.A_BOLD)
+    _safe_addstr(stdscr, 0, 0, title, curses.A_BOLD)
 
     sessions = _visible_sessions(
         state_dir,
@@ -321,14 +342,15 @@ def _draw(
     view_rows = _session_view_rows(sessions)
     list_rows = max(1, min(len(view_rows), max(1, height // 2 - 3)))
     _, visible_rows, selected_row = _view_window(sessions, selected, list_rows)
-    _draw_rows(
-        stdscr,
-        visible_rows,
-        selected_row,
-        start_row=2,
-        max_rows=list_rows,
-        width=width,
-    )
+    if height > 2:
+        _draw_rows(
+            stdscr,
+            visible_rows,
+            selected_row,
+            start_row=2,
+            max_rows=list_rows,
+            width=width,
+        )
 
     if not sessions:
         empty_message = (
@@ -336,11 +358,11 @@ def _draw(
             if filters
             else "No sessions indexed yet. Install hooks and run a Codex turn."
         )
-        stdscr.addstr(4, 0, empty_message)
+        _safe_addstr(stdscr, min(4, max(1, height - 1)), 0, empty_message)
     else:
         detail_row = 2 + list_rows + 2
         if detail_row < height - 1:
-            stdscr.hline(detail_row - 1, 0, curses.ACS_HLINE, max(1, width - 1))
+            _safe_hline(stdscr, detail_row - 1, 0, curses.ACS_HLINE, max(1, width - 1))
             _draw_detail(stdscr, sessions[selected], start_row=detail_row, height=height, width=width)
 
     stdscr.refresh()

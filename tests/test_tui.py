@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from codex_radar.tui import (
+    _draw,
     _filter_sessions,
     _group_sessions_by_project,
     _is_resumable,
@@ -15,6 +16,32 @@ from codex_radar.tui import (
     _session_view_rows,
     _view_window,
 )
+
+
+class FakeWindow:
+    def __init__(self, height: int, width: int) -> None:
+        self.height = height
+        self.width = width
+        self.calls = []
+
+    def erase(self) -> None:
+        self.calls.append(("erase",))
+
+    def getmaxyx(self):
+        return self.height, self.width
+
+    def addstr(self, row, col, text, attr=0) -> None:
+        if row < 0 or row >= self.height or col < 0 or col >= self.width:
+            raise RuntimeError(f"out of bounds: {row},{col}")
+        self.calls.append(("addstr", row, col, text, attr))
+
+    def hline(self, row, col, ch, count) -> None:
+        if row < 0 or row >= self.height or col < 0 or col >= self.width:
+            raise RuntimeError(f"out of bounds: {row},{col}")
+        self.calls.append(("hline", row, col, count))
+
+    def refresh(self) -> None:
+        self.calls.append(("refresh",))
 
 
 class TuiHelperTests(unittest.TestCase):
@@ -156,6 +183,24 @@ class TuiHelperTests(unittest.TestCase):
 
     def test_preview_lines_reports_missing_path(self) -> None:
         self.assertEqual(["No transcript path recorded."], _preview_lines({}, width=80))
+
+    def test_draw_handles_very_small_empty_terminal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            window = FakeWindow(height=3, width=20)
+
+            sessions = _draw(window, Path(tmp), selected=0)
+
+        self.assertEqual([], sessions)
+        self.assertIn(("refresh",), window.calls)
+
+    def test_draw_handles_tiny_width(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            window = FakeWindow(height=4, width=1)
+
+            sessions = _draw(window, Path(tmp), selected=0)
+
+        self.assertEqual([], sessions)
+        self.assertIn(("refresh",), window.calls)
 
 
 if __name__ == "__main__":
