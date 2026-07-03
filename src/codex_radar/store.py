@@ -129,7 +129,7 @@ def _tool_name(payload: Dict[str, Any]) -> str:
     if direct:
         return _string(direct)
 
-    tool_input = payload.get("tool_input")
+    tool_input = _find_first(payload, ("tool_input", "toolInput"))
     if isinstance(tool_input, dict):
         direct = _find_first(tool_input, ("name", "tool_name", "toolName"))
         if direct:
@@ -143,7 +143,7 @@ def normalize_event(payload: Dict[str, Any], recorded_at: Optional[str] = None) 
         _find_first(payload, ("hook_event_name", "hookEventName", "event_name", "event"))
     )
     status = EVENT_STATUS.get(event_name, "unknown")
-    cwd = _string(_find_first(payload, ("cwd", "current_working_directory")))
+    cwd = _string(_find_first(payload, ("cwd", "current_working_directory", "currentWorkingDirectory")))
     project = Path(cwd).name if cwd else ""
     last_message = _string(_find_first(payload, ("last_assistant_message", "lastAssistantMessage")))
 

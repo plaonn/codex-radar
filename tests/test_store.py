@@ -23,6 +23,60 @@ class StoreTests(unittest.TestCase):
         self.assertEqual("example-project", event["project"])
         self.assertEqual("session-1", event["session_id"])
 
+    def test_normalize_event_accepts_camel_case_payload_aliases(self) -> None:
+        event = normalize_event(
+            {
+                "hookEventName": "PreToolUse",
+                "sessionId": "session-1",
+                "turnId": "turn-1",
+                "currentWorkingDirectory": "/tmp/example-project",
+                "transcriptPath": "/tmp/transcript.jsonl",
+                "modelName": "gpt-test",
+                "permissionMode": "default",
+                "toolInput": {"name": "Bash"},
+                "lastAssistantMessage": "running command",
+            },
+            recorded_at="2026-07-03T00:00:00+00:00",
+        )
+
+        self.assertEqual("PreToolUse", event["event_name"])
+        self.assertEqual("tool_running", event["status"])
+        self.assertEqual("session-1", event["session_id"])
+        self.assertEqual("turn-1", event["turn_id"])
+        self.assertEqual("/tmp/example-project", event["cwd"])
+        self.assertEqual("example-project", event["project"])
+        self.assertEqual("/tmp/transcript.jsonl", event["transcript_path"])
+        self.assertEqual("gpt-test", event["model"])
+        self.assertEqual("default", event["permission_mode"])
+        self.assertEqual("Bash", event["tool_name"])
+        self.assertEqual("running command", event["last_assistant_message"])
+
+    def test_normalize_event_maps_approval_policy_to_permission_mode(self) -> None:
+        event = normalize_event(
+            {
+                "hook_event_name": "PermissionRequest",
+                "session_id": "session-1",
+                "approval_policy": "on-request",
+            },
+            recorded_at="2026-07-03T00:00:00+00:00",
+        )
+
+        self.assertEqual("waiting_approval", event["status"])
+        self.assertEqual("on-request", event["permission_mode"])
+
+    def test_normalize_event_extracts_name_from_nested_tool_input(self) -> None:
+        event = normalize_event(
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "session-1",
+                "tool_input": {"name": "Bash"},
+            },
+            recorded_at="2026-07-03T00:00:00+00:00",
+        )
+
+        self.assertEqual("tool_running", event["status"])
+        self.assertEqual("Bash", event["tool_name"])
+
     def test_record_hook_event_appends_event_and_updates_cache(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
@@ -70,6 +124,32 @@ class StoreTests(unittest.TestCase):
 
             self.assertEqual("done", session["status"])
             self.assertEqual("", session["current_tool"])
+
+    def test_subagent_start_and_stop_update_status_and_current_tool(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            started = record_hook_event(
+                {
+                    "hook_event_name": "SubagentStart",
+                    "session_id": "session-1",
+                    "cwd": "/tmp/project-a",
+                    "tool_input": {"name": "Task"},
+                },
+                state_dir,
+            )
+            stopped = record_hook_event(
+                {
+                    "hook_event_name": "SubagentStop",
+                    "session_id": "session-1",
+                    "cwd": "/tmp/project-a",
+                },
+                state_dir,
+            )
+
+            self.assertEqual("running", started["status"])
+            self.assertEqual("Task", started["current_tool"])
+            self.assertEqual("done", stopped["status"])
+            self.assertEqual("", stopped["current_tool"])
 
     def test_session_display_status_marks_old_running_session_stale(self) -> None:
         session = {
