@@ -8,7 +8,7 @@ Current scope:
 - Refreshes automatically when `sessions.json` is created, changed, or deleted.
 - Groups sessions by `project`.
 - Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and compact session rows.
-- Provides a manual refresh command.
+- Provides a manual refresh command in the view title.
 
 Boundaries:
 

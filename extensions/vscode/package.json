@@ -20,7 +20,8 @@
     "commands": [
       {
         "command": "codexRadar.refresh",
-        "title": "Codex Radar: Refresh Sessions"
+        "title": "Codex Radar: Refresh Sessions",
+        "icon": "$(refresh)"
       }
     ],
     "configuration": {
@@ -38,6 +39,15 @@
         {
           "id": "codexRadar.sessions",
           "name": "Codex Radar"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "codexRadar.refresh",
+          "when": "view == codexRadar.sessions",
+          "group": "navigation"
         }
       ]
     }
