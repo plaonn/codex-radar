@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.1");
+  assert.equal(manifest.version, "0.1.2");
 });
 
 test("contributes refresh command as a view title action", () => {
@@ -25,7 +25,7 @@ test("contributes refresh command as a view title action", () => {
   );
 
   assert.equal(refreshCommand.icon, "$(refresh)");
-  assert.equal(viewTitleMenu.when, "view == codexRadar.sessions");
+  assert.equal(viewTitleMenu.when, "view == codexRadar.sessionList");
   assert.equal(viewTitleMenu.group, "navigation@2");
 });
 
@@ -40,7 +40,7 @@ test("contributes a dedicated Codex Radar activity bar container", () => {
   assert.equal(container.icon, "media/codex-radar.svg");
   assert.deepEqual(views, [
     {
-      id: "codexRadar.sessions",
+      id: "codexRadar.sessionList",
       name: "Sessions",
     },
   ]);
@@ -57,7 +57,7 @@ test("contributes status filter as a temporary view title action", () => {
   );
 
   assert.equal(filterCommand.icon, "$(filter)");
-  assert.equal(viewTitleMenu.when, "view == codexRadar.sessions");
+  assert.equal(viewTitleMenu.when, "view == codexRadar.sessionList");
   assert.equal(viewTitleMenu.group, "navigation@1");
   assert.equal(
     Object.prototype.hasOwnProperty.call(
@@ -82,7 +82,7 @@ test("contributes transcript preview as an explicit session row action", () => {
     manifest.activationEvents.includes("onCommand:codexRadar.previewTranscript"),
     true,
   );
-  assert.equal(itemMenu.when, "view == codexRadar.sessions && viewItem == codexRadar.session");
+  assert.equal(itemMenu.when, "view == codexRadar.sessionList && viewItem == codexRadar.session");
   assert.equal(itemMenu.group, "inline@1");
 });
 
@@ -98,6 +98,6 @@ test("contributes experimental open in Codex as a session row action", () => {
   assert.equal(openCommand.icon, "$(link-external)");
   assert.equal(openCommand.title, "Codex Radar: Open in Codex (Experimental)");
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openInCodex"), true);
-  assert.equal(itemMenu.when, "view == codexRadar.sessions && viewItem == codexRadar.session");
+  assert.equal(itemMenu.when, "view == codexRadar.sessionList && viewItem == codexRadar.session");
   assert.equal(itemMenu.group, "inline@2");
 });

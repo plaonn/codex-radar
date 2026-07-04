@@ -297,7 +297,7 @@ async function openOfficialCodexThread(target) {
 function activate(context) {
   const provider = new SessionsProvider();
   const previewProvider = new TranscriptPreviewProvider();
-  const treeView = vscode.window.createTreeView("codexRadar.sessions", {
+  const treeView = vscode.window.createTreeView("codexRadar.sessionList", {
     treeDataProvider: provider,
   });
   syncTreeViewBadge(treeView, provider);

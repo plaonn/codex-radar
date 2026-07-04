@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "Read-only VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "plaonn",
   "license": "MIT",
   "repository": {
@@ -17,7 +17,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:codexRadar.sessions",
+    "onView:codexRadar.sessionList",
     "onCommand:codexRadar.refresh",
     "onCommand:codexRadar.filterStatus",
     "onCommand:codexRadar.previewTranscript",
@@ -69,7 +69,7 @@
     "views": {
       "codexRadar": [
         {
-          "id": "codexRadar.sessions",
+          "id": "codexRadar.sessionList",
           "name": "Sessions"
         }
       ]
@@ -78,24 +78,24 @@
       "view/title": [
         {
           "command": "codexRadar.filterStatus",
-          "when": "view == codexRadar.sessions",
+          "when": "view == codexRadar.sessionList",
           "group": "navigation@1"
         },
         {
           "command": "codexRadar.refresh",
-          "when": "view == codexRadar.sessions",
+          "when": "view == codexRadar.sessionList",
           "group": "navigation@2"
         }
       ],
       "view/item/context": [
         {
           "command": "codexRadar.previewTranscript",
-          "when": "view == codexRadar.sessions && viewItem == codexRadar.session",
+          "when": "view == codexRadar.sessionList && viewItem == codexRadar.session",
           "group": "inline@1"
         },
         {
           "command": "codexRadar.openInCodex",
-          "when": "view == codexRadar.sessions && viewItem == codexRadar.session",
+          "when": "view == codexRadar.sessionList && viewItem == codexRadar.session",
           "group": "inline@2"
         }
       ]
