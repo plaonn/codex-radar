@@ -1,6 +1,6 @@
 # Codex Radar VS Code Extension
 
-Minimal read-only VS Code surface for extension host-local `codex-radar` session state.
+Minimal VS Code surface for extension host-local `codex-radar` session state.
 
 Current scope:
 
@@ -15,12 +15,15 @@ Current scope:
 - Provides a manual refresh command in the view title.
 - Opens the same session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a session row is clicked.
 - Provides a done-session row action to mark the session read or unread.
+- Lets the user configure server-side `retention_days` through `codex-radar config`.
+- Lets the user run server-side pruning through `codex-radar prune`.
 
 Boundaries:
 
 - Does not edit `~/.codex/hooks.json`.
 - Does not install hooks.
 - Does not execute `codex resume`.
+- Does not edit `config.json` directly; retention changes go through the configured `codex-radar` CLI.
 - Treats a successful experimental Codex handoff for a done session as a local read acknowledgement only.
 - Does not read `events.jsonl` for the default view.
 - Does not read raw transcript files or show raw transcript paths in default navigation labels, descriptions, or tooltips.

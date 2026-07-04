@@ -1,8 +1,8 @@
 {
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
-  "description": "Read-only VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.5",
+  "description": "VS Code view for extension host-local codex-radar sessions.",
+  "version": "0.1.6",
   "publisher": "plaonn",
   "license": "MIT",
   "repository": {
@@ -20,6 +20,8 @@
     "onView:codexRadar.sessionList",
     "onCommand:codexRadar.refresh",
     "onCommand:codexRadar.filterStatus",
+    "onCommand:codexRadar.configureRetention",
+    "onCommand:codexRadar.pruneNow",
     "onCommand:codexRadar.markRead",
     "onCommand:codexRadar.markUnread",
     "onCommand:codexRadar.openInCodex"
@@ -36,6 +38,16 @@
         "command": "codexRadar.filterStatus",
         "title": "Codex Radar: Filter by Status",
         "icon": "$(filter)"
+      },
+      {
+        "command": "codexRadar.configureRetention",
+        "title": "Codex Radar: Configure Retention",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "codexRadar.pruneNow",
+        "title": "Codex Radar: Prune Now",
+        "icon": "$(trash)"
       },
       {
         "command": "codexRadar.openInCodex",
@@ -60,6 +72,11 @@
           "type": "string",
           "default": "",
           "description": "Override codex-radar state directory. Empty uses CODEX_RADAR_HOME, XDG_STATE_HOME/codex-radar, or ~/.local/state/codex-radar."
+        },
+        "codexRadar.cliPath": {
+          "type": "string",
+          "default": "codex-radar",
+          "description": "codex-radar CLI executable path used for config and prune commands."
         }
       }
     },
@@ -91,6 +108,16 @@
           "command": "codexRadar.refresh",
           "when": "view == codexRadar.sessionList",
           "group": "navigation@2"
+        },
+        {
+          "command": "codexRadar.configureRetention",
+          "when": "view == codexRadar.sessionList",
+          "group": "navigation@3"
+        },
+        {
+          "command": "codexRadar.pruneNow",
+          "when": "view == codexRadar.sessionList",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [

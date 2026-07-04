@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.5");
+  assert.equal(manifest.version, "0.1.6");
 });
 
 test("contributes refresh command as a view title action", () => {
@@ -66,6 +66,33 @@ test("contributes status filter as a temporary view title action", () => {
     ),
     false,
   );
+});
+
+test("contributes retention config and prune actions", () => {
+  const manifest = readManifest();
+  const configureCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.configureRetention",
+  );
+  const pruneCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.pruneNow",
+  );
+  const configureMenu = manifest.contributes.menus["view/title"].find(
+    (item) => item.command === "codexRadar.configureRetention",
+  );
+  const pruneMenu = manifest.contributes.menus["view/title"].find(
+    (item) => item.command === "codexRadar.pruneNow",
+  );
+  const properties = manifest.contributes.configuration.properties;
+
+  assert.equal(configureCommand.icon, "$(settings-gear)");
+  assert.equal(pruneCommand.icon, "$(trash)");
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.configureRetention"), true);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), true);
+  assert.equal(configureMenu.when, "view == codexRadar.sessionList");
+  assert.equal(pruneMenu.when, "view == codexRadar.sessionList");
+  assert.equal(configureMenu.group, "navigation@3");
+  assert.equal(pruneMenu.group, "navigation@4");
+  assert.equal(properties["codexRadar.cliPath"].default, "codex-radar");
 });
 
 test("does not contribute transcript preview to the VS Code surface", () => {

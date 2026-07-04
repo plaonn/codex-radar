@@ -3,6 +3,16 @@ const vscode = require("vscode");
 
 const { officialCodexThreadUriString } = require("./codexLink");
 const {
+  configGetArgs,
+  configSetRetentionArgs,
+  configuredCliPath,
+  parseRetentionDaysOutput,
+  pruneArgs,
+  retentionDaysFromInput,
+  runRadarCli,
+  validateRetentionDaysInput,
+} = require("./radarCli");
+const {
   defaultStateDir,
   filterSessionsByStatus,
   groupSessionsByProject,
@@ -311,6 +321,57 @@ async function markSessionUnreadCommand(target, provider, treeView) {
   syncTreeViewBadge(treeView, provider);
 }
 
+async function configureRetentionCommand(provider, treeView) {
+  const cliPath = configuredCliPath(vscode);
+  const stateDir = configuredStateDir();
+  let currentDays = 7;
+  try {
+    const result = await runRadarCli(cliPath, configGetArgs(stateDir, "retention_days"));
+    currentDays = parseRetentionDaysOutput(result.stdout);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await vscode.window.showErrorMessage(`Could not read codex-radar retention config: ${message}`);
+    return;
+  }
+
+  const input = await vscode.window.showInputBox({
+    title: "Codex Radar Retention",
+    prompt: "Days to keep sessions in Radar state. Use 0 to disable pruning.",
+    value: String(currentDays),
+    validateInput: validateRetentionDaysInput,
+  });
+  if (input === undefined) {
+    return;
+  }
+
+  const days = retentionDaysFromInput(input);
+  try {
+    await runRadarCli(cliPath, configSetRetentionArgs(stateDir, days));
+    provider.refresh();
+    syncTreeViewBadge(treeView, provider);
+    await vscode.window.showInformationMessage(`Codex Radar retention set to ${days} day${days === 1 ? "" : "s"}.`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await vscode.window.showErrorMessage(`Could not update codex-radar retention config: ${message}`);
+  }
+}
+
+async function pruneNowCommand(provider, treeView) {
+  const cliPath = configuredCliPath(vscode);
+  const stateDir = configuredStateDir();
+  try {
+    const result = await runRadarCli(cliPath, pruneArgs(stateDir));
+    provider.refresh();
+    syncTreeViewBadge(treeView, provider);
+    const payload = JSON.parse(result.stdout || "{}");
+    const removed = Array.isArray(payload.removed_sessions) ? payload.removed_sessions.length : 0;
+    await vscode.window.showInformationMessage(`Codex Radar pruned ${removed} session${removed === 1 ? "" : "s"}.`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await vscode.window.showErrorMessage(`Could not prune codex-radar state: ${message}`);
+  }
+}
+
 function activate(context) {
   const provider = new SessionsProvider(context.globalState);
   const treeView = vscode.window.createTreeView("codexRadar.sessionList", {
@@ -330,6 +391,12 @@ function activate(context) {
       await chooseStatusFilter(provider);
       syncTreeViewBadge(treeView, provider);
     }),
+    vscode.commands.registerCommand("codexRadar.configureRetention", () =>
+      configureRetentionCommand(provider, treeView),
+    ),
+    vscode.commands.registerCommand("codexRadar.pruneNow", () =>
+      pruneNowCommand(provider, treeView),
+    ),
     vscode.commands.registerCommand("codexRadar.markRead", (target) =>
       markSessionReadCommand(target, provider, treeView),
     ),
@@ -359,6 +426,8 @@ module.exports = {
   officialCodexThreadUri,
   openOfficialCodexThread,
   openSessionInCodex,
+  configureRetentionCommand,
+  pruneNowCommand,
   syncTreeViewBadge,
   statusFilterItems,
 };

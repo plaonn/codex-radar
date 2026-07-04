@@ -77,7 +77,7 @@
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Derived specs/tests: planned GUI read contract v1, project-grouped navigation, in-surface attention cues, extension-local read/unread state, read-only cache-change refresh, GUI status filter, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource tests.
+- Derived specs/tests: planned GUI read contract v1, project-grouped navigation, in-surface attention cues, extension-local read/unread state, read-only cache-change refresh, GUI status filter, core-mediated retention config/prune actions, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource tests.
 - Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
 
 #### R7a: GUI project navigation

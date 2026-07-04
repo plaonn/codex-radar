@@ -111,7 +111,7 @@ Retention:
 
 ## Planned GUI Integration Contract
 
-첫 GUI milestone은 VS Code extension 같은 GUI surface가 extension host-local `codex-radar` state를 읽어 프로젝트 단위 conversation list와 thread attention state를 보여주는 read-only dashboard다. Remote SSH 사용 시 기본 관심사는 VS Code UI client machine의 Codex state가 아니라 remote workspace extension host 안의 Codex state와 transcript다.
+첫 GUI milestone은 VS Code extension 같은 GUI surface가 extension host-local `codex-radar` state를 읽어 프로젝트 단위 conversation list와 thread attention state를 보여주는 dashboard다. Remote SSH 사용 시 기본 관심사는 VS Code UI client machine의 Codex state가 아니라 remote workspace extension host 안의 Codex state와 transcript다.
 
 VS Code extension scaffold는 `extensions/vscode/`에 둔다. Python core는 stdlib-first를 유지하고, Node/runtime/package metadata는 extension subtree에 격리한다. 별도 repository 분리는 marketplace, release, review lifecycle이 실제로 갈라질 때 재검토한다.
 
@@ -127,6 +127,7 @@ GUI read contract v1:
 - future CLI/export read adapter는 missing state directory에서 directory나 state file을 생성하지 않아야 한다.
 - GUI는 `events.jsonl`을 기본 navigation 입력으로 읽지 않는다. 현재 default runtime state는 raw hook event log를 누적 저장하지 않는다.
 - GUI는 `config.json`을 직접 수정하지 않고, server-side config 변경이 필요하면 `codex-radar config` 같은 Python core command를 통해 처리한다.
+- VS Code extension은 `codexRadar.cliPath` setting으로 `codex-radar` executable path를 override할 수 있다.
 
 GUI display contract v1:
 
@@ -142,13 +143,16 @@ GUI display contract v1:
 - 첫 notification surface는 VS Code extension 안의 badge/highlight 같은 in-surface attention cue로 제한한다.
 - GUI는 session row click으로 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급한다. done session을 성공적으로 열면 extension-local read state를 read로 갱신할 수 있다.
 - GUI는 done session row의 inline action으로 read/unread를 토글할 수 있다.
+- GUI는 `codex-radar config`를 통해 server-side `retention_days`를 설정할 수 있다.
+- GUI는 `codex-radar prune`을 통해 server-side pruning을 명시적으로 실행할 수 있다.
 - OS notification, external notification channel, toast content template은 별도 milestone 전까지 scope 밖이다.
 
 GUI privacy/action boundary v1:
 
-- 첫 GUI milestone은 read-only dashboard다.
+- 첫 GUI milestone은 session/transcript navigation에 대해 read-only dashboard다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
+- GUI는 server-side retention config/prune에 한해 Python core CLI를 호출할 수 있다. `config.json`과 `sessions.json`을 직접 수정하지 않는다.
 - GUI는 raw transcript file을 기본 list에 자동 노출하지 않는다. 기본 navigation에는 session cache의 redacted latest assistant summary를 짧은 식별 snippet으로 표시할 수 있지만 raw transcript path는 표시하지 않는다.
 - VS Code extension은 transcript preview row action을 제공하지 않는다. 자세한 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.
