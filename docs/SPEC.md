@@ -113,6 +113,7 @@ GUI read contract v1:
 GUI display contract v1:
 
 - GUI는 `project` 기준으로 conversation list를 묶는다.
+- VS Code extension은 Explorer 하위 view가 아니라 dedicated Codex Radar Activity Bar container 안에 session navigation을 제공한다.
 - GUI는 `waiting_approval`, `running`, `done`, `stale`를 navigation 안에서 구분한다.
 - GUI는 `waiting_approval`, `running`, `tool_running`, `stale` 같은 attention-worthy session 수를 VS Code view badge 같은 in-surface cue로 보여줄 수 있다. 이 count는 현재 status filter와 무관하게 전체 loaded session 기준으로 계산한다.
 - GUI는 `display_status` 기준으로 session list를 좁히는 read-only status filter를 제공할 수 있다. 첫 구현은 view-local temporary filter로 두며, session cache나 extension settings를 수정하지 않는다.

@@ -4,6 +4,7 @@ Minimal read-only VS Code surface for extension host-local `codex-radar` session
 
 Current scope:
 
+- Provides a dedicated Codex Radar Activity Bar container.
 - Reads `sessions.json` through a small `SessionSource` adapter.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted.
 - Groups sessions by `project`.

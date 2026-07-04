@@ -23,6 +23,24 @@ test("contributes refresh command as a view title action", () => {
   assert.equal(viewTitleMenu.group, "navigation@2");
 });
 
+test("contributes a dedicated Codex Radar activity bar container", () => {
+  const manifest = readManifest();
+  const container = manifest.contributes.viewsContainers.activitybar.find(
+    (item) => item.id === "codexRadar",
+  );
+  const views = manifest.contributes.views.codexRadar;
+
+  assert.equal(container.title, "Codex Radar");
+  assert.equal(container.icon, "media/codex-radar.svg");
+  assert.deepEqual(views, [
+    {
+      id: "codexRadar.sessions",
+      name: "Sessions",
+    },
+  ]);
+  assert.equal(Object.prototype.hasOwnProperty.call(manifest.contributes.views, "explorer"), false);
+});
+
 test("contributes status filter as a temporary view title action", () => {
   const manifest = readManifest();
   const filterCommand = manifest.contributes.commands.find(

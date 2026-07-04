@@ -57,11 +57,20 @@
         }
       }
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexRadar",
+          "title": "Codex Radar",
+          "icon": "media/codex-radar.svg"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "codexRadar": [
         {
           "id": "codexRadar.sessions",
-          "name": "Codex Radar"
+          "name": "Sessions"
         }
       ]
     },
