@@ -11,6 +11,10 @@ const {
   sessionDescription,
   sessionLabel,
 } = require("./sessionViewModel");
+const {
+  registerRefreshHandlers,
+  sessionCacheWatchTarget,
+} = require("./sessionWatcher");
 
 class ProjectItem extends vscode.TreeItem {
   constructor(project, sessions) {
@@ -113,11 +117,58 @@ function configuredStateDir() {
   return defaultStateDir();
 }
 
+function createSessionCacheWatcher(provider) {
+  const target = sessionCacheWatchTarget(configuredStateDir());
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(target.base, target.pattern),
+  );
+  const refreshHandlers = registerRefreshHandlers(watcher, () => provider.refresh());
+
+  return {
+    dispose() {
+      refreshHandlers.dispose();
+      watcher.dispose();
+    },
+  };
+}
+
+class SessionCacheWatcherManager {
+  constructor(provider) {
+    this.provider = provider;
+    this.current = null;
+    this.reset();
+  }
+
+  reset() {
+    this.disposeCurrent();
+    this.current = createSessionCacheWatcher(this.provider);
+  }
+
+  disposeCurrent() {
+    if (this.current) {
+      this.current.dispose();
+      this.current = null;
+    }
+  }
+
+  dispose() {
+    this.disposeCurrent();
+  }
+}
+
 function activate(context) {
   const provider = new SessionsProvider();
+  const watcherManager = new SessionCacheWatcherManager(provider);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("codexRadar.sessions", provider),
     vscode.commands.registerCommand("codexRadar.refresh", () => provider.refresh()),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("codexRadar.stateDir")) {
+        watcherManager.reset();
+        provider.refresh();
+      }
+    }),
+    watcherManager,
   );
 }
 
