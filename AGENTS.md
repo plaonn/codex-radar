@@ -9,12 +9,17 @@
 - 미래 방향이나 scope를 바꿀 때는 `docs/ROADMAP.md`를 읽는다.
 - tracked public 파일을 active task dashboard로 쓰지 않는다. 사용 가능하면 maintainer가 제공하는 private task surface를 사용한다.
 
+문서 관리:
+- `docs/REQUIREMENTS.md`는 root goal, RDD requirement hierarchy, 전체 rationale/failure-prevented index 역할을 유지한다.
+- requirement 문서가 특정 R의 세부 rationale, assumptions, derived specs/tests, decision history 때문에 root goal과 R 목록을 빠르게 훑기 어려워지면 강제 분리하지 말고 `docs/requirements/Rn-*.md` 같은 세부 문서 분리를 먼저 제안한다.
+- requirement를 분리할 때는 `docs/REQUIREMENTS.md`를 index/current-truth entry point로 남기고, README와 관련 링크를 함께 갱신한다.
+
 엔지니어링 규칙:
 - hook 경로는 빠르고, 로컬 전용이며, dependency-light하게 유지한다.
 - Codex transcript는 민감한 로컬 데이터로 취급한다. transcript, session state, raw hook log, private path, secret, generated runtime state를 commit하지 않는다.
 - event는 append-only로 기록하고, 최신 상태는 derived cache로 관리하는 방식을 선호한다.
 - 일반 개발 명령이나 테스트에서 전역 Codex config를 수정하지 않는다. `~/.codex/hooks.json` 자동 수정 대신 예시와 runbook을 제공한다.
-- `docs/SPEC.md`의 requirement가 dependency를 정당화하기 전까지는 stdlib-first Python을 유지한다.
+- `docs/REQUIREMENTS.md`와 `docs/SPEC.md`가 dependency를 정당화하기 전까지는 stdlib-first Python을 유지한다.
 - private task list, external task mapping detail, local thread ID, operator note를 tracked public 파일에 넣지 않는다.
 
 검증:
