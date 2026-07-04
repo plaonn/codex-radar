@@ -5,16 +5,30 @@
   "version": "0.1.7",
   "publisher": "plaonn",
   "license": "MIT",
+  "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
   "repository": {
     "type": "git",
     "url": "https://github.com/plaonn/codex-radar.git",
     "directory": "extensions/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/plaonn/codex-radar/issues"
   },
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "codex",
+    "radar",
+    "remote",
+    "sessions",
+    "ssh"
+  ],
+  "extensionKind": [
+    "workspace"
   ],
   "activationEvents": [
     "onView:codexRadar.sessionList",

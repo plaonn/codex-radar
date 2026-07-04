@@ -121,6 +121,7 @@ GUI read contract v1:
 - `sessions.json`은 GUI read contract v1의 입력이지만 영구 public API로 과도하게 고정하지 않는다.
 - GUI는 `codex-radar path`를 no-write state directory discovery command로 사용할 수 있다.
 - VS Code extension은 Remote SSH workspace extension host에서 실행되어 그 host의 filesystem 기준으로 state와 transcript를 읽는 것을 기본 전제로 한다. UI client machine의 Codex state를 읽기 위해 `extensionKind: ["ui"]`를 강제하지 않는다.
+- VS Code extension manifest는 `extensionKind: ["workspace"]`로 workspace extension host execution을 명시한다.
 - GUI implementation은 `SessionSource` 같은 얇은 read adapter를 두고 view/component code가 file read에 직접 결합하지 않게 한다.
 - GUI는 `sessions.json` 생성/변경/삭제를 read-only로 watch해 navigation view를 refresh할 수 있다. 이 watcher는 state directory나 cache file을 생성하지 않고, 변경된 cache를 다시 읽는 역할만 한다.
 - 나중에 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커지면 adapter를 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 교체할 수 있다.

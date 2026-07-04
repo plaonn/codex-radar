@@ -15,6 +15,21 @@ test("uses the current manual testing package version", () => {
   assert.equal(manifest.version, "0.1.7");
 });
 
+test("declares release metadata and workspace extension host scope", () => {
+  const manifest = readManifest();
+
+  assert.equal(manifest.publisher, "plaonn");
+  assert.equal(manifest.license, "MIT");
+  assert.equal(
+    manifest.homepage,
+    "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
+  );
+  assert.equal(manifest.bugs.url, "https://github.com/plaonn/codex-radar/issues");
+  assert.deepEqual(manifest.extensionKind, ["workspace"]);
+  assert.equal(manifest.keywords.includes("remote"), true);
+  assert.equal(manifest.keywords.includes("ssh"), true);
+});
+
 test("contributes refresh command as a view title action", () => {
   const manifest = readManifest();
   const refreshCommand = manifest.contributes.commands.find(

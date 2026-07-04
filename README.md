@@ -80,6 +80,18 @@ Future GUI integration은 작은 adapter를 통해 `sessions.json`을 직접 읽
 
 VS Code extension은 기본 navigation을 위해 `sessions.json`을 직접 읽고, retention 설정/정리는 `codex-radar config`와 `codex-radar prune` CLI를 호출한다. CLI executable은 extension setting `codexRadar.cliPath`로 override할 수 있다.
 
+## VS Code extension VSIX
+
+VS Code extension은 아직 Marketplace에 publish하지 않는다. 현재 release path는 local VSIX를 만들고, explicit approval 뒤 GitHub Release artifact로 attached distribution하는 방식이다.
+
+```bash
+npm --prefix extensions/vscode test
+npm --prefix extensions/vscode run package
+code --install-extension extensions/vscode/codex-radar-vscode-0.1.7.vsix --force
+```
+
+Remote SSH smoke test, privacy boundary, version policy, release checklist는 [extensions/vscode/README.md](extensions/vscode/README.md)에 둔다. 변경 이력은 [extensions/vscode/CHANGELOG.md](extensions/vscode/CHANGELOG.md)에 둔다. 생성된 `.vsix`는 gitignored artifact이며 repository에 commit하지 않는다.
+
 ## Hook 설정
 
 [docs/runbooks/install-hooks.md](docs/runbooks/install-hooks.md)를 따른다.
