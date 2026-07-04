@@ -15,6 +15,7 @@ const {
   projectLabel,
   sessionDescription,
   sessionLabel,
+  sessionTooltip,
 } = require("./sessionViewModel");
 const {
   registerRefreshHandlers,
@@ -40,13 +41,7 @@ class SessionItem extends vscode.TreeItem {
     this.contextValue = "codexRadar.session";
     this.session = session;
     this.description = sessionDescription(session);
-    this.tooltip = [
-      `Project: ${session.project || "-"}`,
-      `Status: ${session.display_status || "-"}`,
-      `Last event: ${session.last_event_name || "-"}`,
-      `Last seen: ${session.last_seen_at || "-"}`,
-      `Model: ${session.model || "-"}`,
-    ].join("\n");
+    this.tooltip = sessionTooltip(session);
     this.iconPath = statusIcon(session.display_status);
   }
 }
@@ -127,9 +122,10 @@ class SessionsProvider {
 
     if (this.groups.length === 0) {
       const label = this.statusFilter
-        ? `No sessions match status: ${this.statusFilter}`
-        : "No sessions indexed yet";
+        ? `No sessions match ${this.statusFilter}`
+        : "No sessions indexed";
       const item = new vscode.TreeItem(label);
+      item.description = this.statusFilter ? "Clear the filter to show all sessions." : "";
       item.iconPath = new vscode.ThemeIcon("info");
       return Promise.resolve([item]);
     }

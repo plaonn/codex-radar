@@ -8,7 +8,7 @@ Current scope:
 - Reads `sessions.json` through a small `SessionSource` adapter.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted.
 - Groups sessions by `project`.
-- Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and compact session rows.
+- Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and scan-friendly session rows.
 - Shows the total unfiltered attention count in the VS Code view badge.
 - Filters the view by display status with a temporary view-title action.
 - Provides a manual refresh command in the view title.

@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.2");
+  assert.equal(manifest.version, "0.1.3");
 });
 
 test("contributes refresh command as a view title action", () => {

@@ -5,9 +5,12 @@ const {
   attentionBadge,
   attentionCount,
   projectLabel,
+  relativeTimeText,
   sessionDescription,
   sessionLabel,
+  sessionTooltip,
   shortSessionId,
+  statusText,
 } = require("../src/sessionViewModel");
 
 test("shortens long session ids for scan-friendly rows", () => {
@@ -18,6 +21,7 @@ test("shortens long session ids for scan-friendly rows", () => {
 
 test("formats session rows without transcript content", () => {
   const session = {
+    current_tool: "Bash",
     session_id: "session-approval",
     display_status: "waiting_approval",
     last_event_name: "PermissionRequest",
@@ -25,11 +29,31 @@ test("formats session rows without transcript content", () => {
     last_seen_at: "2026-07-04T00:00:00+00:00",
   };
 
-  assert.equal(sessionLabel(session), "waiting_approval session-appr");
+  assert.equal(statusText("waiting_approval"), "Waiting approval");
+  assert.equal(sessionLabel(session), "Waiting approval - session-appr");
   assert.equal(
-    sessionDescription(session),
-    "PermissionRequest | gpt-5 | 2026-07-04T00:00:00+00:00",
+    sessionDescription(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }),
+    "Bash | PermissionRequest | gpt-5 | 7m ago",
   );
+  assert.equal(sessionTooltip(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }), [
+    "Project: -",
+    "Status: Waiting approval",
+    "Last event: PermissionRequest",
+    "Last seen: 7m ago",
+    "Model: gpt-5",
+    "Current tool: Bash",
+  ].join("\n"));
+});
+
+test("formats relative session times for compact scanning", () => {
+  const nowMs = Date.parse("2026-07-04T12:00:00+00:00");
+
+  assert.equal(relativeTimeText("2026-07-04T12:00:00+00:00", { nowMs }), "now");
+  assert.equal(relativeTimeText("2026-07-04T11:59:00+00:00", { nowMs }), "1m ago");
+  assert.equal(relativeTimeText("2026-07-04T10:00:00+00:00", { nowMs }), "2h ago");
+  assert.equal(relativeTimeText("2026-07-02T12:00:00+00:00", { nowMs }), "2d ago");
+  assert.equal(relativeTimeText("2026-06-20T12:00:00+00:00", { nowMs }), "2026-06-20");
+  assert.equal(relativeTimeText("not-a-date", { nowMs }), "");
 });
 
 test("summarizes project attention in group labels", () => {
@@ -40,7 +64,7 @@ test("summarizes project attention in group labels", () => {
   ];
 
   assert.equal(attentionCount(sessions), 2);
-  assert.equal(projectLabel("codex-radar", sessions), "codex-radar (2 attention / 3 total)");
+  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 2 attention / 3");
   assert.equal(projectLabel("idle-project", [{ display_status: "done" }]), "idle-project (1)");
 });
 

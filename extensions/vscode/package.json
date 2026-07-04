@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "Read-only VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "plaonn",
   "license": "MIT",
   "repository": {

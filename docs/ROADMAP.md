@@ -22,6 +22,14 @@
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
 - CLI/export contract로 전환하는 시점은 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커질 때 재검토한다.
 
+## VS Code Extension Release
+
+- 정식 VS Code extension 출시는 GUI surface가 Remote SSH와 official Codex handoff에서 유용하다는 검증 뒤의 staged milestone으로 둔다.
+- Release readiness는 marketplace publish와 분리한다.
+- Release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
+- GitHub Release에 VSIX를 attached artifact로 배포하는 경로를 먼저 안정화한다.
+- Marketplace publish는 publisher/namespace, marketplace metadata, asset policy, release 운영 방식이 정해진 뒤 별도 milestone으로 진행한다.
+
 ## Parking Lot
 
 - stdlib MVP가 유용하다는 것이 확인된 뒤 Rich/Textual TUI 검토.
