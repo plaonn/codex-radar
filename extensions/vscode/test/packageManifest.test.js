@@ -43,3 +43,21 @@ test("contributes status filter as a temporary view title action", () => {
     false,
   );
 });
+
+test("contributes transcript preview as an explicit session row action", () => {
+  const manifest = readManifest();
+  const previewCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.previewTranscript",
+  );
+  const itemMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.previewTranscript",
+  );
+
+  assert.equal(previewCommand.icon, "$(open-preview)");
+  assert.equal(
+    manifest.activationEvents.includes("onCommand:codexRadar.previewTranscript"),
+    true,
+  );
+  assert.equal(itemMenu.when, "view == codexRadar.sessions && viewItem == codexRadar.session");
+  assert.equal(itemMenu.group, "inline@1");
+});

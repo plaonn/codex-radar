@@ -18,6 +18,10 @@ const {
   registerRefreshHandlers,
   sessionCacheWatchTarget,
 } = require("./sessionWatcher");
+const {
+  previewDocumentContent,
+  skimTranscript,
+} = require("./transcriptPreview");
 
 class ProjectItem extends vscode.TreeItem {
   constructor(project, sessions) {
@@ -32,6 +36,7 @@ class SessionItem extends vscode.TreeItem {
   constructor(session) {
     super(sessionLabel(session), vscode.TreeItemCollapsibleState.None);
     this.contextValue = "codexRadar.session";
+    this.session = session;
     this.description = sessionDescription(session);
     this.tooltip = [
       `Project: ${session.project || "-"}`,
@@ -41,6 +46,20 @@ class SessionItem extends vscode.TreeItem {
       `Model: ${session.model || "-"}`,
     ].join("\n");
     this.iconPath = statusIcon(session.display_status);
+  }
+}
+
+class TranscriptPreviewProvider {
+  constructor() {
+    this.documents = new Map();
+  }
+
+  setContent(uri, content) {
+    this.documents.set(uri.toString(), content);
+  }
+
+  provideTextDocumentContent(uri) {
+    return this.documents.get(uri.toString()) || "";
   }
 }
 
@@ -190,13 +209,57 @@ async function chooseStatusFilter(provider) {
   }
 }
 
+function previewUriForSession(session) {
+  const sessionId = String(session.session_id || "unknown");
+  const safeSessionId = sessionId.replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 80) || "unknown";
+  return vscode.Uri.from({
+    scheme: "codex-radar-preview",
+    path: `/${safeSessionId}.txt`,
+    query: String(Date.now()),
+  });
+}
+
+async function previewTranscript(target, previewProvider) {
+  const session = target && target.session ? target.session : target;
+  if (!session || typeof session !== "object") {
+    await vscode.window.showWarningMessage("Select a Codex Radar session to preview.");
+    return;
+  }
+  if (!session.transcript_path) {
+    await vscode.window.showWarningMessage("Transcript path is not available for this session.");
+    return;
+  }
+
+  let entries;
+  try {
+    entries = skimTranscript(session.transcript_path);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      await vscode.window.showWarningMessage("Transcript file not found.");
+      return;
+    }
+    await vscode.window.showErrorMessage("Could not read transcript preview.");
+    return;
+  }
+
+  const uri = previewUriForSession(session);
+  previewProvider.setContent(uri, previewDocumentContent(session, entries));
+  const document = await vscode.workspace.openTextDocument(uri);
+  await vscode.window.showTextDocument(document, { preview: true });
+}
+
 function activate(context) {
   const provider = new SessionsProvider();
+  const previewProvider = new TranscriptPreviewProvider();
   const watcherManager = new SessionCacheWatcherManager(provider);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("codexRadar.sessions", provider),
+    vscode.workspace.registerTextDocumentContentProvider("codex-radar-preview", previewProvider),
     vscode.commands.registerCommand("codexRadar.refresh", () => provider.refresh()),
     vscode.commands.registerCommand("codexRadar.filterStatus", () => chooseStatusFilter(provider)),
+    vscode.commands.registerCommand("codexRadar.previewTranscript", (target) =>
+      previewTranscript(target, previewProvider),
+    ),
     vscode.workspace.onDidChangeConfiguration((event) => {
       const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
       if (stateDirChanged) {
@@ -213,5 +276,7 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
+  previewUriForSession,
   statusFilterItems,
+  TranscriptPreviewProvider,
 };

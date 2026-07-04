@@ -1,7 +1,7 @@
 {
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
-  "description": "Read-only VS Code view for local codex-radar sessions.",
+  "description": "Read-only VS Code view for extension host-local codex-radar sessions.",
   "version": "0.1.0",
   "publisher": "plaonn",
   "license": "MIT",
@@ -14,7 +14,8 @@
   "activationEvents": [
     "onView:codexRadar.sessions",
     "onCommand:codexRadar.refresh",
-    "onCommand:codexRadar.filterStatus"
+    "onCommand:codexRadar.filterStatus",
+    "onCommand:codexRadar.previewTranscript"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -28,6 +29,11 @@
         "command": "codexRadar.filterStatus",
         "title": "Codex Radar: Filter by Status",
         "icon": "$(filter)"
+      },
+      {
+        "command": "codexRadar.previewTranscript",
+        "title": "Codex Radar: Preview Transcript",
+        "icon": "$(open-preview)"
       }
     ],
     "configuration": {
@@ -59,6 +65,13 @@
           "command": "codexRadar.refresh",
           "when": "view == codexRadar.sessions",
           "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codexRadar.previewTranscript",
+          "when": "view == codexRadar.sessions && viewItem == codexRadar.session",
+          "group": "inline@1"
         }
       ]
     }

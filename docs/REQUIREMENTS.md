@@ -2,14 +2,14 @@
 
 ## Root Goal
 
-`codex-radar`는 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 로컬 Codex를 함께 사용할 때, Codex thread를 프로젝트 단위로 구분하고, 대기/완료/승인요청 상태와 확인할 가치가 있는 최근 transcript를 빠르게 파악하게 해준다.
+`codex-radar`는 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 remote environment 안의 Codex를 함께 사용할 때, Codex thread를 프로젝트 단위로 구분하고, 대기/완료/승인요청 상태와 확인할 가치가 있는 최근 transcript를 빠르게 파악하게 해준다.
 
 ## Requirement Hierarchy
 
 ### R0: 원격 Codex thread visibility
 
 - Status: confirmed
-- Requirement: 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 로컬 Codex를 함께 사용할 때, Codex thread의 프로젝트 소속, 상태, 확인 필요성을 빠르게 파악할 수 있어야 한다.
+- Requirement: 추가 프로그램 설치가 어려운 원격 개발 환경에서 VS Code Remote SSH와 remote environment 안의 Codex를 함께 사용할 때, Codex thread의 프로젝트 소속, 상태, 확인 필요성을 빠르게 파악할 수 있어야 한다.
 - Rationale: VS Code용 Codex extension만으로는 여러 repository의 thread를 프로젝트 단위로 구분하고 상태를 한눈에 파악하기 어렵다.
 - Failure prevented: 어느 Codex 대화가 어느 repository 작업인지 잃어버리거나, 승인요청/완료/대기 thread를 놓치는 상태.
 - Assumptions: Codex lifecycle hook이 session과 transcript metadata를 제공한다.
@@ -58,7 +58,7 @@
 - Requirement: 사용자가 전체 transcript를 열지 않고도 최근 맥락을 훑을 수 있어야 하며, transcript skim output은 secret-like token과 home path를 best-effort로 redact해야 한다.
 - Rationale: 최근 context 확인 비용을 줄이되 transcript와 hook payload가 민감한 로컬 데이터라는 전제를 유지해야 한다.
 - Failure prevented: 최근 context를 확인하려고 매번 전체 transcript를 열거나, skim 과정에서 민감 정보가 부주의하게 노출되는 문제.
-- Derived specs/tests: `codex-radar transcript`, TUI preview, transcript redaction tests.
+- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code explicit transcript preview, transcript redaction tests.
 - Revisit when: transcript format이나 redaction threat model이 바뀔 때.
 
 ### R6: privacy and automation boundary
@@ -99,10 +99,10 @@
 #### R7c: GUI privacy boundary
 
 - Status: confirmed direction
-- Requirement: GUI는 local `codex-radar` state를 읽되 transcript/session metadata를 외부로 전송하지 않고, raw hook event log나 raw transcript는 기본 navigation에서 직접 노출하지 않아야 한다.
+- Requirement: GUI는 host-local `codex-radar` state를 읽되 transcript/session metadata를 외부로 전송하지 않고, raw hook event log나 raw transcript는 기본 navigation에서 직접 노출하지 않아야 한다.
 - Rationale: GUI는 편의 표면일 뿐 privacy boundary를 완화하지 않아야 한다.
 - Failure prevented: GUI 통합 과정에서 transcript path, prompt, code, secret-like content가 부주의하게 표시되거나 외부로 전송되는 문제.
-- Derived specs/tests: sensitive field display rules, explicit user action before transcript preview, best-effort redacted skim reuse.
+- Derived specs/tests: sensitive field display rules, explicit user action before transcript preview, VS Code readonly preview document, best-effort redacted skim reuse.
 
 #### R7d: GUI fallback continuity
 
@@ -114,7 +114,7 @@
 
 ## Rationale
 
-VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 먼저 해결할 수 있다.
+VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.
 
 ## Failure Prevented
 

@@ -94,7 +94,7 @@ display-only status:
 
 ## Planned GUI Integration Contract
 
-첫 GUI milestone은 VS Code extension 같은 GUI surface가 local `codex-radar` state를 읽어 프로젝트 단위 conversation list와 thread attention state를 보여주는 read-only dashboard다. 이 section은 구현 완료 contract가 아니라 R7 implementation을 시작하기 전 유지해야 하는 planned boundary다.
+첫 GUI milestone은 VS Code extension 같은 GUI surface가 extension host-local `codex-radar` state를 읽어 프로젝트 단위 conversation list와 thread attention state를 보여주는 read-only dashboard다. Remote SSH 사용 시 기본 관심사는 VS Code UI client machine의 Codex state가 아니라 remote workspace extension host 안의 Codex state와 transcript다.
 
 VS Code extension scaffold는 `extensions/vscode/`에 둔다. Python core는 stdlib-first를 유지하고, Node/runtime/package metadata는 extension subtree에 격리한다. 별도 repository 분리는 marketplace, release, review lifecycle이 실제로 갈라질 때 재검토한다.
 
@@ -103,6 +103,7 @@ GUI read contract v1:
 - 첫 milestone은 `sessions.json` 직접 read로 시작한다.
 - `sessions.json`은 GUI read contract v1의 입력이지만 영구 public API로 과도하게 고정하지 않는다.
 - GUI는 `codex-radar path`를 no-write state directory discovery command로 사용할 수 있다.
+- VS Code extension은 Remote SSH workspace extension host에서 실행되어 그 host의 filesystem 기준으로 state와 transcript를 읽는 것을 기본 전제로 한다. UI client machine의 Codex state를 읽기 위해 `extensionKind: ["ui"]`를 강제하지 않는다.
 - GUI implementation은 `SessionSource` 같은 얇은 read adapter를 두고 view/component code가 file read에 직접 결합하지 않게 한다.
 - GUI는 `sessions.json` 생성/변경/삭제를 read-only로 watch해 navigation view를 refresh할 수 있다. 이 watcher는 state directory나 cache file을 생성하지 않고, 변경된 cache를 다시 읽는 역할만 한다.
 - 나중에 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커지면 adapter를 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 교체할 수 있다.
@@ -124,6 +125,7 @@ GUI privacy/action boundary v1:
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
 - GUI는 transcript preview를 기본 list에 자동 노출하지 않는다. transcript skim은 사용자 명시 action 뒤에만 수행하고 기존 best-effort redaction semantics를 재사용한다.
+- VS Code transcript preview는 session row의 명시적 command로만 열며, readonly preview document에 식별 가능한 최근 skim만 표시한다. 기본 navigation label, description, tooltip에는 transcript content나 raw transcript path를 넣지 않는다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.
 
 ## Automation Boundary
