@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  attentionBadge,
   attentionCount,
   projectLabel,
   sessionDescription,
@@ -41,4 +42,25 @@ test("summarizes project attention in group labels", () => {
   assert.equal(attentionCount(sessions), 2);
   assert.equal(projectLabel("codex-radar", sessions), "codex-radar (2 attention / 3 total)");
   assert.equal(projectLabel("idle-project", [{ display_status: "done" }]), "idle-project (1)");
+});
+
+test("builds an attention badge from attention statuses only", () => {
+  const sessions = [
+    { display_status: "waiting_approval" },
+    { display_status: "running" },
+    { display_status: "tool_running" },
+    { display_status: "stale" },
+    { display_status: "done" },
+    { display_status: "unknown" },
+  ];
+
+  assert.deepEqual(attentionBadge(sessions), {
+    value: 4,
+    tooltip: "4 attention sessions",
+  });
+  assert.equal(attentionBadge([{ display_status: "done" }]), undefined);
+  assert.deepEqual(attentionBadge([{ display_status: "stale" }]), {
+    value: 1,
+    tooltip: "1 attention session",
+  });
 });

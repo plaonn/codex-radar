@@ -10,6 +10,7 @@ const {
   STATUS_FILTER_VALUES,
 } = require("./sessionSource");
 const {
+  attentionBadge,
   projectLabel,
   sessionDescription,
   sessionLabel,
@@ -85,6 +86,7 @@ class SessionsProvider {
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     this.lastError = "";
     this.statusFilter = "";
+    this.sessions = [];
     this.groups = [];
     this.refresh();
   }
@@ -92,10 +94,13 @@ class SessionsProvider {
   refresh() {
     try {
       const stateDir = configuredStateDir();
-      const sessions = filterSessionsByStatus(loadSessionCache(stateDir), this.statusFilter);
-      this.groups = groupSessionsByProject(sessions);
+      const sessions = loadSessionCache(stateDir);
+      this.sessions = sessions;
+      const visibleSessions = filterSessionsByStatus(sessions, this.statusFilter);
+      this.groups = groupSessionsByProject(visibleSessions);
       this.lastError = "";
     } catch (error) {
+      this.sessions = [];
       this.groups = [];
       this.lastError = error instanceof Error ? error.message : String(error);
     }
@@ -139,6 +144,14 @@ class SessionsProvider {
     this.statusFilter = normalizeStatusFilter(statusFilter);
     this.refresh();
   }
+
+  attentionBadge() {
+    return attentionBadge(this.sessions);
+  }
+}
+
+function syncTreeViewBadge(treeView, provider) {
+  treeView.badge = provider.attentionBadge();
 }
 
 function configuredStateDir() {
@@ -149,12 +162,15 @@ function configuredStateDir() {
   return defaultStateDir();
 }
 
-function createSessionCacheWatcher(provider) {
+function createSessionCacheWatcher(provider, afterRefresh = () => {}) {
   const target = sessionCacheWatchTarget(configuredStateDir());
   const watcher = vscode.workspace.createFileSystemWatcher(
     new vscode.RelativePattern(target.base, target.pattern),
   );
-  const refreshHandlers = registerRefreshHandlers(watcher, () => provider.refresh());
+  const refreshHandlers = registerRefreshHandlers(watcher, () => {
+    provider.refresh();
+    afterRefresh();
+  });
 
   return {
     dispose() {
@@ -165,15 +181,16 @@ function createSessionCacheWatcher(provider) {
 }
 
 class SessionCacheWatcherManager {
-  constructor(provider) {
+  constructor(provider, afterRefresh = () => {}) {
     this.provider = provider;
+    this.afterRefresh = afterRefresh;
     this.current = null;
     this.reset();
   }
 
   reset() {
     this.disposeCurrent();
-    this.current = createSessionCacheWatcher(this.provider);
+    this.current = createSessionCacheWatcher(this.provider, this.afterRefresh);
   }
 
   disposeCurrent() {
@@ -251,12 +268,24 @@ async function previewTranscript(target, previewProvider) {
 function activate(context) {
   const provider = new SessionsProvider();
   const previewProvider = new TranscriptPreviewProvider();
-  const watcherManager = new SessionCacheWatcherManager(provider);
+  const treeView = vscode.window.createTreeView("codexRadar.sessions", {
+    treeDataProvider: provider,
+  });
+  syncTreeViewBadge(treeView, provider);
+  const watcherManager = new SessionCacheWatcherManager(provider, () =>
+    syncTreeViewBadge(treeView, provider),
+  );
   context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("codexRadar.sessions", provider),
+    treeView,
     vscode.workspace.registerTextDocumentContentProvider("codex-radar-preview", previewProvider),
-    vscode.commands.registerCommand("codexRadar.refresh", () => provider.refresh()),
-    vscode.commands.registerCommand("codexRadar.filterStatus", () => chooseStatusFilter(provider)),
+    vscode.commands.registerCommand("codexRadar.refresh", () => {
+      provider.refresh();
+      syncTreeViewBadge(treeView, provider);
+    }),
+    vscode.commands.registerCommand("codexRadar.filterStatus", async () => {
+      await chooseStatusFilter(provider);
+      syncTreeViewBadge(treeView, provider);
+    }),
     vscode.commands.registerCommand("codexRadar.previewTranscript", (target) =>
       previewTranscript(target, previewProvider),
     ),
@@ -265,6 +294,7 @@ function activate(context) {
       if (stateDirChanged) {
         watcherManager.reset();
         provider.refresh();
+        syncTreeViewBadge(treeView, provider);
       }
     }),
     watcherManager,
@@ -277,6 +307,7 @@ module.exports = {
   activate,
   deactivate,
   previewUriForSession,
+  syncTreeViewBadge,
   statusFilterItems,
   TranscriptPreviewProvider,
 };

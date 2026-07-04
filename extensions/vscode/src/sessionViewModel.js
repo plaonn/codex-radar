@@ -34,6 +34,17 @@ function attentionCount(sessions) {
   return sessions.filter((session) => ATTENTION_STATUSES.has(session.display_status)).length;
 }
 
+function attentionBadge(sessions) {
+  const attention = attentionCount(sessions);
+  if (attention === 0) {
+    return undefined;
+  }
+  return {
+    value: attention,
+    tooltip: `${attention} attention session${attention === 1 ? "" : "s"}`,
+  };
+}
+
 function projectLabel(project, sessions) {
   const attention = attentionCount(sessions);
   const total = sessions.length;
@@ -44,6 +55,7 @@ function projectLabel(project, sessions) {
 }
 
 module.exports = {
+  attentionBadge,
   attentionCount,
   projectLabel,
   sessionDescription,
