@@ -70,7 +70,8 @@ or ~/.local/state/codex-radar
 
 ## RDD 표면
 
-- [docs/SPEC.md](docs/SPEC.md): 현재 동작, requirement, data model, automation/privacy boundary.
+- [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md): root goal, RDD requirement hierarchy, rationale, failure prevented.
+- [docs/SPEC.md](docs/SPEC.md): 현재 terminal MVP 동작, data model, automation/privacy boundary.
 - [docs/ROADMAP.md](docs/ROADMAP.md): 미래 방향과 non-goal.
 
 Active task tracking은 tracked public 파일에 저장하지 않는다.

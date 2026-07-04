@@ -4,6 +4,7 @@
 
 편집 전:
 - 이 파일을 읽는다.
+- 현재 requirement와 RDD hierarchy는 `docs/REQUIREMENTS.md`를 읽는다.
 - 현재 동작과 계약은 `docs/SPEC.md`를 읽는다.
 - 미래 방향이나 scope를 바꿀 때는 `docs/ROADMAP.md`를 읽는다.
 - tracked public 파일을 active task dashboard로 쓰지 않는다. 사용 가능하면 maintainer가 제공하는 private task surface를 사용한다.
