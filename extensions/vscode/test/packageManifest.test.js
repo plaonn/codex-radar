@@ -61,3 +61,19 @@ test("contributes transcript preview as an explicit session row action", () => {
   assert.equal(itemMenu.when, "view == codexRadar.sessions && viewItem == codexRadar.session");
   assert.equal(itemMenu.group, "inline@1");
 });
+
+test("contributes experimental open in Codex as a session row action", () => {
+  const manifest = readManifest();
+  const openCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.openInCodex",
+  );
+  const itemMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.openInCodex",
+  );
+
+  assert.equal(openCommand.icon, "$(link-external)");
+  assert.equal(openCommand.title, "Codex Radar: Open in Codex (Experimental)");
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openInCodex"), true);
+  assert.equal(itemMenu.when, "view == codexRadar.sessions && viewItem == codexRadar.session");
+  assert.equal(itemMenu.group, "inline@2");
+});

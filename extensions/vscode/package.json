@@ -15,7 +15,8 @@
     "onView:codexRadar.sessions",
     "onCommand:codexRadar.refresh",
     "onCommand:codexRadar.filterStatus",
-    "onCommand:codexRadar.previewTranscript"
+    "onCommand:codexRadar.previewTranscript",
+    "onCommand:codexRadar.openInCodex"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -34,6 +35,11 @@
         "command": "codexRadar.previewTranscript",
         "title": "Codex Radar: Preview Transcript",
         "icon": "$(open-preview)"
+      },
+      {
+        "command": "codexRadar.openInCodex",
+        "title": "Codex Radar: Open in Codex (Experimental)",
+        "icon": "$(link-external)"
       }
     ],
     "configuration": {
@@ -72,6 +78,11 @@
           "command": "codexRadar.previewTranscript",
           "when": "view == codexRadar.sessions && viewItem == codexRadar.session",
           "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.openInCodex",
+          "when": "view == codexRadar.sessions && viewItem == codexRadar.session",
+          "group": "inline@2"
         }
       ]
     }

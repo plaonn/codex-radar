@@ -1,6 +1,7 @@
 const path = require("node:path");
 const vscode = require("vscode");
 
+const { officialCodexThreadUriString } = require("./codexLink");
 const {
   defaultStateDir,
   filterSessionsByStatus,
@@ -265,6 +266,34 @@ async function previewTranscript(target, previewProvider) {
   await vscode.window.showTextDocument(document, { preview: true });
 }
 
+function officialCodexThreadUri(session) {
+  const uri = officialCodexThreadUriString(session);
+  if (!uri) {
+    return null;
+  }
+  return vscode.Uri.parse(uri);
+}
+
+async function openOfficialCodexThread(target) {
+  const session = target && target.session ? target.session : target;
+  if (!session || typeof session !== "object") {
+    await vscode.window.showWarningMessage("Select a Codex Radar session to open in Codex.");
+    return false;
+  }
+
+  const uri = officialCodexThreadUri(session);
+  if (!uri) {
+    await vscode.window.showWarningMessage("Codex session id is not available for this session.");
+    return false;
+  }
+
+  const opened = await vscode.env.openExternal(uri);
+  if (!opened) {
+    await vscode.window.showWarningMessage("Could not open this session in the Codex extension.");
+  }
+  return opened;
+}
+
 function activate(context) {
   const provider = new SessionsProvider();
   const previewProvider = new TranscriptPreviewProvider();
@@ -289,6 +318,9 @@ function activate(context) {
     vscode.commands.registerCommand("codexRadar.previewTranscript", (target) =>
       previewTranscript(target, previewProvider),
     ),
+    vscode.commands.registerCommand("codexRadar.openInCodex", (target) =>
+      openOfficialCodexThread(target),
+    ),
     vscode.workspace.onDidChangeConfiguration((event) => {
       const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
       if (stateDirChanged) {
@@ -307,6 +339,8 @@ module.exports = {
   activate,
   deactivate,
   previewUriForSession,
+  officialCodexThreadUri,
+  openOfficialCodexThread,
   syncTreeViewBadge,
   statusFilterItems,
   TranscriptPreviewProvider,
