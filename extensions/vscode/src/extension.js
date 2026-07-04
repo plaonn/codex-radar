@@ -3,8 +3,10 @@ const vscode = require("vscode");
 
 const {
   defaultStateDir,
+  filterSessionsByStatus,
   groupSessionsByProject,
   loadSessionCache,
+  normalizeStatusFilter,
 } = require("./sessionSource");
 const {
   projectLabel,
@@ -62,6 +64,7 @@ class SessionsProvider {
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     this.lastError = "";
+    this.statusFilter = "";
     this.groups = [];
     this.refresh();
   }
@@ -69,7 +72,9 @@ class SessionsProvider {
   refresh() {
     try {
       const stateDir = configuredStateDir();
-      this.groups = groupSessionsByProject(loadSessionCache(stateDir));
+      this.statusFilter = configuredStatusFilter();
+      const sessions = filterSessionsByStatus(loadSessionCache(stateDir), this.statusFilter);
+      this.groups = groupSessionsByProject(sessions);
       this.lastError = "";
     } catch (error) {
       this.groups = [];
@@ -96,7 +101,10 @@ class SessionsProvider {
     }
 
     if (this.groups.length === 0) {
-      const item = new vscode.TreeItem("No sessions indexed yet");
+      const label = this.statusFilter
+        ? `No sessions match status: ${this.statusFilter}`
+        : "No sessions indexed yet";
+      const item = new vscode.TreeItem(label);
       item.iconPath = new vscode.ThemeIcon("info");
       return Promise.resolve([item]);
     }
@@ -115,6 +123,11 @@ function configuredStateDir() {
     return path.resolve(configured.replace(/^~(?=$|[\\/])/, process.env.HOME || "~"));
   }
   return defaultStateDir();
+}
+
+function configuredStatusFilter() {
+  const configured = vscode.workspace.getConfiguration("codexRadar").get("statusFilter", "all");
+  return normalizeStatusFilter(configured);
 }
 
 function createSessionCacheWatcher(provider) {
@@ -163,8 +176,12 @@ function activate(context) {
     vscode.window.registerTreeDataProvider("codexRadar.sessions", provider),
     vscode.commands.registerCommand("codexRadar.refresh", () => provider.refresh()),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("codexRadar.stateDir")) {
+      const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
+      const statusFilterChanged = event.affectsConfiguration("codexRadar.statusFilter");
+      if (stateDirChanged) {
         watcherManager.reset();
+      }
+      if (stateDirChanged || statusFilterChanged) {
         provider.refresh();
       }
     }),

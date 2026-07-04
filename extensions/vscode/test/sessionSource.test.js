@@ -6,8 +6,10 @@ const test = require("node:test");
 
 const {
   defaultStateDir,
+  filterSessionsByStatus,
   groupSessionsByProject,
   loadSessionCache,
+  normalizeStatusFilter,
   sessionDisplayStatus,
   sessionsFromPayload,
 } = require("../src/sessionSource");
@@ -88,4 +90,20 @@ test("resolves state directory like codex-radar core", () => {
     "/home/test/state/codex-radar",
   );
   assert.equal(defaultStateDir({}, "/home/test"), "/home/test/.local/state/codex-radar");
+});
+
+test("filters sessions by display status", () => {
+  const sessions = [
+    { session_id: "approval", display_status: "waiting_approval" },
+    { session_id: "stale", display_status: "stale" },
+    { session_id: "done", display_status: "done" },
+  ];
+
+  assert.equal(normalizeStatusFilter("all"), "");
+  assert.equal(normalizeStatusFilter(""), "");
+  assert.deepEqual(filterSessionsByStatus(sessions, "all"), sessions);
+  assert.deepEqual(
+    filterSessionsByStatus(sessions, "waiting_approval").map((session) => session.session_id),
+    ["approval"],
+  );
 });

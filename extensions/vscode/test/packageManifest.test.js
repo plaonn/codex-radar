@@ -22,3 +22,20 @@ test("contributes refresh command as a view title action", () => {
   assert.equal(viewTitleMenu.when, "view == codexRadar.sessions");
   assert.equal(viewTitleMenu.group, "navigation");
 });
+
+test("contributes a status filter setting with supported display statuses", () => {
+  const manifest = readManifest();
+  const statusFilter = manifest.contributes.configuration.properties["codexRadar.statusFilter"];
+
+  assert.equal(statusFilter.default, "all");
+  assert.deepEqual(statusFilter.enum, [
+    "all",
+    "active",
+    "running",
+    "tool_running",
+    "waiting_approval",
+    "done",
+    "stale",
+    "unknown",
+  ]);
+});

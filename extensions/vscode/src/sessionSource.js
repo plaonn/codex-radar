@@ -5,6 +5,16 @@ const path = require("node:path");
 const CACHE_SCHEMA_VERSION = 1;
 const STALE_SESSION_SECONDS = 30 * 60;
 const STALE_ELIGIBLE_STATUSES = new Set(["active", "running", "tool_running"]);
+const STATUS_FILTER_VALUES = Object.freeze([
+  "all",
+  "active",
+  "running",
+  "tool_running",
+  "waiting_approval",
+  "done",
+  "stale",
+  "unknown",
+]);
 
 function expandHome(value, homeDir = os.homedir()) {
   if (!value) {
@@ -98,6 +108,19 @@ function loadSessionCache(stateDir, options = {}) {
   }
 }
 
+function normalizeStatusFilter(value) {
+  const status = String(value || "").trim();
+  return status && status !== "all" ? status : "";
+}
+
+function filterSessionsByStatus(sessions, statusFilter) {
+  const status = normalizeStatusFilter(statusFilter);
+  if (!status) {
+    return sessions;
+  }
+  return sessions.filter((session) => String(session.display_status || "") === status);
+}
+
 function projectName(session) {
   return String(session.project || "-");
 }
@@ -116,12 +139,15 @@ function groupSessionsByProject(sessions) {
 
 module.exports = {
   CACHE_SCHEMA_VERSION,
+  STATUS_FILTER_VALUES,
   STALE_SESSION_SECONDS,
   defaultStateDir,
   expandHome,
+  filterSessionsByStatus,
   groupSessionsByProject,
   isStaleSession,
   loadSessionCache,
+  normalizeStatusFilter,
   sessionCachePath,
   sessionDisplayStatus,
   sessionsFromPayload,
