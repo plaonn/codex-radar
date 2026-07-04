@@ -12,10 +12,13 @@
 
 ## GUI Integration Criteria
 
-- 첫 GUI milestone은 local `codex-radar` state를 읽어 프로젝트 단위 conversation list를 보여줘야 한다.
+- 첫 GUI milestone은 `sessions.json`을 직접 읽는 GUI read contract v1로 시작한다.
+- GUI implementation은 read adapter를 통해 state source를 캡슐화하고, 나중에 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 전환할 수 있어야 한다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `done`, `stale`)를 navigation 안에서 구분해야 한다.
-- GUI notification은 thread 상태와 project grouping 안에서 설계하며, OS/external notification보다 VS Code workflow 통합을 우선한다.
+- 첫 GUI notification surface는 project grouping 안의 badge/highlight 같은 in-surface cue로 제한한다.
+- 첫 GUI action boundary는 read-only dashboard다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
+- CLI/export contract로 전환하는 시점은 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커질 때 재검토한다.
 
 ## Parking Lot
 

@@ -72,12 +72,45 @@
 
 ### R7: future GUI integration
 
-- Status: confirmed direction, spec pending
+- Status: confirmed direction, staged specs pending implementation
 - Requirement: 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 thread 상태/알림을 통합해야 한다.
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Revisit when: GUI integration milestone을 시작할 때.
+- Derived specs/tests: planned GUI read contract v1, project-grouped navigation, in-surface attention cues, read-only first milestone, extension surface boundary.
+- Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
+
+#### R7a: GUI project navigation
+
+- Status: confirmed direction
+- Requirement: GUI는 프로젝트 단위로 묶인 conversation list를 primary navigation으로 제공해야 한다.
+- Rationale: VS Code용 Codex extension의 기본 대화 목록은 프로젝트별 switching에 충분하지 않으므로, GUI 통합의 첫 가치는 project grouping이다.
+- Failure prevented: terminal fallback을 열지 않으면 프로젝트별 Codex thread를 찾기 어려운 문제.
+- Derived specs/tests: GUI project grouping rules, direct `sessions.json` read contract v1, future extension view tests.
+
+#### R7b: GUI attention state
+
+- Status: confirmed direction
+- Requirement: GUI는 `waiting_approval`, `running`, `done`, `stale` 같은 thread 상태를 navigation 안에서 구분하고, 첫 milestone에서는 VS Code surface 안의 badge/highlight 같은 in-surface cue만 사용해야 한다.
+- Rationale: 사용자는 VS Code workflow 안에서 어떤 thread가 주의가 필요한지 확인해야 하지만, OS/external notification은 content template과 redaction policy 없이는 scope가 커진다.
+- Failure prevented: thread 상태를 놓치거나, 초기 GUI milestone이 OS/external notification 설계로 과도하게 확장되는 문제.
+- Derived specs/tests: GUI notification rules, in-surface cue only, no OS/external notification before explicit opt-in milestone.
+
+#### R7c: GUI privacy boundary
+
+- Status: confirmed direction
+- Requirement: GUI는 local `codex-radar` state를 읽되 transcript/session metadata를 외부로 전송하지 않고, raw hook event log나 raw transcript는 기본 navigation에서 직접 노출하지 않아야 한다.
+- Rationale: GUI는 편의 표면일 뿐 privacy boundary를 완화하지 않아야 한다.
+- Failure prevented: GUI 통합 과정에서 transcript path, prompt, code, secret-like content가 부주의하게 표시되거나 외부로 전송되는 문제.
+- Derived specs/tests: sensitive field display rules, explicit user action before transcript preview, best-effort redacted skim reuse.
+
+#### R7d: GUI fallback continuity
+
+- Status: confirmed direction
+- Requirement: GUI가 안정화될 때까지 terminal MVP와 foreground watcher는 fallback workflow로 유지되어야 한다.
+- Rationale: GUI integration은 최종 표면이지만, 원격 환경에서는 terminal fallback이 초기 운영 안정성을 제공한다.
+- Failure prevented: GUI 구현 중 terminal workflow를 잃어 실제 thread visibility가 퇴보하는 문제.
+- Derived specs/tests: terminal MVP remains supported while GUI integration is experimental.
 
 ## Rationale
 
@@ -91,4 +124,3 @@ VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex
 - 원격 개발 중 VS Code 안에서 확인해야 할 Codex thread 상태를 놓치는 문제.
 - 최근 context를 확인하려고 매번 전체 transcript를 여는 문제.
 - 불안정한 VS Code extension 내부 구현에 monitoring을 결합하는 문제.
-

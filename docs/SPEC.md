@@ -90,6 +90,34 @@ display-only status:
 
 현재 terminal MVP는 project column, TUI project group header, `sessions --group-project`, `--project` filter로 프로젝트 단위 구분과 narrowing을 제공한다. 향후 GUI 통합에서는 프로젝트 단위로 묶인 conversation list가 primary navigation surface가 되어야 한다.
 
+## Planned GUI Integration Contract
+
+첫 GUI milestone은 VS Code extension 같은 GUI surface가 local `codex-radar` state를 읽어 프로젝트 단위 conversation list와 thread attention state를 보여주는 read-only dashboard다. 이 section은 구현 완료 contract가 아니라 R7 implementation을 시작하기 전 유지해야 하는 planned boundary다.
+
+GUI read contract v1:
+
+- 첫 milestone은 `sessions.json` 직접 read로 시작한다.
+- `sessions.json`은 GUI read contract v1의 입력이지만 영구 public API로 과도하게 고정하지 않는다.
+- GUI implementation은 `SessionSource` 같은 얇은 read adapter를 두고 view/component code가 file read에 직접 결합하지 않게 한다.
+- 나중에 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커지면 adapter를 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 교체할 수 있다.
+- GUI는 `events.jsonl`을 기본 navigation 입력으로 읽지 않는다. normalized event의 `raw`에는 민감한 hook payload가 포함될 수 있기 때문이다.
+
+GUI display contract v1:
+
+- GUI는 `project` 기준으로 conversation list를 묶는다.
+- GUI는 `waiting_approval`, `running`, `done`, `stale`를 navigation 안에서 구분한다.
+- `stale`은 cache의 원본 `status`를 바꾸지 않는 display-only status이며, terminal MVP와 같은 stale rule을 사용한다.
+- 첫 notification surface는 VS Code extension 안의 badge/highlight 같은 in-surface attention cue로 제한한다.
+- OS notification, external notification channel, toast content template은 별도 milestone 전까지 scope 밖이다.
+
+GUI privacy/action boundary v1:
+
+- 첫 GUI milestone은 read-only dashboard다.
+- GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
+- GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
+- GUI는 transcript preview를 기본 list에 자동 노출하지 않는다. transcript skim은 사용자 명시 action 뒤에만 수행하고 기존 best-effort redaction semantics를 재사용한다.
+- GUI는 transcript/session metadata를 외부로 전송하지 않는다.
+
 ## Automation Boundary
 
 허용:
