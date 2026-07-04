@@ -91,6 +91,11 @@
           "type": "string",
           "default": "codex-radar",
           "description": "codex-radar CLI executable path used for config and prune commands."
+        },
+        "codexRadar.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python executable used only when Codex Radar falls back to a source checkout with src/codex_radar/cli.py in the current workspace."
         }
       }
     },

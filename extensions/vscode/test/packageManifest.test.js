@@ -108,6 +108,7 @@ test("contributes retention config and prune actions", () => {
   assert.equal(configureMenu.group, "navigation@3");
   assert.equal(pruneMenu.group, "navigation@4");
   assert.equal(properties["codexRadar.cliPath"].default, "codex-radar");
+  assert.equal(properties["codexRadar.pythonPath"].default, "python3");
 });
 
 test("does not contribute transcript preview to the VS Code surface", () => {

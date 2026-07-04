@@ -59,6 +59,12 @@ code --install-extension extensions/vscode/codex-radar-vscode-0.1.7.vsix --force
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
 
+Configure the CLI used by retention and prune actions:
+
+- If `codex-radar` is installed on the VS Code extension host PATH, the default `codexRadar.cliPath` works.
+- If not, set `codexRadar.cliPath` to an absolute executable path.
+- When the open workspace is a codex-radar source checkout containing `src/codex_radar/cli.py`, the extension can fall back to `python3 -m codex_radar.cli` with `PYTHONPATH=src`. Override that interpreter with `codexRadar.pythonPath` if needed.
+
 ## Remote SSH Smoke Test
 
 1. Confirm the remote host has `codex-radar` available:

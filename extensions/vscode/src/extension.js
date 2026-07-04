@@ -5,7 +5,7 @@ const { officialCodexThreadUriString } = require("./codexLink");
 const {
   configGetArgs,
   configSetRetentionArgs,
-  configuredCliPath,
+  configuredCliInvocation,
   parseRetentionDaysOutput,
   pruneArgs,
   retentionDaysFromInput,
@@ -311,11 +311,11 @@ async function markSessionUnreadCommand(target, provider, treeView) {
 }
 
 async function configureRetentionCommand(provider, treeView) {
-  const cliPath = configuredCliPath(vscode);
+  const cliInvocation = configuredCliInvocation(vscode);
   const stateDir = configuredStateDir();
   let currentDays = 7;
   try {
-    const result = await runRadarCli(cliPath, configGetArgs(stateDir, "retention_days"));
+    const result = await runRadarCli(cliInvocation, configGetArgs(stateDir, "retention_days"));
     currentDays = parseRetentionDaysOutput(result.stdout);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -335,7 +335,7 @@ async function configureRetentionCommand(provider, treeView) {
 
   const days = retentionDaysFromInput(input);
   try {
-    await runRadarCli(cliPath, configSetRetentionArgs(stateDir, days));
+    await runRadarCli(cliInvocation, configSetRetentionArgs(stateDir, days));
     provider.refresh();
     syncTreeViewBadge(treeView, provider);
     await vscode.window.showInformationMessage(`Codex Radar retention set to ${days} day${days === 1 ? "" : "s"}.`);
@@ -346,10 +346,10 @@ async function configureRetentionCommand(provider, treeView) {
 }
 
 async function pruneNowCommand(provider, treeView) {
-  const cliPath = configuredCliPath(vscode);
+  const cliInvocation = configuredCliInvocation(vscode);
   const stateDir = configuredStateDir();
   try {
-    const result = await runRadarCli(cliPath, pruneArgs(stateDir));
+    const result = await runRadarCli(cliInvocation, pruneArgs(stateDir));
     provider.refresh();
     syncTreeViewBadge(treeView, provider);
     const payload = JSON.parse(result.stdout || "{}");
