@@ -37,10 +37,10 @@
 ### R3: terminal MVP/fallback workflow
 
 - Status: confirmed
-- Requirement: GUI 통합 전까지 terminal-first workflow로 세션 목록, transcript skim, TUI dashboard, waiting approval watch를 사용할 수 있어야 한다.
+- Requirement: GUI 통합 전까지 terminal-first workflow로 세션 목록, transcript skim, TUI dashboard, done/waiting approval foreground watch를 사용할 수 있어야 한다.
 - Rationale: 최종 GUI 통합을 기다리지 않고 원격 개발 환경의 visibility 문제를 먼저 줄여야 한다.
 - Failure prevented: GUI/extension 구현에 막혀 실제 thread 확인과 switching 개선이 지연되는 문제.
-- Derived specs/tests: `sessions`, `transcript`, `tui`, `watch`, `completion`, CLI/TUI/watch/completion tests.
+- Derived specs/tests: `sessions`, `transcript`, `tui`, `watch` default done alerts, optional waiting approval alerts, `completion`, CLI/TUI/watch/completion tests.
 - Revisit when: GUI 통합이 terminal MVP의 주요 workflow를 대체할 만큼 안정화될 때.
 
 ### R4: status-based attention routing
@@ -49,7 +49,7 @@
 - Requirement: thread 상태는 `active`, `running`, `tool_running`, `waiting_approval`, `done`, `stale`처럼 사용자의 주의가 필요한 정도를 구분할 수 있게 표현되어야 한다.
 - Rationale: 사용자는 어떤 thread가 기다리는지, 완료됐는지, 멈춘 듯한지 빠르게 판단해야 한다.
 - Failure prevented: turn 종료, approval request, tool 상태 변화를 놓치는 문제.
-- Derived specs/tests: event-to-status mapping, display-only `stale`, waiting approval watcher, stale/session filter tests.
+- Derived specs/tests: event-to-status mapping, display-only `stale`, done/waiting approval watcher, stale/session filter tests.
 - Revisit when: Codex lifecycle event 종류나 user attention model이 바뀔 때.
 
 ### R5: safe transcript skim

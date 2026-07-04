@@ -7,11 +7,20 @@ COMMANDS = ("hook", "sessions", "transcript", "tui", "watch", "path", "doctor", 
 GLOBAL_OPTIONS = ("--state-dir", "-h", "--help")
 SESSION_FILTER_OPTIONS = ("--project", "--status", "--model", "--since")
 SESSION_TEXT_OPTIONS = ("--group-project",)
+WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-existing", "--quiet-start")
 
 
 def bash_completion() -> str:
     words = " ".join(
-        (*COMMANDS, *GLOBAL_OPTIONS, "--json", "--limit", *SESSION_FILTER_OPTIONS, *SESSION_TEXT_OPTIONS)
+        (
+            *COMMANDS,
+            *GLOBAL_OPTIONS,
+            "--json",
+            "--limit",
+            *SESSION_FILTER_OPTIONS,
+            *SESSION_TEXT_OPTIONS,
+            *WATCH_OPTIONS,
+        )
     )
     return f"""# codex-radar bash completion
 _codex_radar_complete() {{
@@ -41,8 +50,11 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from sessions tui' -l since -r",
         "complete -c codex-radar -n '__fish_seen_subcommand_from sessions' -l group-project",
         "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l interval -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l status -r",
         "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l once",
         "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l no-bell",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l include-existing",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l quiet-start",
     ]
     return "\n".join(lines) + "\n"
 

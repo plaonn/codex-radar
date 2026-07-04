@@ -1,5 +1,8 @@
 import io
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -10,6 +13,31 @@ from codex_radar.cli import main
 
 
 class CliTests(unittest.TestCase):
+    def test_module_execution_invokes_main(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "missing-state"
+            env = dict(os.environ)
+            env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "codex_radar.cli",
+                    "--state-dir",
+                    str(state_dir),
+                    "path",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+            self.assertEqual("", result.stderr)
+            self.assertEqual(0, result.returncode)
+            self.assertEqual(f"{state_dir}\n", result.stdout)
+
     def test_path_prints_state_dir_without_creating_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp) / "missing-state"
@@ -249,7 +277,46 @@ class CliTests(unittest.TestCase):
             payload = json.loads(out.getvalue())
             self.assertEqual(["after"], [row["session_id"] for row in payload])
 
-    def test_watch_once_reports_waiting_approval(self) -> None:
+    def test_watch_once_reports_existing_done_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "session-1": {
+                                "session_id": "session-1",
+                                "status": "done",
+                                "project": "project-a",
+                                "last_event_name": "Stop",
+                                "last_seen_at": "2026-07-03T00:00:00+00:00",
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(
+                    [
+                        "--state-dir",
+                        str(state_dir),
+                        "watch",
+                        "--once",
+                        "--no-bell",
+                        "--include-existing",
+                        "--quiet-start",
+                    ]
+                )
+
+            self.assertEqual(
+                "codex-radar: done project=project-a event=Stop\n",
+                out.getvalue(),
+            )
+
+    def test_watch_status_can_report_waiting_approval(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
             (state_dir / "sessions.json").write_text(
@@ -271,7 +338,19 @@ class CliTests(unittest.TestCase):
 
             out = io.StringIO()
             with redirect_stdout(out):
-                main(["--state-dir", str(state_dir), "watch", "--once", "--no-bell"])
+                main(
+                    [
+                        "--state-dir",
+                        str(state_dir),
+                        "watch",
+                        "--once",
+                        "--no-bell",
+                        "--status",
+                        "waiting_approval",
+                        "--include-existing",
+                        "--quiet-start",
+                    ]
+                )
 
             self.assertEqual(
                 "codex-radar: waiting_approval project=project-a event=PermissionRequest\n",
@@ -287,6 +366,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("complete -c codex-radar", output)
         self.assertIn("sessions tui", output)
         self.assertIn("group-project", output)
+        self.assertIn("include-existing", output)
 
 
 if __name__ == "__main__":

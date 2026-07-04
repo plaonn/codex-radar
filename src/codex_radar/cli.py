@@ -218,6 +218,9 @@ def cmd_watch(args: argparse.Namespace) -> int:
         interval_seconds=args.interval,
         once=args.once,
         bell=not args.no_bell,
+        statuses=args.status or None,
+        include_existing=args.include_existing,
+        announce=not args.quiet_start,
     )
 
 
@@ -274,10 +277,25 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subparsers.add_parser("doctor", help="Print a short local diagnostic")
     doctor.set_defaults(func=cmd_doctor)
 
-    watch = subparsers.add_parser("watch", help="Watch for local waiting approval sessions")
+    watch = subparsers.add_parser("watch", help="Watch for local session status changes")
     watch.add_argument("--interval", type=float, default=2.0)
     watch.add_argument("--once", action="store_true", help="Check once and exit")
     watch.add_argument("--no-bell", action="store_true", help="Print alerts without terminal bell")
+    watch.add_argument(
+        "--status",
+        action="append",
+        help="Display status to alert on. Repeat to watch multiple statuses. Defaults to done.",
+    )
+    watch.add_argument(
+        "--include-existing",
+        action="store_true",
+        help="Alert for matching sessions that already exist when watch starts",
+    )
+    watch.add_argument(
+        "--quiet-start",
+        action="store_true",
+        help="Do not print the startup watch summary line",
+    )
     watch.set_defaults(func=cmd_watch)
 
     completion = subparsers.add_parser("completion", help="Print a shell completion script")
@@ -291,3 +309,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     return int(args.func(args))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
