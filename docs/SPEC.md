@@ -138,7 +138,7 @@ GUI display contract v1:
 - GUI attention은 `waiting_approval`, `stale`, unread `done` session을 뜻한다. `running`과 `tool_running`은 상태로 표시하지만 attention count에는 포함하지 않는다.
 - GUI는 attention-worthy session 수를 VS Code view badge 같은 in-surface cue로 보여줄 수 있다. 이 count는 현재 status filter와 무관하게 전체 loaded session 기준으로 계산한다.
 - GUI는 `display_status` 기준으로 session list를 좁히는 read-only status filter를 제공할 수 있다. 첫 구현은 view-local temporary filter로 두며, session cache나 extension settings를 수정하지 않는다.
-- GUI는 done session에 extension-local read/unread state를 유지할 수 있다. read key는 `session_id`와 done `last_seen_at` 기준이며, 같은 session이 다시 done 상태로 갱신되면 새 unread item으로 취급한다.
+- GUI는 done session에 extension-local read/unread state를 유지할 수 있다. read key는 `session_id`와 done `last_seen_at` 기준이며, 같은 session이 다시 done 상태로 갱신되면 새 unread item으로 취급한다. Done row는 unread/read 상태를 row description과 distinct mail-style icon으로 구분해야 하며, inline toggle action도 hide/show를 암시하는 eye icon을 쓰지 않는다.
 - `stale`은 cache의 원본 `status`를 바꾸지 않는 display-only status이며, terminal MVP와 같은 stale rule을 사용한다.
 - 첫 notification surface는 VS Code extension 안의 badge/highlight 같은 in-surface attention cue로 제한한다.
 - GUI는 session row click으로 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급한다. done session을 성공적으로 열면 extension-local read state를 read로 갱신할 수 있다.

@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.6");
+  assert.equal(manifest.version, "0.1.7");
 });
 
 test("contributes refresh command as a view title action", () => {
@@ -139,8 +139,10 @@ test("contributes done read and unread row actions", () => {
     (item) => item.command === "codexRadar.markUnread",
   );
 
-  assert.equal(markReadCommand.icon, "$(eye)");
-  assert.equal(markUnreadCommand.icon, "$(eye-closed)");
+  assert.equal(markReadCommand.icon, "$(mail-read)");
+  assert.equal(markUnreadCommand.icon, "$(mail)");
+  assert.equal(markReadCommand.title, "Codex Radar: Mark as Read");
+  assert.equal(markUnreadCommand.title, "Codex Radar: Mark as Unread");
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.markRead"), true);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.markUnread"), true);
   assert.equal(

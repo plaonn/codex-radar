@@ -75,6 +75,23 @@ function sessionLabel(session) {
   return sessionTitle(session);
 }
 
+function sessionIconId(session) {
+  const status = String(session.display_status || "");
+  if (status === "waiting_approval") {
+    return "warning";
+  }
+  if (status === "running" || status === "tool_running") {
+    return "sync~spin";
+  }
+  if (status === "stale") {
+    return "watch";
+  }
+  if (status === "done") {
+    return session.is_unread_done ? "mail" : "mail-read";
+  }
+  return "circle-outline";
+}
+
 function relativeTimeText(timestamp, options = {}) {
   const valueMs = Date.parse(String(timestamp || ""));
   if (!Number.isFinite(valueMs)) {
@@ -108,13 +125,12 @@ function relativeTimeText(timestamp, options = {}) {
 function sessionDescription(session, options = {}) {
   const parts = [];
   const status = statusText(session.display_status);
-  if (status) {
-    parts.push(status);
-  }
   if (session.is_unread_done) {
-    parts.push("Unread");
+    parts.push("Unread done");
   } else if (String(session.display_status || "") === "done") {
-    parts.push("Read");
+    parts.push("Read done");
+  } else if (status) {
+    parts.push(status);
   }
   if (session.current_tool) {
     parts.push(String(session.current_tool));
@@ -174,6 +190,7 @@ module.exports = {
   relativeTimeText,
   redactText,
   sessionDescription,
+  sessionIconId,
   sessionLabel,
   sessionSnippet,
   sessionTitle,

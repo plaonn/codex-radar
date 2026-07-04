@@ -9,6 +9,7 @@ const {
   relativeTimeText,
   redactText,
   sessionDescription,
+  sessionIconId,
   sessionLabel,
   sessionSnippet,
   sessionTitle,
@@ -77,6 +78,23 @@ test("builds human-readable title and redacted snippet from session cache", () =
     "Release readiness",
   );
   assert.equal(sessionTitle({ display_status: "stale" }), "unknown - Stale thread");
+});
+
+test("makes done read state visible in row descriptions", () => {
+  const base = {
+    display_status: "done",
+    last_seen_at: "2026-07-04T00:00:00+00:00",
+  };
+  const now = { nowMs: Date.parse("2026-07-04T00:07:00+00:00") };
+
+  assert.equal(sessionDescription({ ...base, is_unread_done: true }, now), "Unread done | 7m ago");
+  assert.equal(sessionDescription({ ...base, is_done_read: true }, now), "Read done | 7m ago");
+});
+
+test("uses distinct row icons for unread and read done sessions", () => {
+  assert.equal(sessionIconId({ display_status: "done", is_unread_done: true }), "mail");
+  assert.equal(sessionIconId({ display_status: "done", is_done_read: true }), "mail-read");
+  assert.equal(sessionIconId({ display_status: "waiting_approval" }), "warning");
 });
 
 test("formats relative session times for compact scanning", () => {

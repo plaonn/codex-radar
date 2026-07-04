@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "plaonn",
   "license": "MIT",
   "repository": {
@@ -56,13 +56,13 @@
       },
       {
         "command": "codexRadar.markRead",
-        "title": "Codex Radar: Mark Read",
-        "icon": "$(eye)"
+        "title": "Codex Radar: Mark as Read",
+        "icon": "$(mail-read)"
       },
       {
         "command": "codexRadar.markUnread",
-        "title": "Codex Radar: Mark Unread",
-        "icon": "$(eye-closed)"
+        "title": "Codex Radar: Mark as Unread",
+        "icon": "$(mail)"
       }
     ],
     "configuration": {

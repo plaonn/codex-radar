@@ -11,6 +11,7 @@ Current scope:
 - Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and inbox-like session rows.
 - Prefixes rows with a short session id when no readable thread title is available in `sessions.json`.
 - Shows the total unfiltered attention count in the VS Code view badge. Attention means `waiting_approval`, `stale`, or unread `done`.
+- Distinguishes unread/read done rows with row text and mail-style icons.
 - Filters the view by display status with a temporary view-title action.
 - Provides a manual refresh command in the view title.
 - Opens the same session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a session row is clicked.

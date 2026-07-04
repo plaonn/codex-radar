@@ -24,6 +24,7 @@ const {
   attentionBadge,
   projectLabel,
   sessionDescription,
+  sessionIconId,
   sessionLabel,
   sessionTooltip,
 } = require("./sessionViewModel");
@@ -57,7 +58,7 @@ class SessionItem extends vscode.TreeItem {
     this.session = session;
     this.description = sessionDescription(session);
     this.tooltip = sessionTooltip(session);
-    this.iconPath = statusIcon(session.display_status);
+    this.iconPath = sessionIcon(session);
     this.command = {
       command: "codexRadar.openInCodex",
       title: "Open in Codex",
@@ -66,20 +67,8 @@ class SessionItem extends vscode.TreeItem {
   }
 }
 
-function statusIcon(status) {
-  if (status === "waiting_approval") {
-    return new vscode.ThemeIcon("warning");
-  }
-  if (status === "running" || status === "tool_running") {
-    return new vscode.ThemeIcon("sync~spin");
-  }
-  if (status === "stale") {
-    return new vscode.ThemeIcon("watch");
-  }
-  if (status === "done") {
-    return new vscode.ThemeIcon("check");
-  }
-  return new vscode.ThemeIcon("circle-outline");
+function sessionIcon(session) {
+  return new vscode.ThemeIcon(sessionIconId(session));
 }
 
 function sessionContextValue(session) {
