@@ -28,10 +28,11 @@
 
 - Status: confirmed
 - Requirement: Codex lifecycle hook payload를 Codex turn을 오래 막지 않고 수집하고, 로컬 세션을 `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, latest assistant summary 기준으로 인덱싱해야 한다.
-- Rationale: private IDE 내부 구현에 결합하지 않고 thread visibility 문제를 해결하려면 Codex가 공개하는 hook metadata를 빠르게 local state로 변환해야 한다.
+- Rationale: Codex App과 VS Code extension에서 생성한 thread는 client surface와 UX가 다르므로, private client 내부 구현에 결합하지 않고 thread visibility 문제를 해결하려면 공통으로 관측 가능한 Codex lifecycle hook metadata를 빠르게 local state로 변환해야 한다.
 - Failure prevented: hook path 지연, session 상태 손실, IDE 내부 구현 변경에 따른 monitor 파손.
 - Derived specs/tests: `codex-radar hook`, append-only `events.jsonl`, derived `sessions.json`, hook event normalization/cache update tests.
-- Revisit when: Codex hook payload contract나 session identifier model이 바뀔 때.
+- Assumptions: 대상 client surface가 local Codex lifecycle hook을 발생시킨다. hook은 공통 관측면이지만 authoritative session API는 아니므로, status는 마지막으로 관측한 event와 그로부터의 추론으로 취급한다.
+- Revisit when: Codex hook payload contract, session identifier model, 또는 App/extension을 가로지르는 안정적인 공통 session API가 제공될 때.
 
 ### R3: terminal MVP/fallback workflow
 
@@ -82,6 +83,8 @@
 
 현재 spec은 local-only hook indexer, append-only event log, derived session cache, project-aware session list/filtering, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 통합하는 것을 지향하지만, 현재 spec은 terminal MVP/fallback contract를 정의한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
 
+Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아니라 마지막으로 관측한 lifecycle event와 display-only 추론이다. `waiting_approval`과 `done`은 각각 `PermissionRequest`, `Stop`/`SubagentStop` event를 관측했음을 뜻하고, `stale`은 `active`, `running`, `tool_running` 상태에서 일정 시간 새 hook event가 없었다는 표시다.
+
 현재 terminal MVP command contract:
 
 - `codex-radar hook`: stdin에서 hook payload 1개를 읽어 기록한다.
@@ -97,7 +100,7 @@
 
 ## Rationale
 
-VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex hook은 이미 session과 transcript metadata를 노출하므로, private IDE 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 먼저 해결할 수 있다.
+VS Code Remote SSH로 원격 환경에서 개발하면서 이 PC의 로컬 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 로컬 인덱서로 visibility 문제를 먼저 해결할 수 있다.
 
 ## Failure Prevented
 
