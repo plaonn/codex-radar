@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.8
+
+Release candidate package for retention settings fixes after VSIX smoke feedback. This version is not a Marketplace publication.
+
+### Fixed
+
+- Resolve the default `codex-radar` command through the remote user's login shell when the VS Code extension host process PATH returns `ENOENT`.
+- Keep explicit `codexRadar.cliPath` as the first-priority override.
+- Keep source checkout fallback through `python3 -m codex_radar.cli` for local VSIX validation.
+
 ## 0.1.7
 
 Release readiness package for local VSIX and GitHub Release validation. This version is not a Marketplace publication.
