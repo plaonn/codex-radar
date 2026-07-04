@@ -9,11 +9,6 @@
 - 미래 방향이나 scope를 바꿀 때는 `docs/ROADMAP.md`를 읽는다.
 - tracked public 파일을 active task dashboard로 쓰지 않는다. 사용 가능하면 maintainer가 제공하는 private task surface를 사용한다.
 
-문서 관리:
-- `docs/REQUIREMENTS.md`는 root goal, RDD requirement hierarchy, 전체 rationale/failure-prevented index 역할을 유지한다.
-- requirement 문서가 특정 R의 세부 rationale, assumptions, derived specs/tests, decision history 때문에 root goal과 R 목록을 빠르게 훑기 어려워지면 강제 분리하지 말고 `docs/requirements/Rn-*.md` 같은 세부 문서 분리를 먼저 제안한다.
-- requirement를 분리할 때는 `docs/REQUIREMENTS.md`를 index/current-truth entry point로 남기고, README와 관련 링크를 함께 갱신한다.
-
 엔지니어링 규칙:
 - hook 경로는 빠르고, 로컬 전용이며, dependency-light하게 유지한다.
 - Codex transcript는 민감한 로컬 데이터로 취급한다. transcript, session state, raw hook log, private path, secret, generated runtime state를 commit하지 않는다.
