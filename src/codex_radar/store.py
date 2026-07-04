@@ -20,6 +20,8 @@ EVENT_STATUS = {
 }
 
 CACHE_SCHEMA_VERSION = 1
+CONFIG_SCHEMA_VERSION = 1
+DEFAULT_RETENTION_DAYS = 7
 SESSION_CACHE_FIELDS = (
     "session_id",
     "first_seen_at",
@@ -115,8 +117,9 @@ def ensure_state_dir(state_dir: Optional[Path] = None) -> Path:
     return resolved
 
 
-def events_path(state_dir: Optional[Path] = None) -> Path:
-    return ensure_state_dir(state_dir) / "events.jsonl"
+def config_path(state_dir: Optional[Path] = None, *, create: bool = True) -> Path:
+    directory = ensure_state_dir(state_dir) if create else state_dir_path(state_dir)
+    return directory / "config.json"
 
 
 def sessions_path(state_dir: Optional[Path] = None, *, create: bool = True) -> Path:
@@ -137,6 +140,46 @@ def _truncate(value: str, limit: int = 500) -> str:
     if len(value) <= limit:
         return value
     return value[: limit - 1].rstrip() + "..."
+
+
+def _retention_days(value: Any, default: int = DEFAULT_RETENTION_DAYS) -> int:
+    try:
+        days = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(0, days)
+
+
+def _reference_time(value: Optional[Any] = None) -> datetime:
+    parsed = parse_timestamp(value)
+    if parsed is not None:
+        return parsed
+    return datetime.now(timezone.utc)
+
+
+def _prune_session_mapping(
+    sessions: Dict[str, Dict[str, Any]],
+    *,
+    retention_days: int,
+    now: Optional[datetime] = None,
+) -> tuple[Dict[str, Dict[str, Any]], list[str], Optional[datetime]]:
+    if retention_days <= 0:
+        return sessions, [], None
+
+    reference = now or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    reference = reference.astimezone(timezone.utc)
+    cutoff = reference - timedelta(days=retention_days)
+    kept: Dict[str, Dict[str, Any]] = {}
+    removed: list[str] = []
+    for session_id, session in sessions.items():
+        last_seen_at = parse_timestamp(session.get("last_seen_at"))
+        if last_seen_at is not None and last_seen_at < cutoff:
+            removed.append(session_id)
+        else:
+            kept[session_id] = session
+    return kept, removed, cutoff
 
 
 def _find_first(payload: Dict[str, Any], keys: Iterable[str]) -> Any:
@@ -204,13 +247,6 @@ def _state_lock(state_dir: Path) -> Iterator[None]:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def append_event(event: Dict[str, Any], state_dir: Optional[Path] = None) -> None:
-    path = events_path(state_dir)
-    line = json.dumps(event, ensure_ascii=False, sort_keys=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(line + "\n")
-
-
 def load_sessions(state_dir: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
     path = sessions_path(state_dir, create=False)
     if not path.exists():
@@ -225,6 +261,39 @@ def load_sessions(state_dir: Optional[Path] = None) -> Dict[str, Dict[str, Any]]
     if not isinstance(sessions, dict):
         return {}
     return {str(key): value for key, value in sessions.items() if isinstance(value, dict)}
+
+
+def load_config(state_dir: Optional[Path] = None) -> Dict[str, Any]:
+    path = config_path(state_dir, create=False)
+    config: Dict[str, Any] = {
+        "schema_version": CONFIG_SCHEMA_VERSION,
+        "retention_days": DEFAULT_RETENTION_DAYS,
+    }
+    if not path.exists():
+        return config
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return config
+    if not isinstance(data, dict):
+        return config
+    config["retention_days"] = _retention_days(data.get("retention_days"))
+    return config
+
+
+def save_config(config: Dict[str, Any], state_dir: Optional[Path] = None) -> Dict[str, Any]:
+    normalized = {
+        "schema_version": CONFIG_SCHEMA_VERSION,
+        "retention_days": _retention_days(config.get("retention_days")),
+    }
+    path = config_path(state_dir)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(
+        json.dumps(normalized, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    tmp.replace(path)
+    return normalized
 
 
 def save_sessions(sessions: Dict[str, Dict[str, Any]], state_dir: Optional[Path] = None) -> None:
@@ -265,16 +334,61 @@ def update_session_cache(event: Dict[str, Any], state_dir: Optional[Path] = None
         "event_count": int(previous.get("event_count", 0)) + 1,
     }
     sessions[session_id] = session
+    sessions, _, _ = _prune_session_mapping(
+        sessions,
+        retention_days=load_config(state_dir).get("retention_days", DEFAULT_RETENTION_DAYS),
+        now=_reference_time(event.get("recorded_at")),
+    )
     save_sessions(sessions, state_dir)
     return session
+
+
+def prune_sessions(
+    state_dir: Optional[Path] = None,
+    *,
+    retention_days: Optional[int] = None,
+    now: Optional[datetime] = None,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    resolved = state_dir_path(state_dir)
+    config = load_config(resolved)
+    days = _retention_days(
+        retention_days if retention_days is not None else config.get("retention_days")
+    )
+    sessions = load_sessions(resolved)
+    kept, removed_ids, cutoff = _prune_session_mapping(
+        sessions,
+        retention_days=days,
+        now=now,
+    )
+
+    legacy_events_path = resolved / "events.jsonl"
+    legacy_events_removed = legacy_events_path.exists()
+
+    if not dry_run:
+        if removed_ids:
+            save_sessions(kept, resolved)
+        if legacy_events_path.exists():
+            legacy_events_path.unlink()
+
+    return {
+        "retention_days": days,
+        "cutoff": cutoff.isoformat() if cutoff else "",
+        "removed_sessions": sorted(removed_ids),
+        "kept_sessions": len(kept),
+        "legacy_events_removed": legacy_events_removed,
+        "dry_run": dry_run,
+    }
 
 
 def record_hook_event(payload: Dict[str, Any], state_dir: Optional[Path] = None) -> Dict[str, Any]:
     resolved = ensure_state_dir(state_dir)
     event = normalize_event(payload)
     with _state_lock(resolved):
-        append_event(event, resolved)
         session = update_session_cache(event, resolved)
+        legacy_events_path = resolved / "events.jsonl"
+        if legacy_events_path.exists():
+            legacy_events_path.unlink()
     return session
 
 

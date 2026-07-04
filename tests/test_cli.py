@@ -357,6 +357,59 @@ class CliTests(unittest.TestCase):
                 out.getvalue(),
             )
 
+    def test_config_get_and_set_retention_days(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "config", "get", "retention_days"])
+            self.assertEqual("7\n", out.getvalue())
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "config", "set", "retention_days", "14"])
+            self.assertEqual(14, json.loads(out.getvalue())["retention_days"])
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "config", "get", "retention_days"])
+            self.assertEqual("14\n", out.getvalue())
+
+    def test_prune_reports_and_removes_old_sessions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "events.jsonl").write_text('{"legacy": true}\n', encoding="utf-8")
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "old": {
+                                "session_id": "old",
+                                "status": "done",
+                                "last_seen_at": "2000-01-01T00:00:00+00:00",
+                            },
+                            "recent": {
+                                "session_id": "recent",
+                                "status": "done",
+                                "last_seen_at": datetime.now(timezone.utc).isoformat(),
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "prune", "--retention-days", "7"])
+
+            payload = json.loads(out.getvalue())
+            self.assertEqual(["old"], payload["removed_sessions"])
+            self.assertTrue(payload["legacy_events_removed"])
+            remaining = json.loads((state_dir / "sessions.json").read_text(encoding="utf-8"))
+            self.assertEqual(["recent"], list(remaining["sessions"]))
+
     def test_completion_prints_shell_script(self) -> None:
         out = io.StringIO()
         with redirect_stdout(out):
@@ -367,6 +420,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("sessions tui", output)
         self.assertIn("group-project", output)
         self.assertIn("include-existing", output)
+        self.assertIn("retention-days", output)
 
 
 if __name__ == "__main__":

@@ -27,10 +27,10 @@
 ### R2: local-only hook session index
 
 - Status: confirmed
-- Requirement: Codex lifecycle hook payload를 Codex turn을 오래 막지 않고 수집하고, 로컬 세션을 `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, latest assistant summary 기준으로 인덱싱해야 한다.
+- Requirement: Codex lifecycle hook payload를 Codex turn을 오래 막지 않고 수집하고, 로컬 세션을 `session_id`, `cwd`, project name, latest event, status, transcript path, model, permission mode, latest assistant summary 기준의 최신 상태 index로 유지해야 한다.
 - Rationale: Codex App과 VS Code extension에서 생성한 thread는 client surface와 UX가 다르므로, private client 내부 구현에 결합하지 않고 thread visibility 문제를 해결하려면 공통으로 관측 가능한 Codex lifecycle hook metadata를 빠르게 local state로 변환해야 한다.
 - Failure prevented: hook path 지연, session 상태 손실, IDE 내부 구현 변경에 따른 monitor 파손.
-- Derived specs/tests: `codex-radar hook`, append-only `events.jsonl`, derived `sessions.json`, hook event normalization/cache update tests.
+- Derived specs/tests: `codex-radar hook`, latest-state `sessions.json`, hook event normalization/cache update tests, `codex-radar prune`, server-side `retention_days` config.
 - Assumptions: 대상 client surface가 local Codex lifecycle hook을 발생시킨다. hook은 공통 관측면이지만 authoritative session API는 아니므로, status는 마지막으로 관측한 event와 그로부터의 추론으로 취급한다.
 - Revisit when: Codex hook payload contract, session identifier model, 또는 App/extension을 가로지르는 안정적인 공통 session API가 제공될 때.
 
@@ -67,7 +67,7 @@
 - Requirement: `codex-radar`는 로컬 상태 쓰기와 명시적 local read만 수행하며, 전역 Codex config 자동 수정, 외부 전송, transcript 삭제, 관찰한 repository 수정은 하지 않아야 한다.
 - Rationale: transcript, hook payload, private path, prompt, code, secret은 민감한 로컬 데이터로 취급해야 한다.
 - Failure prevented: private data 유출, 전역 Codex 설정 손상, 관찰 도구가 작업 repository를 변경하는 문제.
-- Derived specs/tests: local state directory, runbook-only hook install, minimal watcher alert, privacy/automation boundary docs.
+- Derived specs/tests: local state directory, runbook-only hook install, minimal watcher alert, no default raw event log, retention pruning, privacy/automation boundary docs.
 - Revisit when: notification, GUI integration, external sync, automation surface를 도입할 때.
 
 ### R7: future GUI integration

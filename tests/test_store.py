@@ -6,11 +6,15 @@ from pathlib import Path
 
 from codex_radar.store import (
     CACHE_SCHEMA_VERSION,
+    DEFAULT_RETENTION_DAYS,
     SESSION_CACHE_FIELDS,
     is_stale_session,
+    load_config,
     load_sessions,
     normalize_event,
+    prune_sessions,
     record_hook_event,
+    save_config,
     session_display_status,
 )
 
@@ -85,7 +89,7 @@ class StoreTests(unittest.TestCase):
         self.assertEqual("tool_running", event["status"])
         self.assertEqual("Bash", event["tool_name"])
 
-    def test_record_hook_event_appends_event_and_updates_cache(self) -> None:
+    def test_record_hook_event_updates_cache_without_event_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
             session = record_hook_event(
@@ -103,11 +107,40 @@ class StoreTests(unittest.TestCase):
 
             self.assertEqual("running", session["status"])
             self.assertEqual("project-a", session["project"])
-            events = (state_dir / "events.jsonl").read_text(encoding="utf-8").strip().splitlines()
-            self.assertEqual(1, len(events))
-            self.assertEqual("UserPromptSubmit", json.loads(events[0])["event_name"])
+            self.assertFalse((state_dir / "events.jsonl").exists())
             sessions = load_sessions(state_dir)
             self.assertEqual("running", sessions["session-1"]["status"])
+
+    def test_record_hook_event_applies_retention_and_removes_legacy_event_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "events.jsonl").write_text('{"legacy": true}\n', encoding="utf-8")
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "old": {
+                                "session_id": "old",
+                                "status": "done",
+                                "last_seen_at": "2000-01-01T00:00:00+00:00",
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            record_hook_event(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "new",
+                    "cwd": "/tmp/project-a",
+                },
+                state_dir,
+            )
+
+            self.assertFalse((state_dir / "events.jsonl").exists())
+            self.assertEqual(["new"], sorted(load_sessions(state_dir)))
 
     def test_session_cache_writes_gui_read_contract_schema_v1(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -139,6 +172,84 @@ class StoreTests(unittest.TestCase):
 
             self.assertEqual({}, load_sessions(state_dir))
             self.assertFalse(state_dir.exists())
+
+    def test_config_defaults_and_save(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "missing-state"
+
+            self.assertEqual(DEFAULT_RETENTION_DAYS, load_config(state_dir)["retention_days"])
+            self.assertFalse(state_dir.exists())
+
+            saved = save_config({"retention_days": 14}, state_dir)
+
+            self.assertEqual(14, saved["retention_days"])
+            self.assertEqual(14, load_config(state_dir)["retention_days"])
+
+    def test_prune_sessions_removes_old_sessions_and_legacy_event_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "events.jsonl").write_text('{"legacy": true}\n', encoding="utf-8")
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "sessions": {
+                            "old": {
+                                "session_id": "old",
+                                "status": "done",
+                                "last_seen_at": "2026-06-01T00:00:00+00:00",
+                            },
+                            "recent": {
+                                "session_id": "recent",
+                                "status": "done",
+                                "last_seen_at": "2026-07-04T00:00:00+00:00",
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = prune_sessions(
+                state_dir,
+                retention_days=7,
+                now=datetime(2026, 7, 5, tzinfo=timezone.utc),
+            )
+
+            self.assertEqual(["old"], result["removed_sessions"])
+            self.assertTrue(result["legacy_events_removed"])
+            self.assertFalse((state_dir / "events.jsonl").exists())
+            self.assertEqual(["recent"], list(load_sessions(state_dir)))
+
+    def test_prune_sessions_dry_run_does_not_modify_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            (state_dir / "events.jsonl").write_text('{"legacy": true}\n', encoding="utf-8")
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "old": {
+                                "session_id": "old",
+                                "status": "done",
+                                "last_seen_at": "2026-06-01T00:00:00+00:00",
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = prune_sessions(
+                state_dir,
+                retention_days=7,
+                now=datetime(2026, 7, 5, tzinfo=timezone.utc),
+                dry_run=True,
+            )
+
+            self.assertEqual(["old"], result["removed_sessions"])
+            self.assertTrue((state_dir / "events.jsonl").exists())
+            self.assertEqual(["old"], list(load_sessions(state_dir)))
 
     def test_stop_clears_current_tool(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -37,7 +37,7 @@ test("formats session rows without transcript content", () => {
   };
 
   assert.equal(statusText("waiting_approval"), "Waiting approval");
-  assert.equal(sessionLabel(session), "I need permission to run the command.");
+  assert.equal(sessionLabel(session), "session-appr - I need permission to run the command.");
   assert.equal(
     sessionDescription(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }),
     "Waiting approval | Bash | gpt-5 | 7m ago",
@@ -57,6 +57,7 @@ test("formats session rows without transcript content", () => {
 test("builds human-readable title and redacted snippet from session cache", () => {
   const session = {
     display_status: "done",
+    session_id: "019f2830-12e4-7fe0-beee-92df30259c6e",
     last_assistant_message: "token=supersecret open /Users/example/private/file",
   };
 
@@ -68,10 +69,14 @@ test("builds human-readable title and redacted snippet from session cache", () =
     "[REDACTED] open ~/private/file",
   );
   assert.equal(
+    sessionTitle(session, { homeDir: "/Users/example" }),
+    "019f2830-12e - [REDACTED] open ~/private/file",
+  );
+  assert.equal(
     sessionTitle({ ...session, thread_title: "  Release\nreadiness  " }),
     "Release readiness",
   );
-  assert.equal(sessionTitle({ display_status: "stale" }), "Stale thread");
+  assert.equal(sessionTitle({ display_status: "stale" }), "unknown - Stale thread");
 });
 
 test("formats relative session times for compact scanning", () => {

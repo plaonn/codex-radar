@@ -55,6 +55,7 @@ function sessionSnippet(session, options = {}) {
 }
 
 function sessionTitle(session, options = {}) {
+  const shortId = shortSessionId(session.session_id);
   const title = compactText(
     session.title || session.thread_title || session.conversation_title || session.summary || "",
   );
@@ -64,10 +65,10 @@ function sessionTitle(session, options = {}) {
 
   const snippet = sessionSnippet(session, options);
   if (snippet) {
-    return snippet;
+    return truncateText(`${shortId} - ${snippet}`, options.maxLength ?? 96);
   }
 
-  return `${statusText(session.display_status)} thread`;
+  return `${shortId} - ${statusText(session.display_status)} thread`;
 }
 
 function sessionLabel(session) {

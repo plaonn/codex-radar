@@ -3,11 +3,23 @@ from __future__ import annotations
 from typing import Dict
 
 
-COMMANDS = ("hook", "sessions", "transcript", "tui", "watch", "path", "doctor", "completion")
+COMMANDS = (
+    "hook",
+    "sessions",
+    "transcript",
+    "tui",
+    "watch",
+    "path",
+    "doctor",
+    "config",
+    "prune",
+    "completion",
+)
 GLOBAL_OPTIONS = ("--state-dir", "-h", "--help")
 SESSION_FILTER_OPTIONS = ("--project", "--status", "--model", "--since")
 SESSION_TEXT_OPTIONS = ("--group-project",)
 WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-existing", "--quiet-start")
+PRUNE_OPTIONS = ("--retention-days", "--dry-run")
 
 
 def bash_completion() -> str:
@@ -20,6 +32,10 @@ def bash_completion() -> str:
             *SESSION_FILTER_OPTIONS,
             *SESSION_TEXT_OPTIONS,
             *WATCH_OPTIONS,
+            *PRUNE_OPTIONS,
+            "get",
+            "set",
+            "retention_days",
         )
     )
     return f"""# codex-radar bash completion
@@ -55,6 +71,10 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l no-bell",
         "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l include-existing",
         "complete -c codex-radar -n '__fish_seen_subcommand_from watch' -l quiet-start",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from config' -a 'get set'",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set' -a 'retention_days'",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from prune' -l retention-days -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from prune' -l dry-run",
     ]
     return "\n".join(lines) + "\n"
 

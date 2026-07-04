@@ -11,11 +11,15 @@ from typing import Any, Dict, Iterable, Optional
 
 from .completion import COMPLETIONS, completion_script
 from .store import (
+    DEFAULT_RETENTION_DAYS,
     default_state_dir,
     iter_sessions,
+    load_config,
     load_sessions,
     parse_timestamp,
+    prune_sessions,
     record_hook_event,
+    save_config,
     session_display_status,
     session_seen_since,
 )
@@ -209,6 +213,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     print(f"state_dir: {state_dir}")
     print(f"state_dir_exists: {state_dir.exists()}")
     print(f"sessions: {len(load_sessions(state_dir))}")
+    print(f"retention_days: {load_config(state_dir)['retention_days']}")
     return 0
 
 
@@ -226,6 +231,41 @@ def cmd_watch(args: argparse.Namespace) -> int:
 
 def cmd_completion(args: argparse.Namespace) -> int:
     print(completion_script(args.shell), end="")
+    return 0
+
+
+def cmd_config(args: argparse.Namespace) -> int:
+    state_dir = _state_dir_arg(args.state_dir)
+    if args.config_command == "get":
+        config = load_config(state_dir)
+        if args.key:
+            if args.key not in config:
+                raise SystemExit(f"unknown config key: {args.key}")
+            print(config[args.key])
+        else:
+            print(json.dumps(config, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
+    if args.config_command == "set":
+        if args.key != "retention_days":
+            raise SystemExit(f"unknown config key: {args.key}")
+        config = load_config(state_dir)
+        config["retention_days"] = args.value
+        saved = save_config(config, state_dir)
+        print(json.dumps(saved, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
+    raise SystemExit("expected config command")
+
+
+def cmd_prune(args: argparse.Namespace) -> int:
+    state_dir = _state_dir_arg(args.state_dir)
+    result = prune_sessions(
+        state_dir,
+        retention_days=args.retention_days,
+        dry_run=args.dry_run,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 
 
@@ -276,6 +316,29 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Print a short local diagnostic")
     doctor.set_defaults(func=cmd_doctor)
+
+    config = subparsers.add_parser("config", help="Read or update codex-radar config")
+    config_subparsers = config.add_subparsers(dest="config_command", required=True)
+    config_get = config_subparsers.add_parser("get", help="Print config JSON or one config value")
+    config_get.add_argument("key", nargs="?")
+    config_get.set_defaults(func=cmd_config)
+    config_set = config_subparsers.add_parser("set", help="Set one config value")
+    config_set.add_argument("key", choices=["retention_days"])
+    config_set.add_argument(
+        "value",
+        type=int,
+        help=f"Days to keep sessions in Radar state. 0 disables pruning. Default: {DEFAULT_RETENTION_DAYS}",
+    )
+    config_set.set_defaults(func=cmd_config)
+
+    prune = subparsers.add_parser("prune", help="Remove old sessions from Radar state")
+    prune.add_argument(
+        "--retention-days",
+        type=int,
+        help=f"Override configured retention days for this run. Default config value: {DEFAULT_RETENTION_DAYS}",
+    )
+    prune.add_argument("--dry-run", action="store_true", help="Show what would be pruned")
+    prune.set_defaults(func=cmd_prune)
 
     watch = subparsers.add_parser("watch", help="Watch for local session status changes")
     watch.add_argument("--interval", type=float, default=2.0)

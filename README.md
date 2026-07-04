@@ -23,13 +23,16 @@ python -m pip install -e .
 ## 명령
 
 ```bash
-codex-radar hook              # stdin의 hook JSON payload 1개 기록
+codex-radar hook              # stdin의 hook JSON payload 1개로 session index 갱신
 codex-radar sessions          # 인덱싱된 세션 목록 출력
 codex-radar transcript <id>   # session id 또는 path로 transcript 훑어보기
 codex-radar tui               # 터미널 dashboard 열기
 codex-radar watch             # done foreground watcher 실행
 codex-radar path              # state directory 출력
 codex-radar doctor            # 짧은 로컬 진단 출력
+codex-radar config get        # server-side codex-radar config 출력
+codex-radar config set retention_days 7
+codex-radar prune             # retention 기준으로 오래된 Radar session 제거
 codex-radar completion <sh>   # bash, zsh, fish completion script 출력
 ```
 
@@ -44,6 +47,15 @@ codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
 codex-radar sessions --group-project
 codex-radar tui --project codex-radar --since 1d
+```
+
+`retention_days`는 server-side config이며 기본값은 7일이다. hook update는 이 기준으로 오래된 Radar session을 `sessions.json`에서 자동 제거한다. `0`은 pruning 비활성화다. `codex-radar prune`은 같은 규칙을 수동 실행하거나 `--dry-run`으로 확인하는 운영 command다. 과거 버전이 만든 legacy `events.jsonl`은 hook update 또는 prune 시 제거된다. Codex transcript 파일이나 공식 Codex thread/archive 상태는 건드리지 않는다.
+
+```bash
+codex-radar config get retention_days
+codex-radar config set retention_days 14
+codex-radar prune --dry-run
+codex-radar prune
 ```
 
 `codex-radar watch`는 opt-in foreground watcher다. state cache를 polling하다가 새 `done` session을 보면 terminal bell과 최소 metadata line을 출력한다. 시작 시 현재 session 수와 matching 수를 출력하며, 시작 전에 이미 `done`이었던 session은 기본으로 다시 알리지 않는다. 기존 session도 보고 싶으면 `--include-existing`, 승인 대기까지 같이 보고 싶으면 `--status done --status waiting_approval`을 사용한다. hook path에서는 notification을 보내지 않는다. 이 command는 terminal MVP/fallback이며 future GUI integration을 대체하지 않는다.

@@ -74,8 +74,7 @@ class ExamplesTests(unittest.TestCase):
 
             sessions = load_sessions(state_dir)
             self.assertEqual(set(config["hooks"]), {item["last_event_name"] for item in sessions.values()})
-            event_lines = (state_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
-            self.assertEqual(len(config["hooks"]), len(event_lines))
+            self.assertFalse((state_dir / "events.jsonl").exists())
 
     def test_install_runbook_keeps_hooks_json_as_manual_merge_artifact(self) -> None:
         runbook = INSTALL_RUNBOOK.read_text(encoding="utf-8")
