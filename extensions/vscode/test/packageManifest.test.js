@@ -9,6 +9,12 @@ function readManifest() {
   return JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 }
 
+test("uses the current manual testing package version", () => {
+  const manifest = readManifest();
+
+  assert.equal(manifest.version, "0.1.1");
+});
+
 test("contributes refresh command as a view title action", () => {
   const manifest = readManifest();
   const refreshCommand = manifest.contributes.commands.find(
