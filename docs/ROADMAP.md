@@ -35,3 +35,4 @@
 - stdlib MVP가 유용하다는 것이 확인된 뒤 Rich/Textual TUI 검토.
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
+- VS Code 기본 TreeView 한계로 row 상태 아이콘 자체에 click handler를 붙이기 어렵다면, read/unread mail icon 직접 토글 같은 richer row interaction은 Webview 기반 custom list 전환 시 함께 검토.
