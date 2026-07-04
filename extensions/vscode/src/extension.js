@@ -7,6 +7,7 @@ const {
   groupSessionsByProject,
   loadSessionCache,
   normalizeStatusFilter,
+  STATUS_FILTER_VALUES,
 } = require("./sessionSource");
 const {
   projectLabel,
@@ -72,7 +73,6 @@ class SessionsProvider {
   refresh() {
     try {
       const stateDir = configuredStateDir();
-      this.statusFilter = configuredStatusFilter();
       const sessions = filterSessionsByStatus(loadSessionCache(stateDir), this.statusFilter);
       this.groups = groupSessionsByProject(sessions);
       this.lastError = "";
@@ -115,6 +115,11 @@ class SessionsProvider {
       }),
     );
   }
+
+  setStatusFilter(statusFilter) {
+    this.statusFilter = normalizeStatusFilter(statusFilter);
+    this.refresh();
+  }
 }
 
 function configuredStateDir() {
@@ -123,11 +128,6 @@ function configuredStateDir() {
     return path.resolve(configured.replace(/^~(?=$|[\\/])/, process.env.HOME || "~"));
   }
   return defaultStateDir();
-}
-
-function configuredStatusFilter() {
-  const configured = vscode.workspace.getConfiguration("codexRadar").get("statusFilter", "all");
-  return normalizeStatusFilter(configured);
 }
 
 function createSessionCacheWatcher(provider) {
@@ -169,19 +169,38 @@ class SessionCacheWatcherManager {
   }
 }
 
+function statusFilterItems(currentStatusFilter = "") {
+  const current = normalizeStatusFilter(currentStatusFilter) || "all";
+  return STATUS_FILTER_VALUES.map((status) => {
+    const value = normalizeStatusFilter(status);
+    return {
+      label: status === "all" ? "All statuses" : status,
+      description: status === current ? "current" : "",
+      value,
+    };
+  });
+}
+
+async function chooseStatusFilter(provider) {
+  const selected = await vscode.window.showQuickPick(statusFilterItems(provider.statusFilter), {
+    placeHolder: "Filter Codex Radar sessions by status",
+  });
+  if (selected) {
+    provider.setStatusFilter(selected.value);
+  }
+}
+
 function activate(context) {
   const provider = new SessionsProvider();
   const watcherManager = new SessionCacheWatcherManager(provider);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("codexRadar.sessions", provider),
     vscode.commands.registerCommand("codexRadar.refresh", () => provider.refresh()),
+    vscode.commands.registerCommand("codexRadar.filterStatus", () => chooseStatusFilter(provider)),
     vscode.workspace.onDidChangeConfiguration((event) => {
       const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
-      const statusFilterChanged = event.affectsConfiguration("codexRadar.statusFilter");
       if (stateDirChanged) {
         watcherManager.reset();
-      }
-      if (stateDirChanged || statusFilterChanged) {
         provider.refresh();
       }
     }),
@@ -194,4 +213,5 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
+  statusFilterItems,
 };

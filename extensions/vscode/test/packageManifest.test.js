@@ -20,22 +20,26 @@ test("contributes refresh command as a view title action", () => {
 
   assert.equal(refreshCommand.icon, "$(refresh)");
   assert.equal(viewTitleMenu.when, "view == codexRadar.sessions");
-  assert.equal(viewTitleMenu.group, "navigation");
+  assert.equal(viewTitleMenu.group, "navigation@2");
 });
 
-test("contributes a status filter setting with supported display statuses", () => {
+test("contributes status filter as a temporary view title action", () => {
   const manifest = readManifest();
-  const statusFilter = manifest.contributes.configuration.properties["codexRadar.statusFilter"];
+  const filterCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.filterStatus",
+  );
+  const viewTitleMenu = manifest.contributes.menus["view/title"].find(
+    (item) => item.command === "codexRadar.filterStatus",
+  );
 
-  assert.equal(statusFilter.default, "all");
-  assert.deepEqual(statusFilter.enum, [
-    "all",
-    "active",
-    "running",
-    "tool_running",
-    "waiting_approval",
-    "done",
-    "stale",
-    "unknown",
-  ]);
+  assert.equal(filterCommand.icon, "$(filter)");
+  assert.equal(viewTitleMenu.when, "view == codexRadar.sessions");
+  assert.equal(viewTitleMenu.group, "navigation@1");
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      manifest.contributes.configuration.properties,
+      "codexRadar.statusFilter",
+    ),
+    false,
+  );
 });

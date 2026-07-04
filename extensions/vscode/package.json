@@ -13,7 +13,8 @@
   ],
   "activationEvents": [
     "onView:codexRadar.sessions",
-    "onCommand:codexRadar.refresh"
+    "onCommand:codexRadar.refresh",
+    "onCommand:codexRadar.filterStatus"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -22,6 +23,11 @@
         "command": "codexRadar.refresh",
         "title": "Codex Radar: Refresh Sessions",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "codexRadar.filterStatus",
+        "title": "Codex Radar: Filter by Status",
+        "icon": "$(filter)"
       }
     ],
     "configuration": {
@@ -31,21 +37,6 @@
           "type": "string",
           "default": "",
           "description": "Override codex-radar state directory. Empty uses CODEX_RADAR_HOME, XDG_STATE_HOME/codex-radar, or ~/.local/state/codex-radar."
-        },
-        "codexRadar.statusFilter": {
-          "type": "string",
-          "default": "all",
-          "enum": [
-            "all",
-            "active",
-            "running",
-            "tool_running",
-            "waiting_approval",
-            "done",
-            "stale",
-            "unknown"
-          ],
-          "description": "Filter the Codex Radar view by display status. Use all to show every indexed session."
         }
       }
     },
@@ -60,9 +51,14 @@
     "menus": {
       "view/title": [
         {
+          "command": "codexRadar.filterStatus",
+          "when": "view == codexRadar.sessions",
+          "group": "navigation@1"
+        },
+        {
           "command": "codexRadar.refresh",
           "when": "view == codexRadar.sessions",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ]
     }
