@@ -5,6 +5,11 @@
   "version": "0.1.0",
   "publisher": "plaonn",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plaonn/codex-radar.git",
+    "directory": "extensions/vscode"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -88,6 +93,7 @@
     }
   },
   "scripts": {
+    "package": "npx --yes @vscode/vsce package --out codex-radar-vscode-${npm_package_version}.vsix",
     "test": "node --test test/*.test.js"
   }
 }

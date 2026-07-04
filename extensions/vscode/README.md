@@ -29,3 +29,11 @@ Run tests:
 ```bash
 npm --prefix extensions/vscode test
 ```
+
+Package a local VSIX:
+
+```bash
+npm --prefix extensions/vscode run package
+```
+
+The generated `.vsix` is a local/release artifact. It is ignored by git and should be attached to a release when publishing, not committed to the repository.
