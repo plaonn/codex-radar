@@ -8,7 +8,9 @@
 
 초기 로컬 MVP 상태다. hook indexer, session list, transcript skim, dependency-free TUI가 들어가 있다.
 
-VS Code extension 또는 유사 GUI 통합은 future direction이다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
+VS Code extension 또는 유사 GUI 통합은 experimental direction이다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
+
+VS Code extension scaffold는 [extensions/vscode](extensions/vscode)에 둔다. Python core는 stdlib-first를 유지하고, extension runtime과 Node 관련 파일은 이 subtree에 격리한다.
 
 ## 개발 설치
 
@@ -83,4 +85,5 @@ Active task tracking은 tracked public 파일에 저장하지 않는다.
 ```bash
 PYTHONPATH=src python3 -m unittest discover
 python3 -m compileall src tests
+npm --prefix extensions/vscode test
 ```

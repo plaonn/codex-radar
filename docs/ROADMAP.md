@@ -12,6 +12,8 @@
 
 ## GUI Integration Criteria
 
+- VS Code extension은 이 repository 안의 `extensions/vscode/` subtree에서 시작한다.
+- Python core는 stdlib-first를 유지하고, Node/extension dependency는 extension subtree에 격리한다.
 - 첫 GUI milestone은 `sessions.json`을 직접 읽는 GUI read contract v1로 시작한다.
 - GUI implementation은 read adapter를 통해 state source를 캡슐화하고, 나중에 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 전환할 수 있어야 한다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `done`, `stale`)를 navigation 안에서 구분해야 한다.

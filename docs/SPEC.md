@@ -96,6 +96,8 @@ display-only status:
 
 첫 GUI milestone은 VS Code extension 같은 GUI surface가 local `codex-radar` state를 읽어 프로젝트 단위 conversation list와 thread attention state를 보여주는 read-only dashboard다. 이 section은 구현 완료 contract가 아니라 R7 implementation을 시작하기 전 유지해야 하는 planned boundary다.
 
+VS Code extension scaffold는 `extensions/vscode/`에 둔다. Python core는 stdlib-first를 유지하고, Node/runtime/package metadata는 extension subtree에 격리한다. 별도 repository 분리는 marketplace, release, review lifecycle이 실제로 갈라질 때 재검토한다.
+
 GUI read contract v1:
 
 - 첫 milestone은 `sessions.json` 직접 read로 시작한다.

@@ -15,8 +15,10 @@
 - event는 append-only로 기록하고, 최신 상태는 derived cache로 관리하는 방식을 선호한다.
 - 일반 개발 명령이나 테스트에서 전역 Codex config를 수정하지 않는다. `~/.codex/hooks.json` 자동 수정 대신 예시와 runbook을 제공한다.
 - `docs/REQUIREMENTS.md`와 `docs/SPEC.md`가 dependency를 정당화하기 전까지는 stdlib-first Python을 유지한다.
+- VS Code extension은 `extensions/vscode/` 아래에 둔다. Python core는 stdlib-first를 유지하고, Node/extension dependency와 build artifact는 extension subtree에 격리한다.
 - private task list, external task mapping detail, local thread ID, operator note를 tracked public 파일에 넣지 않는다.
 
 검증:
 - 코드 변경 후 `PYTHONPATH=src python3 -m unittest discover`를 실행한다.
 - Python 구조 변경 후 `python3 -m compileall src tests`를 실행한다.
+- VS Code extension 변경 후 `npm --prefix extensions/vscode test`를 실행한다.

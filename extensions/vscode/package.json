@@ -1,0 +1,48 @@
+{
+  "name": "codex-radar-vscode",
+  "displayName": "Codex Radar",
+  "description": "Read-only VS Code view for local codex-radar sessions.",
+  "version": "0.1.0",
+  "publisher": "plaonn",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:codexRadar.sessions",
+    "onCommand:codexRadar.refresh"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexRadar.refresh",
+        "title": "Codex Radar: Refresh Sessions"
+      }
+    ],
+    "configuration": {
+      "title": "Codex Radar",
+      "properties": {
+        "codexRadar.stateDir": {
+          "type": "string",
+          "default": "",
+          "description": "Override codex-radar state directory. Empty uses CODEX_RADAR_HOME, XDG_STATE_HOME/codex-radar, or ~/.local/state/codex-radar."
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "codexRadar.sessions",
+          "name": "Codex Radar"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
