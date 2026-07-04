@@ -6,7 +6,7 @@ Current scope:
 
 - Reads `sessions.json` through a small `SessionSource` adapter.
 - Groups sessions by `project`.
-- Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state.
+- Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and compact session rows.
 - Provides a manual refresh command.
 
 Boundaries:

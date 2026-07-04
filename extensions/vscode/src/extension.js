@@ -6,21 +6,26 @@ const {
   groupSessionsByProject,
   loadSessionCache,
 } = require("./sessionSource");
+const {
+  projectLabel,
+  sessionDescription,
+  sessionLabel,
+} = require("./sessionViewModel");
 
 class ProjectItem extends vscode.TreeItem {
-  constructor(project, count) {
-    super(`${project} (${count})`, vscode.TreeItemCollapsibleState.Expanded);
+  constructor(project, sessions) {
+    super(projectLabel(project, sessions), vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = "codexRadar.project";
     this.iconPath = new vscode.ThemeIcon("folder");
+    this.project = project;
   }
 }
 
 class SessionItem extends vscode.TreeItem {
   constructor(session) {
-    const label = `${session.display_status || "-"}  ${session.session_id || "unknown"}`;
-    super(label, vscode.TreeItemCollapsibleState.None);
+    super(sessionLabel(session), vscode.TreeItemCollapsibleState.None);
     this.contextValue = "codexRadar.session";
-    this.description = session.model || "";
+    this.description = sessionDescription(session);
     this.tooltip = [
       `Project: ${session.project || "-"}`,
       `Status: ${session.display_status || "-"}`,
@@ -94,9 +99,7 @@ class SessionsProvider {
 
     return Promise.resolve(
       this.groups.map((group) => {
-        const item = new ProjectItem(group.project, group.sessions.length);
-        item.project = group.project;
-        return item;
+        return new ProjectItem(group.project, group.sessions);
       }),
     );
   }
