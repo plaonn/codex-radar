@@ -68,7 +68,7 @@ function configuredCliInvocation(vscode) {
   return {
     command: DEFAULT_CLI_PATH,
     argsPrefix: [],
-    options: {},
+    options: { shellLookup: true },
     label: DEFAULT_CLI_PATH,
   };
 }
@@ -121,15 +121,26 @@ function normalizeInvocation(invocation) {
   };
 }
 
-function runRadarCli(invocation, args, options = {}) {
-  const normalized = normalizeInvocation(invocation);
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+function loginShellArgs(shellPath, command) {
+  const shellName = path.basename(String(shellPath || ""));
+  if (shellName === "sh" || shellName === "dash") {
+    return ["-c", command];
+  }
+  return ["-lc", command];
+}
+
+function execFilePromise(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     execFile(
-      normalized.command,
-      [...normalized.argsPrefix, ...args],
+      command,
+      args,
       {
-        cwd: options.cwd || normalized.options.cwd,
-        env: options.env || normalized.options.env,
+        cwd: options.cwd,
+        env: options.env,
         timeout: options.timeoutMs ?? 10000,
         maxBuffer: options.maxBuffer ?? 1024 * 1024,
       },
@@ -145,6 +156,54 @@ function runRadarCli(invocation, args, options = {}) {
   });
 }
 
+async function resolveCommandFromLoginShell(command, options = {}) {
+  const shellPath = options.shellPath || process.env.SHELL || "/bin/sh";
+  const lookup = await execFilePromise(
+    shellPath,
+    loginShellArgs(shellPath, `command -v ${shellQuote(command)}`),
+    {
+      cwd: options.cwd,
+      env: options.env,
+      timeoutMs: options.timeoutMs ?? 10000,
+      maxBuffer: options.maxBuffer ?? 1024 * 1024,
+    },
+  );
+  return String(lookup.stdout || "").trim().split(/\r?\n/).find(Boolean) || "";
+}
+
+async function runRadarCli(invocation, args, options = {}) {
+  const normalized = normalizeInvocation(invocation);
+  const runOptions = {
+    cwd: options.cwd || normalized.options.cwd,
+    env: options.env || normalized.options.env,
+    shellPath: options.shellPath || normalized.options.shellPath,
+    timeoutMs: options.timeoutMs ?? 10000,
+    maxBuffer: options.maxBuffer ?? 1024 * 1024,
+  };
+  try {
+    return await execFilePromise(
+      normalized.command,
+      [...normalized.argsPrefix, ...args],
+      runOptions,
+    );
+  } catch (error) {
+    const isMissingDefaultCommand =
+      normalized.options.shellLookup &&
+      normalized.command === DEFAULT_CLI_PATH &&
+      error &&
+      String(error.message || "").includes("ENOENT");
+    if (!isMissingDefaultCommand) {
+      throw error;
+    }
+
+    const resolved = await resolveCommandFromLoginShell(normalized.command, runOptions);
+    if (!resolved) {
+      throw error;
+    }
+    return execFilePromise(resolved, [...normalized.argsPrefix, ...args], runOptions);
+  }
+}
+
 module.exports = {
   DEFAULT_CLI_PATH,
   DEFAULT_PYTHON_PATH,
@@ -153,12 +212,15 @@ module.exports = {
   configuredCliInvocation,
   configuredCliPath,
   configuredPythonPath,
+  loginShellArgs,
   parseRetentionDaysOutput,
   prependPathEnv,
   pruneArgs,
+  resolveCommandFromLoginShell,
   retentionDaysFromInput,
   runRadarCli,
   sourceRootCliInvocation,
+  shellQuote,
   validateRetentionDaysInput,
   workspaceSourceRoot,
 };

@@ -10,12 +10,15 @@ const {
   configuredCliInvocation,
   DEFAULT_CLI_PATH,
   DEFAULT_PYTHON_PATH,
+  loginShellArgs,
   parseRetentionDaysOutput,
   prependPathEnv,
   pruneArgs,
+  resolveCommandFromLoginShell,
   retentionDaysFromInput,
   runRadarCli,
   sourceRootCliInvocation,
+  shellQuote,
   validateRetentionDaysInput,
   workspaceSourceRoot,
 } = require("../src/radarCli");
@@ -96,7 +99,10 @@ test("uses configured cliPath before source checkout fallback", () => {
 });
 
 test("falls back to codex-radar command when no source checkout is open", () => {
-  assert.equal(configuredCliInvocation(fakeVscode()).command, DEFAULT_CLI_PATH);
+  const invocation = configuredCliInvocation(fakeVscode());
+
+  assert.equal(invocation.command, DEFAULT_CLI_PATH);
+  assert.equal(invocation.options.shellLookup, true);
   assert.equal(DEFAULT_PYTHON_PATH, "python3");
   assert.equal(prependPathEnv("/usr/bin", "/tmp/src"), `/tmp/src${path.delimiter}/usr/bin`);
 });
@@ -112,4 +118,50 @@ test("runs CLI invocations with prefix args", async () => {
   );
 
   assert.equal(result.stdout.trim(), "--state-dir|/tmp/radar state|config|get|retention_days");
+});
+
+test("quotes commands for shell lookup", () => {
+  assert.equal(shellQuote("codex-radar"), "'codex-radar'");
+  assert.equal(shellQuote("it's"), "'it'\\''s'");
+  assert.deepEqual(loginShellArgs("/bin/zsh", "command -v codex-radar"), [
+    "-lc",
+    "command -v codex-radar",
+  ]);
+  assert.deepEqual(loginShellArgs("/bin/sh", "command -v codex-radar"), [
+    "-c",
+    "command -v codex-radar",
+  ]);
+});
+
+test("resolves default codex-radar through a login shell after ENOENT", async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-vscode-shell-"));
+  const fakeCli = path.join(tmp, "codex-radar");
+  const fakeShell = path.join(tmp, "fake-shell");
+  try {
+    fs.writeFileSync(
+      fakeCli,
+      "#!/bin/sh\nprintf 'fake-cli:%s\\n' \"$*\"\n",
+      { mode: 0o755 },
+    );
+    fs.writeFileSync(
+      fakeShell,
+      `#!/bin/sh\nprintf '%s\\n' ${JSON.stringify(fakeCli)}\n`,
+      { mode: 0o755 },
+    );
+
+    assert.equal(await resolveCommandFromLoginShell("codex-radar", { shellPath: fakeShell }), fakeCli);
+    const result = await runRadarCli(
+      {
+        command: DEFAULT_CLI_PATH,
+        argsPrefix: [],
+        options: { shellLookup: true, shellPath: fakeShell },
+      },
+      ["config", "get", "retention_days"],
+      { env: { PATH: "/usr/bin:/bin" } },
+    );
+
+    assert.equal(result.stdout.trim(), "fake-cli:config get retention_days");
+  } finally {
+    fs.rmSync(tmp, { force: true, recursive: true });
+  }
 });

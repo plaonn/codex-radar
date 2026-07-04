@@ -62,7 +62,8 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 Configure the CLI used by retention and prune actions:
 
 - If `codex-radar` is installed on the VS Code extension host PATH, the default `codexRadar.cliPath` works.
-- If not, set `codexRadar.cliPath` to an absolute executable path.
+- If the extension host PATH cannot find `codex-radar`, the default command is resolved once more through the remote user's login shell with `command -v codex-radar`.
+- If that still cannot find the command, install `codex-radar` for the remote shell or set `codexRadar.cliPath`.
 - When the open workspace is a codex-radar source checkout containing `src/codex_radar/cli.py`, the extension can fall back to `python3 -m codex_radar.cli` with `PYTHONPATH=src`. Override that interpreter with `codexRadar.pythonPath` if needed.
 
 ## Remote SSH Smoke Test
