@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "sessions": {
+    "session-approval": {
+      "current_tool": "",
+      "cwd": "/tmp/project-a",
+      "event_count": 3,
+      "first_seen_at": "2026-07-04T00:00:00+00:00",
+      "last_assistant_message": "I need permission to run the command.",
+      "last_event_name": "PermissionRequest",
+      "last_seen_at": "2026-07-04T00:05:00+00:00",
+      "model": "gpt-5",
+      "permission_mode": "on-request",
+      "project": "project-a",
+      "session_id": "session-approval",
+      "status": "waiting_approval",
+      "transcript_path": "/tmp/project-a/transcript.jsonl",
+      "turn_id": "turn-1"
+    },
+    "session-running": {
+      "current_tool": "Bash",
+      "cwd": "/tmp/project-b",
+      "event_count": 2,
+      "first_seen_at": "2026-07-04T00:01:00+00:00",
+      "last_assistant_message": "Running tests.",
+      "last_event_name": "PreToolUse",
+      "last_seen_at": "2026-07-04T00:03:00+00:00",
+      "model": "gpt-5",
+      "permission_mode": "default",
+      "project": "project-b",
+      "session_id": "session-running",
+      "status": "tool_running",
+      "transcript_path": "/tmp/project-b/transcript.jsonl",
+      "turn_id": "turn-2"
+    }
+  },
+  "updated_at": "2026-07-04T00:05:00+00:00"
+}

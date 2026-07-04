@@ -47,7 +47,7 @@ or ~/.local/state/codex-radar
 state directory 구성:
 
 - `events.jsonl`: 정규화된 hook event append-only log.
-- `sessions.json`: latest session cache.
+- `sessions.json`: latest session cache. GUI read contract v1 schema는 [schemas/session-cache-v1.schema.json](schemas/session-cache-v1.schema.json), example은 [../examples/sessions.json](../examples/sessions.json)에 둔다.
 - `.lock`: append/cache update 중 사용하는 coarse file lock.
 
 ## Data Model

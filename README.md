@@ -62,6 +62,8 @@ or $XDG_STATE_HOME/codex-radar
 or ~/.local/state/codex-radar
 ```
 
+Future GUI integration은 작은 adapter를 통해 `sessions.json`을 직접 읽는 방식으로 시작한다. v1 cache schema는 [docs/schemas/session-cache-v1.schema.json](docs/schemas/session-cache-v1.schema.json), 예시는 [examples/sessions.json](examples/sessions.json)에 둔다.
+
 ## Hook 설정
 
 [docs/runbooks/install-hooks.md](docs/runbooks/install-hooks.md)를 따른다.
