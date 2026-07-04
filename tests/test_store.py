@@ -4,7 +4,15 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from codex_radar.store import is_stale_session, load_sessions, normalize_event, record_hook_event, session_display_status
+from codex_radar.store import (
+    CACHE_SCHEMA_VERSION,
+    SESSION_CACHE_FIELDS,
+    is_stale_session,
+    load_sessions,
+    normalize_event,
+    record_hook_event,
+    session_display_status,
+)
 
 
 class StoreTests(unittest.TestCase):
@@ -100,6 +108,37 @@ class StoreTests(unittest.TestCase):
             self.assertEqual("UserPromptSubmit", json.loads(events[0])["event_name"])
             sessions = load_sessions(state_dir)
             self.assertEqual("running", sessions["session-1"]["status"])
+
+    def test_session_cache_writes_gui_read_contract_schema_v1(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            record_hook_event(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "session-1",
+                    "turn_id": "turn-1",
+                    "cwd": "/tmp/project-a",
+                    "transcript_path": "/tmp/transcript.jsonl",
+                    "model": "gpt-test",
+                    "permission_mode": "default",
+                    "last_assistant_message": "working",
+                },
+                state_dir,
+            )
+
+            payload = json.loads((state_dir / "sessions.json").read_text(encoding="utf-8"))
+            self.assertEqual(CACHE_SCHEMA_VERSION, payload["schema_version"])
+            self.assertIsInstance(payload["updated_at"], str)
+            self.assertEqual(["session-1"], list(payload["sessions"]))
+            session = payload["sessions"]["session-1"]
+            self.assertEqual(set(SESSION_CACHE_FIELDS), set(session))
+
+    def test_load_sessions_does_not_create_missing_state_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "missing-state"
+
+            self.assertEqual({}, load_sessions(state_dir))
+            self.assertFalse(state_dir.exists())
 
     def test_stop_clears_current_tool(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

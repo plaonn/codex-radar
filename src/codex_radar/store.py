@@ -19,6 +19,23 @@ EVENT_STATUS = {
     "SubagentStop": "done",
 }
 
+CACHE_SCHEMA_VERSION = 1
+SESSION_CACHE_FIELDS = (
+    "session_id",
+    "first_seen_at",
+    "last_seen_at",
+    "last_event_name",
+    "status",
+    "cwd",
+    "project",
+    "transcript_path",
+    "model",
+    "permission_mode",
+    "turn_id",
+    "current_tool",
+    "last_assistant_message",
+    "event_count",
+)
 STALE_SESSION_SECONDS = 30 * 60
 STALE_ELIGIBLE_STATUSES = {"active", "running", "tool_running"}
 
@@ -88,8 +105,12 @@ def default_state_dir() -> Path:
     return Path.home() / ".local" / "state" / "codex-radar"
 
 
+def state_dir_path(state_dir: Optional[Path] = None) -> Path:
+    return Path(state_dir) if state_dir is not None else default_state_dir()
+
+
 def ensure_state_dir(state_dir: Optional[Path] = None) -> Path:
-    resolved = Path(state_dir) if state_dir is not None else default_state_dir()
+    resolved = state_dir_path(state_dir)
     resolved.mkdir(parents=True, exist_ok=True)
     return resolved
 
@@ -98,8 +119,9 @@ def events_path(state_dir: Optional[Path] = None) -> Path:
     return ensure_state_dir(state_dir) / "events.jsonl"
 
 
-def sessions_path(state_dir: Optional[Path] = None) -> Path:
-    return ensure_state_dir(state_dir) / "sessions.json"
+def sessions_path(state_dir: Optional[Path] = None, *, create: bool = True) -> Path:
+    directory = ensure_state_dir(state_dir) if create else state_dir_path(state_dir)
+    return directory / "sessions.json"
 
 
 def _string(value: Any) -> str:
@@ -190,7 +212,7 @@ def append_event(event: Dict[str, Any], state_dir: Optional[Path] = None) -> Non
 
 
 def load_sessions(state_dir: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
-    path = sessions_path(state_dir)
+    path = sessions_path(state_dir, create=False)
     if not path.exists():
         return {}
     try:
@@ -208,7 +230,7 @@ def load_sessions(state_dir: Optional[Path] = None) -> Dict[str, Dict[str, Any]]
 def save_sessions(sessions: Dict[str, Dict[str, Any]], state_dir: Optional[Path] = None) -> None:
     path = sessions_path(state_dir)
     payload = {
-        "schema_version": 1,
+        "schema_version": CACHE_SCHEMA_VERSION,
         "updated_at": utc_now(),
         "sessions": sessions,
     }

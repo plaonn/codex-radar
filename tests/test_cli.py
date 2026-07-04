@@ -10,6 +10,28 @@ from codex_radar.cli import main
 
 
 class CliTests(unittest.TestCase):
+    def test_path_prints_state_dir_without_creating_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "missing-state"
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "path"])
+
+            self.assertEqual(f"{state_dir}\n", out.getvalue())
+            self.assertFalse(state_dir.exists())
+
+    def test_sessions_json_does_not_create_missing_state_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "missing-state"
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "sessions", "--json"])
+
+            self.assertEqual([], json.loads(out.getvalue()))
+            self.assertFalse(state_dir.exists())
+
     def test_sessions_prints_display_status_and_filters_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)

@@ -16,6 +16,8 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
 - `codex-radar tui`: 가벼운 session dashboard를 연다.
 - `codex-radar watch`: foreground watcher를 실행해 새 `waiting_approval` session을 terminal bell과 최소 metadata line으로 알린다.
+- `codex-radar path`: active state directory를 출력한다. 이 command는 directory를 생성하지 않는 no-write discovery surface다.
+- `codex-radar doctor`: 짧은 로컬 진단을 출력한다.
 - `codex-radar completion <bash|zsh|fish>`: shell completion script를 stdout으로 출력한다.
 - TUI는 선택한 session의 metadata와 transcript preview를 같은 terminal 안에서 보여준다.
 - TUI에서 resumable session row를 선택하고 Enter를 누르면 curses UI를 종료한 뒤 같은 terminal에서 `codex resume <session_id>`를 실행한다.
@@ -98,8 +100,10 @@ GUI read contract v1:
 
 - 첫 milestone은 `sessions.json` 직접 read로 시작한다.
 - `sessions.json`은 GUI read contract v1의 입력이지만 영구 public API로 과도하게 고정하지 않는다.
+- GUI는 `codex-radar path`를 no-write state directory discovery command로 사용할 수 있다.
 - GUI implementation은 `SessionSource` 같은 얇은 read adapter를 두고 view/component code가 file read에 직접 결합하지 않게 한다.
 - 나중에 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커지면 adapter를 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 교체할 수 있다.
+- future CLI/export read adapter는 missing state directory에서 directory나 state file을 생성하지 않아야 한다.
 - GUI는 `events.jsonl`을 기본 navigation 입력으로 읽지 않는다. normalized event의 `raw`에는 민감한 hook payload가 포함될 수 있기 때문이다.
 
 GUI display contract v1:
