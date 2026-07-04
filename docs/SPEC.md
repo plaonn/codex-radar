@@ -114,13 +114,16 @@ GUI display contract v1:
 
 - GUI는 `project` 기준으로 conversation list를 묶는다.
 - VS Code extension은 Explorer 하위 view가 아니라 dedicated Codex Radar Activity Bar container 안에 session navigation을 제공한다.
-- VS Code session row는 scan-friendly status text, short session id, current tool/event/model/relative last-seen metadata를 표시하며 기본 navigation에는 transcript content나 raw transcript path를 포함하지 않는다.
+- VS Code session row는 readable title/snippet, scan-friendly status text, read/unread state, current tool/model/relative last-seen metadata를 표시한다. 기본 navigation의 snippet은 session cache의 redacted latest assistant summary를 사용하고 raw transcript file을 row마다 읽지 않는다.
 - GUI는 `waiting_approval`, `running`, `done`, `stale`를 navigation 안에서 구분한다.
-- GUI는 `waiting_approval`, `running`, `tool_running`, `stale` 같은 attention-worthy session 수를 VS Code view badge 같은 in-surface cue로 보여줄 수 있다. 이 count는 현재 status filter와 무관하게 전체 loaded session 기준으로 계산한다.
+- GUI attention은 `waiting_approval`, `stale`, unread `done` session을 뜻한다. `running`과 `tool_running`은 상태로 표시하지만 attention count에는 포함하지 않는다.
+- GUI는 attention-worthy session 수를 VS Code view badge 같은 in-surface cue로 보여줄 수 있다. 이 count는 현재 status filter와 무관하게 전체 loaded session 기준으로 계산한다.
 - GUI는 `display_status` 기준으로 session list를 좁히는 read-only status filter를 제공할 수 있다. 첫 구현은 view-local temporary filter로 두며, session cache나 extension settings를 수정하지 않는다.
+- GUI는 done session에 extension-local read/unread state를 유지할 수 있다. read key는 `session_id`와 done `last_seen_at` 기준이며, 같은 session이 다시 done 상태로 갱신되면 새 unread item으로 취급한다.
 - `stale`은 cache의 원본 `status`를 바꾸지 않는 display-only status이며, terminal MVP와 같은 stale rule을 사용한다.
 - 첫 notification surface는 VS Code extension 안의 badge/highlight 같은 in-surface attention cue로 제한한다.
-- GUI는 session row에서 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급하고, 실패해도 session state나 acknowledgement state를 변경하지 않는다.
+- GUI는 session row click으로 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급한다. done session을 성공적으로 열면 extension-local read state를 read로 갱신할 수 있다.
+- GUI는 done session row의 inline action으로 read/unread를 토글할 수 있다.
 - OS notification, external notification channel, toast content template은 별도 milestone 전까지 scope 밖이다.
 
 GUI privacy/action boundary v1:
@@ -128,8 +131,8 @@ GUI privacy/action boundary v1:
 - 첫 GUI milestone은 read-only dashboard다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
-- GUI는 transcript preview를 기본 list에 자동 노출하지 않는다. transcript skim은 사용자 명시 action 뒤에만 수행하고 기존 best-effort redaction semantics를 재사용한다.
-- VS Code transcript preview는 session row의 명시적 command로만 열며, readonly preview document에 식별 가능한 최근 skim만 표시한다. 기본 navigation label, description, tooltip에는 transcript content나 raw transcript path를 넣지 않는다.
+- GUI는 raw transcript file을 기본 list에 자동 노출하지 않는다. 기본 navigation에는 session cache의 redacted latest assistant summary를 짧은 식별 snippet으로 표시할 수 있지만 raw transcript path는 표시하지 않는다.
+- VS Code extension은 transcript preview row action을 제공하지 않는다. 자세한 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.
 
 ## Automation Boundary

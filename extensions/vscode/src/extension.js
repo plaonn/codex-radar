@@ -22,9 +22,14 @@ const {
   sessionCacheWatchTarget,
 } = require("./sessionWatcher");
 const {
-  previewDocumentContent,
-  skimTranscript,
-} = require("./transcriptPreview");
+  READ_DONE_KEYS_KEY,
+  decorateSessions,
+  isDoneSession,
+  markDoneRead,
+  markDoneUnread,
+  readStateFromValue,
+  readStateToValue,
+} = require("./readState");
 
 class ProjectItem extends vscode.TreeItem {
   constructor(project, sessions) {
@@ -38,25 +43,16 @@ class ProjectItem extends vscode.TreeItem {
 class SessionItem extends vscode.TreeItem {
   constructor(session) {
     super(sessionLabel(session), vscode.TreeItemCollapsibleState.None);
-    this.contextValue = "codexRadar.session";
+    this.contextValue = sessionContextValue(session);
     this.session = session;
     this.description = sessionDescription(session);
     this.tooltip = sessionTooltip(session);
     this.iconPath = statusIcon(session.display_status);
-  }
-}
-
-class TranscriptPreviewProvider {
-  constructor() {
-    this.documents = new Map();
-  }
-
-  setContent(uri, content) {
-    this.documents.set(uri.toString(), content);
-  }
-
-  provideTextDocumentContent(uri) {
-    return this.documents.get(uri.toString()) || "";
+    this.command = {
+      command: "codexRadar.openInCodex",
+      title: "Open in Codex",
+      arguments: [this],
+    };
   }
 }
 
@@ -76,8 +72,16 @@ function statusIcon(status) {
   return new vscode.ThemeIcon("circle-outline");
 }
 
+function sessionContextValue(session) {
+  if (isDoneSession(session)) {
+    return session.is_unread_done ? "codexRadar.session.done.unread" : "codexRadar.session.done.read";
+  }
+  return "codexRadar.session";
+}
+
 class SessionsProvider {
-  constructor() {
+  constructor(globalState) {
+    this.globalState = globalState;
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     this.lastError = "";
@@ -90,7 +94,8 @@ class SessionsProvider {
   refresh() {
     try {
       const stateDir = configuredStateDir();
-      const sessions = loadSessionCache(stateDir);
+      const readKeys = this.readKeys();
+      const sessions = decorateSessions(loadSessionCache(stateDir), readKeys);
       this.sessions = sessions;
       const visibleSessions = filterSessionsByStatus(sessions, this.statusFilter);
       this.groups = groupSessionsByProject(visibleSessions);
@@ -144,6 +149,23 @@ class SessionsProvider {
 
   attentionBadge() {
     return attentionBadge(this.sessions);
+  }
+
+  readKeys() {
+    return readStateFromValue(this.globalState.get(READ_DONE_KEYS_KEY, []));
+  }
+
+  async updateReadKeys(readKeys) {
+    await this.globalState.update(READ_DONE_KEYS_KEY, readStateToValue(readKeys));
+    this.refresh();
+  }
+
+  async markSessionRead(session) {
+    await this.updateReadKeys(markDoneRead(this.readKeys(), session));
+  }
+
+  async markSessionUnread(session) {
+    await this.updateReadKeys(markDoneUnread(this.readKeys(), session));
   }
 }
 
@@ -223,43 +245,12 @@ async function chooseStatusFilter(provider) {
   }
 }
 
-function previewUriForSession(session) {
-  const sessionId = String(session.session_id || "unknown");
-  const safeSessionId = sessionId.replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 80) || "unknown";
-  return vscode.Uri.from({
-    scheme: "codex-radar-preview",
-    path: `/${safeSessionId}.txt`,
-    query: String(Date.now()),
-  });
-}
-
-async function previewTranscript(target, previewProvider) {
+function sessionFromTarget(target) {
   const session = target && target.session ? target.session : target;
   if (!session || typeof session !== "object") {
-    await vscode.window.showWarningMessage("Select a Codex Radar session to preview.");
-    return;
+    return null;
   }
-  if (!session.transcript_path) {
-    await vscode.window.showWarningMessage("Transcript path is not available for this session.");
-    return;
-  }
-
-  let entries;
-  try {
-    entries = skimTranscript(session.transcript_path);
-  } catch (error) {
-    if (error && error.code === "ENOENT") {
-      await vscode.window.showWarningMessage("Transcript file not found.");
-      return;
-    }
-    await vscode.window.showErrorMessage("Could not read transcript preview.");
-    return;
-  }
-
-  const uri = previewUriForSession(session);
-  previewProvider.setContent(uri, previewDocumentContent(session, entries));
-  const document = await vscode.workspace.openTextDocument(uri);
-  await vscode.window.showTextDocument(document, { preview: true });
+  return session;
 }
 
 function officialCodexThreadUri(session) {
@@ -271,8 +262,8 @@ function officialCodexThreadUri(session) {
 }
 
 async function openOfficialCodexThread(target) {
-  const session = target && target.session ? target.session : target;
-  if (!session || typeof session !== "object") {
+  const session = sessionFromTarget(target);
+  if (!session) {
     await vscode.window.showWarningMessage("Select a Codex Radar session to open in Codex.");
     return false;
   }
@@ -290,9 +281,38 @@ async function openOfficialCodexThread(target) {
   return opened;
 }
 
+async function openSessionInCodex(target, provider, treeView) {
+  const session = sessionFromTarget(target);
+  const opened = await openOfficialCodexThread(session);
+  if (opened && session && isDoneSession(session)) {
+    await provider.markSessionRead(session);
+    syncTreeViewBadge(treeView, provider);
+  }
+  return opened;
+}
+
+async function markSessionReadCommand(target, provider, treeView) {
+  const session = sessionFromTarget(target);
+  if (!session || !isDoneSession(session)) {
+    await vscode.window.showWarningMessage("Select a done Codex Radar session to mark read.");
+    return;
+  }
+  await provider.markSessionRead(session);
+  syncTreeViewBadge(treeView, provider);
+}
+
+async function markSessionUnreadCommand(target, provider, treeView) {
+  const session = sessionFromTarget(target);
+  if (!session || !isDoneSession(session)) {
+    await vscode.window.showWarningMessage("Select a done Codex Radar session to mark unread.");
+    return;
+  }
+  await provider.markSessionUnread(session);
+  syncTreeViewBadge(treeView, provider);
+}
+
 function activate(context) {
-  const provider = new SessionsProvider();
-  const previewProvider = new TranscriptPreviewProvider();
+  const provider = new SessionsProvider(context.globalState);
   const treeView = vscode.window.createTreeView("codexRadar.sessionList", {
     treeDataProvider: provider,
   });
@@ -302,7 +322,6 @@ function activate(context) {
   );
   context.subscriptions.push(
     treeView,
-    vscode.workspace.registerTextDocumentContentProvider("codex-radar-preview", previewProvider),
     vscode.commands.registerCommand("codexRadar.refresh", () => {
       provider.refresh();
       syncTreeViewBadge(treeView, provider);
@@ -311,11 +330,14 @@ function activate(context) {
       await chooseStatusFilter(provider);
       syncTreeViewBadge(treeView, provider);
     }),
-    vscode.commands.registerCommand("codexRadar.previewTranscript", (target) =>
-      previewTranscript(target, previewProvider),
+    vscode.commands.registerCommand("codexRadar.markRead", (target) =>
+      markSessionReadCommand(target, provider, treeView),
+    ),
+    vscode.commands.registerCommand("codexRadar.markUnread", (target) =>
+      markSessionUnreadCommand(target, provider, treeView),
     ),
     vscode.commands.registerCommand("codexRadar.openInCodex", (target) =>
-      openOfficialCodexThread(target),
+      openSessionInCodex(target, provider, treeView),
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
       const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
@@ -334,10 +356,9 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
-  previewUriForSession,
   officialCodexThreadUri,
   openOfficialCodexThread,
+  openSessionInCodex,
   syncTreeViewBadge,
   statusFilterItems,
-  TranscriptPreviewProvider,
 };

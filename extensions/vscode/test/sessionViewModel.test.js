@@ -4,13 +4,18 @@ const test = require("node:test");
 const {
   attentionBadge,
   attentionCount,
+  compactText,
   projectLabel,
   relativeTimeText,
+  redactText,
   sessionDescription,
   sessionLabel,
+  sessionSnippet,
+  sessionTitle,
   sessionTooltip,
   shortSessionId,
   statusText,
+  truncateText,
 } = require("../src/sessionViewModel");
 
 test("shortens long session ids for scan-friendly rows", () => {
@@ -24,25 +29,49 @@ test("formats session rows without transcript content", () => {
     current_tool: "Bash",
     session_id: "session-approval",
     display_status: "waiting_approval",
+    is_attention: true,
     last_event_name: "PermissionRequest",
+    last_assistant_message: "I need permission to run the command.",
     model: "gpt-5",
     last_seen_at: "2026-07-04T00:00:00+00:00",
   };
 
   assert.equal(statusText("waiting_approval"), "Waiting approval");
-  assert.equal(sessionLabel(session), "Waiting approval - session-appr");
+  assert.equal(sessionLabel(session), "I need permission to run the command.");
   assert.equal(
     sessionDescription(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }),
-    "Bash | PermissionRequest | gpt-5 | 7m ago",
+    "Waiting approval | Bash | gpt-5 | 7m ago",
   );
   assert.equal(sessionTooltip(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }), [
     "Project: -",
     "Status: Waiting approval",
+    "Read: -",
     "Last event: PermissionRequest",
     "Last seen: 7m ago",
     "Model: gpt-5",
     "Current tool: Bash",
+    "Session: session-appr",
   ].join("\n"));
+});
+
+test("builds human-readable title and redacted snippet from session cache", () => {
+  const session = {
+    display_status: "done",
+    last_assistant_message: "token=supersecret open /Users/example/private/file",
+  };
+
+  assert.equal(compactText("  hello\n\nworld  "), "hello world");
+  assert.equal(truncateText("abcdef", 4), "abc...");
+  assert.equal(redactText("token=supersecret", { homeDir: "/Users/example" }), "[REDACTED]");
+  assert.equal(
+    sessionSnippet(session, { homeDir: "/Users/example" }),
+    "[REDACTED] open ~/private/file",
+  );
+  assert.equal(
+    sessionTitle({ ...session, thread_title: "  Release\nreadiness  " }),
+    "Release readiness",
+  );
+  assert.equal(sessionTitle({ display_status: "stale" }), "Stale thread");
 });
 
 test("formats relative session times for compact scanning", () => {
@@ -58,32 +87,33 @@ test("formats relative session times for compact scanning", () => {
 
 test("summarizes project attention in group labels", () => {
   const sessions = [
-    { display_status: "waiting_approval" },
-    { display_status: "done" },
-    { display_status: "stale" },
+    { display_status: "waiting_approval", is_attention: true },
+    { display_status: "done", is_attention: false },
+    { display_status: "done", is_attention: true },
+    { display_status: "stale", is_attention: true },
   ];
 
-  assert.equal(attentionCount(sessions), 2);
-  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 2 attention / 3");
+  assert.equal(attentionCount(sessions), 3);
+  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 3 attention / 4");
   assert.equal(projectLabel("idle-project", [{ display_status: "done" }]), "idle-project (1)");
 });
 
-test("builds an attention badge from attention statuses only", () => {
+test("builds an attention badge from decorated attention state only", () => {
   const sessions = [
-    { display_status: "waiting_approval" },
-    { display_status: "running" },
-    { display_status: "tool_running" },
-    { display_status: "stale" },
-    { display_status: "done" },
-    { display_status: "unknown" },
+    { display_status: "waiting_approval", is_attention: true },
+    { display_status: "running", is_attention: false },
+    { display_status: "tool_running", is_attention: false },
+    { display_status: "stale", is_attention: true },
+    { display_status: "done", is_attention: true },
+    { display_status: "done", is_attention: false },
   ];
 
   assert.deepEqual(attentionBadge(sessions), {
-    value: 4,
-    tooltip: "4 attention sessions",
+    value: 3,
+    tooltip: "3 attention sessions",
   });
-  assert.equal(attentionBadge([{ display_status: "done" }]), undefined);
-  assert.deepEqual(attentionBadge([{ display_status: "stale" }]), {
+  assert.equal(attentionBadge([{ display_status: "done", is_attention: false }]), undefined);
+  assert.deepEqual(attentionBadge([{ display_status: "done", is_attention: true }]), {
     value: 1,
     tooltip: "1 attention session",
   });

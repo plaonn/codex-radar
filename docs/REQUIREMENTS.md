@@ -58,7 +58,7 @@
 - Requirement: 사용자가 전체 transcript를 열지 않고도 최근 맥락을 훑을 수 있어야 하며, transcript skim output은 secret-like token과 home path를 best-effort로 redact해야 한다.
 - Rationale: 최근 context 확인 비용을 줄이되 transcript와 hook payload가 민감한 로컬 데이터라는 전제를 유지해야 한다.
 - Failure prevented: 최근 context를 확인하려고 매번 전체 transcript를 열거나, skim 과정에서 민감 정보가 부주의하게 노출되는 문제.
-- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code explicit transcript preview, transcript redaction tests.
+- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code redacted cached snippet display, transcript redaction tests.
 - Revisit when: transcript format이나 redaction threat model이 바뀔 때.
 
 ### R6: privacy and automation boundary
@@ -77,7 +77,7 @@
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Derived specs/tests: planned GUI read contract v1, project-grouped navigation, in-surface attention cues, read-only cache-change refresh, GUI status filter, read-only first milestone, extension surface boundary, `extensions/vscode` scaffold and SessionSource tests.
+- Derived specs/tests: planned GUI read contract v1, project-grouped navigation, in-surface attention cues, extension-local read/unread state, read-only cache-change refresh, GUI status filter, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource tests.
 - Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
 
 #### R7a: GUI project navigation
@@ -91,10 +91,10 @@
 #### R7b: GUI attention state
 
 - Status: confirmed direction
-- Requirement: GUI는 `waiting_approval`, `running`, `done`, `stale` 같은 thread 상태를 navigation 안에서 구분하고, 첫 milestone에서는 VS Code surface 안의 badge/highlight 같은 in-surface cue만 사용해야 한다.
+- Requirement: GUI는 `waiting_approval`, `running`, `done`, `stale` 같은 thread 상태를 navigation 안에서 구분하고, attention badge는 `waiting_approval`, `stale`, unread `done`처럼 사용자 확인이 필요한 상태를 표현해야 한다.
 - Rationale: 사용자는 VS Code workflow 안에서 어떤 thread가 주의가 필요한지 확인해야 하지만, OS/external notification은 content template과 redaction policy 없이는 scope가 커진다.
 - Failure prevented: thread 상태를 놓치거나, 초기 GUI milestone이 OS/external notification 설계로 과도하게 확장되는 문제.
-- Derived specs/tests: GUI notification rules, in-surface cue only, no OS/external notification before explicit opt-in milestone.
+- Derived specs/tests: GUI notification rules, in-surface cue only, extension-local read/unread toggle, no OS/external notification before explicit opt-in milestone.
 
 #### R7c: GUI privacy boundary
 
@@ -102,7 +102,7 @@
 - Requirement: GUI는 host-local `codex-radar` state를 읽되 transcript/session metadata를 외부로 전송하지 않고, raw hook event log나 raw transcript는 기본 navigation에서 직접 노출하지 않아야 한다.
 - Rationale: GUI는 편의 표면일 뿐 privacy boundary를 완화하지 않아야 한다.
 - Failure prevented: GUI 통합 과정에서 transcript path, prompt, code, secret-like content가 부주의하게 표시되거나 외부로 전송되는 문제.
-- Derived specs/tests: sensitive field display rules, explicit user action before transcript preview, VS Code readonly preview document, best-effort redacted skim reuse.
+- Derived specs/tests: sensitive field display rules, redacted latest cached snippet in default navigation, no raw transcript path/content in default navigation, best-effort redaction reuse.
 
 #### R7d: GUI fallback continuity
 

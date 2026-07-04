@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.3");
+  assert.equal(manifest.version, "0.1.4");
 });
 
 test("contributes refresh command as a view title action", () => {
@@ -68,7 +68,7 @@ test("contributes status filter as a temporary view title action", () => {
   );
 });
 
-test("contributes transcript preview as an explicit session row action", () => {
+test("does not contribute transcript preview to the VS Code surface", () => {
   const manifest = readManifest();
   const previewCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.previewTranscript",
@@ -77,16 +77,12 @@ test("contributes transcript preview as an explicit session row action", () => {
     (item) => item.command === "codexRadar.previewTranscript",
   );
 
-  assert.equal(previewCommand.icon, "$(open-preview)");
-  assert.equal(
-    manifest.activationEvents.includes("onCommand:codexRadar.previewTranscript"),
-    true,
-  );
-  assert.equal(itemMenu.when, "view == codexRadar.sessionList && viewItem == codexRadar.session");
-  assert.equal(itemMenu.group, "inline@1");
+  assert.equal(previewCommand, undefined);
+  assert.equal(itemMenu, undefined);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.previewTranscript"), false);
 });
 
-test("contributes experimental open in Codex as a session row action", () => {
+test("contributes experimental open in Codex as the row command", () => {
   const manifest = readManifest();
   const openCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.openInCodex",
@@ -98,6 +94,36 @@ test("contributes experimental open in Codex as a session row action", () => {
   assert.equal(openCommand.icon, "$(link-external)");
   assert.equal(openCommand.title, "Codex Radar: Open in Codex (Experimental)");
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openInCodex"), true);
-  assert.equal(itemMenu.when, "view == codexRadar.sessionList && viewItem == codexRadar.session");
-  assert.equal(itemMenu.group, "inline@2");
+  assert.equal(itemMenu, undefined);
+});
+
+test("contributes done read and unread row actions", () => {
+  const manifest = readManifest();
+  const markReadCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.markRead",
+  );
+  const markUnreadCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.markUnread",
+  );
+  const markReadMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.markRead",
+  );
+  const markUnreadMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.markUnread",
+  );
+
+  assert.equal(markReadCommand.icon, "$(eye)");
+  assert.equal(markUnreadCommand.icon, "$(eye-closed)");
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.markRead"), true);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.markUnread"), true);
+  assert.equal(
+    markReadMenu.when,
+    "view == codexRadar.sessionList && viewItem == codexRadar.session.done.unread",
+  );
+  assert.equal(
+    markUnreadMenu.when,
+    "view == codexRadar.sessionList && viewItem == codexRadar.session.done.read",
+  );
+  assert.equal(markReadMenu.group, "inline@1");
+  assert.equal(markUnreadMenu.group, "inline@1");
 });
