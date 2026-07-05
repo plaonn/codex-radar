@@ -99,6 +99,7 @@ test("makes done read state visible in row descriptions", () => {
 });
 
 test("uses distinct row icons for unread and read done sessions", () => {
+  assert.equal(sessionIconId({ display_status: "done", is_hidden: true }), "eye-closed");
   assert.equal(sessionIconId({ display_status: "done", is_unread_done: true }), "mail");
   assert.equal(sessionIconId({ display_status: "done", is_done_read: true }), "mail-read");
   assert.equal(sessionIconId({ display_status: "waiting_approval" }), "warning");

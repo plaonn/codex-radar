@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.11
+
+Release candidate package for Hidden row icon polish. This version is not a Marketplace publication.
+
+### Fixed
+
+- Show hidden session rows with an `eye-closed` icon instead of done mail/read icons.
+
 ## 0.1.10
 
 Release candidate package for section-based TreeView navigation and local hide/restore controls. This version is not a Marketplace publication.

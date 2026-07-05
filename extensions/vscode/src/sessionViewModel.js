@@ -76,6 +76,9 @@ function sessionLabel(session) {
 }
 
 function sessionIconId(session) {
+  if (session.is_hidden) {
+    return "eye-closed";
+  }
   const status = String(session.display_status || "");
   if (status === "waiting_approval") {
     return "warning";
