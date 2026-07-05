@@ -98,6 +98,35 @@ test("filters project sessions by display status without changing attention coun
   assert.deepEqual(model.groups.map((group) => group.project), ["project-a"]);
 });
 
+test("keeps selection on the same session identity when the row key changes", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "other-1",
+      project: "project-a",
+      display_status: "waiting_approval",
+      last_seen_at: "2026-07-05T00:12:00+09:00",
+      last_event_name: "PermissionRequest",
+      last_assistant_message: "Other attention thread",
+    },
+    {
+      session_id: "selected-1",
+      project: "project-a",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:11:00+09:00",
+      last_assistant_message: "Updated selected thread",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    selectedKey: "selected-1\n2026-07-05T00:01:00+09:00",
+    selectedIdentity: "selected-1",
+    nowMs,
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.equal(model.selected.sessionId, "selected-1");
+  assert.equal(model.selected.key, "selected-1\n2026-07-05T00:11:00+09:00");
+});
+
 test("builds session action state for Webview buttons", () => {
   const unreadDone = decorateSessions([baseSessions[1]], new Set(), new Set())[0];
   const readDone = decorateSessions([baseSessions[1]], markDoneRead(new Set(), baseSessions[1]), new Set())[0];

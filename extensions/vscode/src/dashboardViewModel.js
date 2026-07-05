@@ -31,6 +31,10 @@ function archiveCacheKey(session) {
   return sessionStateKey(session) || String(session?.session_id || "");
 }
 
+function sessionIdentity(session) {
+  return String(session?.session_id || session?.sessionId || "");
+}
+
 function isArchivedSession(session, options = {}) {
   const key = archiveCacheKey(session);
   const cache = options.archivedSessionCache instanceof Map ? options.archivedSessionCache : null;
@@ -134,11 +138,15 @@ function buildDashboardModel(sessions, options = {}) {
   const selectedKey = options.selectedKey && indexCards(allCards).has(options.selectedKey)
     ? options.selectedKey
     : "";
+  const selectedIdentity = String(options.selectedIdentity || "");
 
   let selectedSession = null;
   if (selectedKey) {
     const byKey = new Map(sessions.map((session) => [sessionStateKey(session), session]));
     selectedSession = byKey.get(selectedKey) || null;
+  }
+  if (!selectedSession && selectedIdentity) {
+    selectedSession = sessions.find((session) => sessionIdentity(session) === selectedIdentity) || null;
   }
   if (!selectedSession) {
     selectedSession = attentionSessions[0] || filteredSessions[0] || archivedSessions[0] || sessions[0] || null;
@@ -177,5 +185,6 @@ module.exports = {
   findSessionByKey,
   isArchivedSession,
   sessionCard,
+  sessionIdentity,
   statusOptions,
 };

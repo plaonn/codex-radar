@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.13
+
+Release candidate package for stable sidebar selection ownership. This version is not a Marketplace publication.
+
+### Fixed
+
+- Keep sidebar and dashboard selection on the same Codex session id when session-cache refreshes change the row key timestamp.
+- Prevent selected row focus from falling back to a different attention item while the selected thread is still present.
+
 ## 0.3.12
 
 Release candidate package for stable preview session ownership. This version is not a Marketplace publication.

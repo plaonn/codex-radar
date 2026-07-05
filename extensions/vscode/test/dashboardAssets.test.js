@@ -81,7 +81,7 @@ test("uses a fixed preview header and scrollable transcript body", () => {
   assert.match(extension, /enableScripts:\s*true/);
   assert.doesNotMatch(extension, /webview\.html = previewHtml\(this\.previewPanel\.webview, this\.context\.extensionUri, model/);
   assert.match(extension, /this\.previewPanel\.webview\.postMessage\(this\.pendingPreviewState\)/);
-  assert.match(extension, /session\.session_id \|\| session\.key/);
+  assert.match(extension, /session\.session_id \|\| session\.sessionId \|\| session\.key/);
   assert.match(preview, /acquireVsCodeApi\(\)/);
   assert.match(preview, /message\.initialScrollToBottom \|\| isNewSession \|\| isNearBottom\(\)/);
   assert.match(preview, /addEventListener\("scroll", saveScroll/);
@@ -92,6 +92,7 @@ test("keeps preview ownership independent from dashboard selection fallback", ()
   const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
 
   assert.match(extension, /function previewSessionIdentity\(session\)/);
+  assert.match(extension, /session\.session_id \|\| session\.sessionId \|\| session\.key/);
   assert.match(extension, /sessionForPreviewIdentity\(identity\)/);
   assert.match(extension, /const session = this\.sessionForPreviewIdentity\(this\.previewSessionKey\);/);
   assert.doesNotMatch(
@@ -105,4 +106,14 @@ test("keeps preview ownership independent from dashboard selection fallback", ()
     extension,
     /this\.sessionForPreviewIdentity\(requestedIdentity\) \|\| this\.sessionForKey\(requestedKey\) \|\| requestedSession/,
   );
+});
+
+test("tracks selected rows by stable session identity across refreshes", () => {
+  const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+
+  assert.match(extension, /this\.selectedSessionIdentity = "";/);
+  assert.match(extension, /selectedIdentity: this\.selectedSessionIdentity/);
+  assert.match(extension, /this\.selectedSessionIdentity = previewSessionIdentity\(this\.model\.selected\);/);
+  assert.match(extension, /this\.selectedSessionIdentity = previewSessionIdentity\(session\);/);
+  assert.match(extension, /this\.selectedSessionIdentity = requestedIdentity;/);
 });

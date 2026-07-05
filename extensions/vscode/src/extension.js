@@ -56,7 +56,7 @@ function previewSessionIdentity(session) {
   if (!session || typeof session !== "object") {
     return "";
   }
-  return String(session.session_id || session.key || "");
+  return String(session.session_id || session.sessionId || session.key || "");
 }
 
 function officialCodexThreadUri(session) {
@@ -221,6 +221,7 @@ class RadarWebviewController {
     this.context = context;
     this.statusFilter = "";
     this.selectedKey = "";
+    this.selectedSessionIdentity = "";
     this.sessions = [];
     this.model = null;
     this.lastError = "";
@@ -239,14 +240,17 @@ class RadarWebviewController {
       this.model = buildDashboardModel(this.sessions, {
         homeDir: process.env.HOME || "",
         selectedKey: this.selectedKey,
+        selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
       });
       this.selectedKey = this.model.selected?.key || "";
+      this.selectedSessionIdentity = previewSessionIdentity(this.model.selected);
       this.lastError = "";
     } catch (error) {
       this.sessions = [];
       this.model = buildDashboardModel([], {
         selectedKey: this.selectedKey,
+        selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
       });
       this.lastError = error instanceof Error ? error.message : String(error);
@@ -430,6 +434,7 @@ class RadarWebviewController {
     }
 
     this.selectedKey = key;
+    this.selectedSessionIdentity = previewSessionIdentity(session);
     this.refresh();
   }
 
@@ -463,6 +468,7 @@ class RadarWebviewController {
       const requestedSession = this.sessionForKey(requestedKey);
       const requestedIdentity = previewSessionIdentity(requestedSession);
       this.selectedKey = requestedKey;
+      this.selectedSessionIdentity = requestedIdentity;
       this.refresh({ updatePreview: false });
       if (surface !== "dashboard") {
         this.openPreview(
