@@ -136,6 +136,7 @@ function previewHtml(webview, extensionUri, model, options = {}) {
   const cspSource = webview.cspSource;
   const initialScrollToBottom = options.initialScrollToBottom !== false;
   const sessionIdentity = JSON.stringify(String(options.sessionIdentity || model.shortSessionId || ""));
+  const restoreScroll = JSON.stringify(options.restoreScroll || null);
   const notice = model.transcriptMessage
     ? `<div class="preview-notice">${escapeHtml(model.transcriptMessage)}</div>`
     : "";
@@ -182,6 +183,7 @@ function previewHtml(webview, extensionUri, model, options = {}) {
     const previewBody = document.querySelector(".preview-body");
     const previewSessionIdentity = ${sessionIdentity};
     const initialScrollToBottom = ${initialScrollToBottom ? "true" : "false"};
+    const restoreScroll = ${restoreScroll};
     const previousState = vscode.getState() || {};
     const previousScroll = previousState.previewScroll || {};
 
@@ -195,13 +197,18 @@ function previewHtml(webview, extensionUri, model, options = {}) {
       if (!previewBody) {
         return;
       }
+      const scroll = {
+        sessionIdentity: previewSessionIdentity,
+        scrollTop: previewBody.scrollTop,
+        nearBottom: isNearBottom(),
+      };
       vscode.setState({
         ...previousState,
-        previewScroll: {
-          sessionIdentity: previewSessionIdentity,
-          scrollTop: previewBody.scrollTop,
-          nearBottom: isNearBottom(),
-        },
+        previewScroll: scroll,
+      });
+      vscode.postMessage({
+        type: "previewScroll",
+        ...scroll,
       });
     }
 
@@ -219,10 +226,17 @@ function previewHtml(webview, extensionUri, model, options = {}) {
       }
       if (
         initialScrollToBottom
-        || previousScroll.sessionIdentity !== previewSessionIdentity
+        || restoreScroll?.nearBottom
+        || (!restoreScroll && previousScroll.sessionIdentity !== previewSessionIdentity)
         || previousScroll.nearBottom
       ) {
         scrollToBottom();
+        return;
+      }
+      if (Number.isFinite(restoreScroll?.scrollTop)) {
+        const maxScroll = Math.max(0, previewBody.scrollHeight - previewBody.clientHeight);
+        previewBody.scrollTop = Math.min(restoreScroll.scrollTop, maxScroll);
+        saveScroll();
         return;
       }
       if (Number.isFinite(previousScroll.scrollTop)) {
@@ -318,6 +332,7 @@ class RadarWebviewController {
     this.panel = null;
     this.previewPanel = null;
     this.previewSessionKey = "";
+    this.previewScrollStates = new Map();
     this.refresh();
   }
 
@@ -430,6 +445,7 @@ class RadarWebviewController {
           localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "media")],
         },
       );
+      this.previewPanel.webview.onDidReceiveMessage((message) => this.handlePreviewMessage(message));
       this.previewPanel.onDidDispose(() => {
         this.previewPanel = null;
         this.previewSessionKey = "";
@@ -440,11 +456,29 @@ class RadarWebviewController {
     const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
     const model = buildSessionPreviewModel(session, { homeDir: process.env.HOME || "" });
     this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
+    const restoreScroll = this.previewScrollStates.get(sessionIdentity) || null;
     this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri, model, {
       initialScrollToBottom: shouldScrollToBottom,
       sessionIdentity,
+      restoreScroll,
     });
     this.previewSessionKey = sessionIdentity;
+  }
+
+  handlePreviewMessage(message) {
+    if (!message || typeof message !== "object" || message.type !== "previewScroll") {
+      return;
+    }
+    const sessionIdentity = String(message.sessionIdentity || "");
+    if (!sessionIdentity) {
+      return;
+    }
+    const scrollTop = Number(message.scrollTop);
+    this.previewScrollStates.set(sessionIdentity, {
+      sessionIdentity,
+      scrollTop: Number.isFinite(scrollTop) ? scrollTop : 0,
+      nearBottom: Boolean(message.nearBottom),
+    });
   }
 
   updatePreviewPanel() {

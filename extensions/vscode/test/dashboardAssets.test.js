@@ -75,8 +75,11 @@ test("uses a fixed preview header and scrollable transcript body", () => {
   assert.match(js, /enableScripts:\s*true/);
   assert.match(js, /previewBody\.scrollTop = previewBody\.scrollHeight;/);
   assert.match(js, /acquireVsCodeApi\(\)/);
+  assert.match(js, /type:\s*"previewScroll"/);
   assert.match(js, /previousScroll\.nearBottom/);
+  assert.match(js, /restoreScroll\?\.nearBottom/);
   assert.match(js, /previewBody\.addEventListener\("scroll", saveScroll/);
+  assert.match(js, /this\.previewScrollStates\.get\(sessionIdentity\)/);
   assert.match(js, /session\.session_id \|\| session\.key/);
   assert.match(js, /this\.refresh\(\{ updatePreview:\s*false \}\);/);
 });

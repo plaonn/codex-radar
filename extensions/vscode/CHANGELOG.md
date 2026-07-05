@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.10
+
+Release candidate package for host-backed preview scroll restoration. This version is not a Marketplace publication.
+
+### Fixed
+
+- Report preview body scroll position from the Webview back to the extension host.
+- Restore same-session preview updates from the extension-host scroll state so transcript refreshes do not jump to the top or bottom unexpectedly.
+
 ## 0.3.9
 
 Release candidate package for preview scroll-state restoration. This version is not a Marketplace publication.
