@@ -284,7 +284,7 @@ test("falls back to cached assistant summary when transcript is unavailable", ()
   assert.match(model.transcriptEntries[0].html, /<h4>Cached<\/h4>/);
   assert.equal(
     model.transcriptMessage,
-    "No transcript file found for this session on the extension host. Showing the cached latest Codex summary.",
+    "No transcript path is recorded for this Radar session cache item. Showing the cached latest Codex summary.",
   );
   assert.equal(JSON.stringify(model).includes(tmp), false);
 });
@@ -299,6 +299,6 @@ test("uses a generic message when no transcript path or fallback file exists", (
   });
 
   assert.equal(model.transcriptEntries.length, 0);
-  assert.equal(model.transcriptMessage, "No transcript file found for this session on the extension host.");
+  assert.equal(model.transcriptMessage, "No transcript path is recorded for this Radar session cache item.");
   assert.equal(JSON.stringify(model).includes(tmp), false);
 });

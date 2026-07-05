@@ -437,7 +437,7 @@ function readTranscriptEntries(session, options = {}) {
   if (!transcriptPath) {
     const missingMessage = transcript.source === "missing-explicit"
       ? "Transcript file is not available on this host."
-      : "No transcript file found for this session on the extension host.";
+      : "No transcript path is recorded for this Radar session cache item.";
     return transcriptFallback(
       session,
       session?.last_assistant_message

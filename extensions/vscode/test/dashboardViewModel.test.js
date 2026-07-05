@@ -154,31 +154,31 @@ test("keeps lifecycle display status and detects archived sessions separately", 
   assert.equal(isArchivedSession(baseSessions[2], { resolveTranscriptPathInfo: archiveResolver }), true);
 });
 
-test("detects archived side sessions by Codex thread state when transcript path is absent", () => {
-  const sideSession = {
-    session_id: "side-session",
+test("detects archived sessions by direct Codex thread state without time-window guessing", () => {
+  const archivedSession = {
+    session_id: "archived-direct",
     cwd: "/repo",
     display_status: "done",
     last_seen_at: "2026-07-04T15:24:37Z",
     transcript_path: "",
   };
-  const activeSideSession = {
-    ...sideSession,
-    last_seen_at: "2026-07-04T20:24:37Z",
+  const sideSessionNearArchivedThread = {
+    ...archivedSession,
+    session_id: "side-session",
   };
 
-  assert.equal(isArchivedSession(sideSession, {
+  assert.equal(isArchivedSession(archivedSession, {
     resolveTranscriptPathInfo: emptyArchiveResolver,
     resolveCodexArchivedThreads: archivedThreads,
   }), true);
-  assert.equal(isArchivedSession(activeSideSession, {
+  assert.equal(isArchivedSession(sideSessionNearArchivedThread, {
     resolveTranscriptPathInfo: emptyArchiveResolver,
     resolveCodexArchivedThreads: archivedThreads,
   }), false);
-  assert.equal(isArchivedSession({ ...sideSession, transcript_path: "/tmp/current.jsonl" }, {
+  assert.equal(isArchivedSession({ ...archivedSession, transcript_path: "/tmp/current.jsonl" }, {
     resolveTranscriptPathInfo: emptyArchiveResolver,
     resolveCodexArchivedThreads: archivedThreads,
-  }), false);
+  }), true);
 });
 
 test("finds sessions by timestamp state key", () => {

@@ -14,7 +14,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Shows `waiting_approval` and unread `done` sessions in the sidebar and dashboard attention inbox.
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Routes host-local Codex archived sessions to the sidebar `Archived` section and dashboard archived list.
-- Also uses Codex local thread state as a fallback for done side sessions whose hook payload has no transcript path.
+- Also uses Codex local thread state as a direct archived-thread fallback when the Codex thread id matches the Radar session id.
 - Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus the latest 120 redacted user/Codex messages with messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
 - Separates lifecycle status, done read state, and archived state in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.

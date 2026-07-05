@@ -17,11 +17,6 @@ function stateDbCandidates(options = {}) {
   ].filter(Boolean);
 }
 
-function parseTimestampSeconds(value) {
-  const ms = Date.parse(String(value || ""));
-  return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
-}
-
 function readArchivedThreadRows(options = {}) {
   const dbPath = stateDbCandidates(options).find((candidate) => fs.existsSync(candidate));
   if (!dbPath) {
@@ -56,7 +51,7 @@ function readArchivedThreadRows(options = {}) {
         updatedAt: Number.parseInt(updatedAt, 10) || 0,
       };
     })
-    .filter((row) => row.id && row.cwd && row.createdAt && row.updatedAt);
+    .filter((row) => row.id);
 }
 
 function archivedThreadState(options = {}) {
@@ -82,25 +77,7 @@ function archivedThreadState(options = {}) {
 function isArchivedByCodexThreadState(session, options = {}) {
   const state = archivedThreadState(options);
   const sessionId = String(session?.session_id || "");
-  if (sessionId && state.ids.has(sessionId)) {
-    return true;
-  }
-
-  if (session?.transcript_path) {
-    return false;
-  }
-
-  const cwd = String(session?.cwd || "");
-  const lastSeen = parseTimestampSeconds(session?.last_seen_at);
-  if (!cwd || !lastSeen) {
-    return false;
-  }
-
-  return state.rows.some((row) => (
-    row.cwd === cwd
-    && row.createdAt <= lastSeen
-    && lastSeen <= row.updatedAt
-  ));
+  return Boolean(sessionId && state.ids.has(sessionId));
 }
 
 module.exports = {
