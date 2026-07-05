@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.10
+
+Release candidate package for section-based TreeView navigation and local hide/restore controls. This version is not a Marketplace publication.
+
+### Added
+
+- Split the Codex Radar Activity Bar container into native `Attention`, `Projects`, and collapsed `Hidden` sections.
+- Add `Hide from Radar` and `Restore to Radar` row actions backed by extension-local hidden state.
+- Exclude hidden sessions from `Attention` and `Projects` while keeping them restorable from `Hidden`.
+
 ## 0.1.9
 
 Release candidate package for native TreeView navigation cleanup. This version is not a Marketplace publication.

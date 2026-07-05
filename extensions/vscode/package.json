@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -31,11 +31,15 @@
     "workspace"
   ],
   "activationEvents": [
-    "onView:codexRadar.sessionList",
+    "onView:codexRadar.attentionList",
+    "onView:codexRadar.projectList",
+    "onView:codexRadar.hiddenList",
     "onCommand:codexRadar.refresh",
     "onCommand:codexRadar.filterStatus",
     "onCommand:codexRadar.configureRetention",
     "onCommand:codexRadar.pruneNow",
+    "onCommand:codexRadar.hideSession",
+    "onCommand:codexRadar.restoreSession",
     "onCommand:codexRadar.markRead",
     "onCommand:codexRadar.markUnread",
     "onCommand:codexRadar.openInCodex"
@@ -67,6 +71,16 @@
         "command": "codexRadar.openInCodex",
         "title": "Codex Radar: Open in Codex (Experimental)",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "codexRadar.hideSession",
+        "title": "Codex Radar: Hide from Radar",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "codexRadar.restoreSession",
+        "title": "Codex Radar: Restore to Radar",
+        "icon": "$(eye)"
       },
       {
         "command": "codexRadar.markRead",
@@ -111,8 +125,17 @@
     "views": {
       "codexRadar": [
         {
-          "id": "codexRadar.sessionList",
-          "name": "Sessions"
+          "id": "codexRadar.attentionList",
+          "name": "Attention"
+        },
+        {
+          "id": "codexRadar.projectList",
+          "name": "Projects"
+        },
+        {
+          "id": "codexRadar.hiddenList",
+          "name": "Hidden",
+          "visibility": "collapsed"
         }
       ]
     },
@@ -120,34 +143,79 @@
       "view/title": [
         {
           "command": "codexRadar.filterStatus",
-          "when": "view == codexRadar.sessionList",
+          "when": "view == codexRadar.projectList",
           "group": "navigation@1"
         },
         {
           "command": "codexRadar.refresh",
-          "when": "view == codexRadar.sessionList",
+          "when": "view == codexRadar.projectList",
           "group": "navigation@2"
         },
         {
           "command": "codexRadar.configureRetention",
-          "when": "view == codexRadar.sessionList",
+          "when": "view == codexRadar.projectList",
           "group": "navigation@3"
         },
         {
           "command": "codexRadar.pruneNow",
-          "when": "view == codexRadar.sessionList",
+          "when": "view == codexRadar.projectList",
           "group": "navigation@4"
         }
       ],
       "view/item/context": [
         {
           "command": "codexRadar.markRead",
-          "when": "view == codexRadar.sessionList && viewItem == codexRadar.session.done.unread",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.unread",
           "group": "inline@1"
         },
         {
           "command": "codexRadar.markUnread",
-          "when": "view == codexRadar.sessionList && viewItem == codexRadar.session.done.read",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.read",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.markRead",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.markUnread",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.read",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.read",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.read",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.restoreSession",
+          "when": "view == codexRadar.hiddenList && viewItem == codexRadar.session.hidden",
           "group": "inline@1"
         }
       ]

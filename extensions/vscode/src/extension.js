@@ -33,13 +33,16 @@ const {
   sessionCacheWatchTarget,
 } = require("./sessionWatcher");
 const {
+  HIDDEN_SESSION_KEYS_KEY,
   READ_DONE_KEYS_KEY,
   decorateSessions,
   isDoneSession,
+  markSessionHidden,
   markDoneRead,
   markDoneUnread,
   readStateFromValue,
   readStateToValue,
+  restoreSession,
 } = require("./readState");
 
 class ProjectItem extends vscode.TreeItem {
@@ -48,14 +51,6 @@ class ProjectItem extends vscode.TreeItem {
     this.contextValue = "codexRadar.project";
     this.iconPath = new vscode.ThemeIcon("folder");
     this.project = project;
-  }
-}
-
-class AttentionItem extends vscode.TreeItem {
-  constructor(sessions) {
-    super(`Attention (${sessions.length})`, vscode.TreeItemCollapsibleState.Expanded);
-    this.contextValue = "codexRadar.attention";
-    this.iconPath = new vscode.ThemeIcon("bell-dot");
   }
 }
 
@@ -80,6 +75,9 @@ function sessionIcon(session) {
 }
 
 function sessionContextValue(session) {
+  if (session.is_hidden) {
+    return "codexRadar.session.hidden";
+  }
   if (isDoneSession(session)) {
     return session.is_unread_done ? "codexRadar.session.done.unread" : "codexRadar.session.done.read";
   }
@@ -87,13 +85,15 @@ function sessionContextValue(session) {
 }
 
 class SessionsProvider {
-  constructor(globalState) {
+  constructor(globalState, viewMode = "projects") {
     this.globalState = globalState;
+    this.viewMode = viewMode;
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     this.lastError = "";
     this.statusFilter = "";
     this.sessions = [];
+    this.items = [];
     this.attentionSessions = [];
     this.groups = [];
     this.refresh();
@@ -103,14 +103,25 @@ class SessionsProvider {
     try {
       const stateDir = configuredStateDir();
       const readKeys = this.readKeys();
-      const sessions = decorateSessions(loadSessionCache(stateDir), readKeys);
-      this.sessions = sessions;
-      this.attentionSessions = sessions.filter((session) => session.is_attention);
-      const visibleSessions = filterSessionsByStatus(sessions, this.statusFilter);
-      this.groups = groupSessionsByProject(visibleSessions);
+      const hiddenKeys = this.hiddenKeys();
+      const decorated = decorateSessions(loadSessionCache(stateDir), readKeys, hiddenKeys);
+      const activeSessions = decorated.filter((session) => !session.is_hidden);
+      this.sessions = activeSessions;
+      this.items = [];
+      this.attentionSessions = activeSessions.filter((session) => session.is_attention);
+      this.groups = [];
+      if (this.viewMode === "attention") {
+        this.items = this.attentionSessions;
+      } else if (this.viewMode === "hidden") {
+        this.items = decorated.filter((session) => session.is_hidden);
+      } else {
+        const visibleSessions = filterSessionsByStatus(activeSessions, this.statusFilter);
+        this.groups = groupSessionsByProject(visibleSessions);
+      }
       this.lastError = "";
     } catch (error) {
       this.sessions = [];
+      this.items = [];
       this.attentionSessions = [];
       this.groups = [];
       this.lastError = error instanceof Error ? error.message : String(error);
@@ -123,12 +134,6 @@ class SessionsProvider {
   }
 
   getChildren(element) {
-    if (element instanceof AttentionItem) {
-      return Promise.resolve(
-        this.attentionSessions.map((session) => new SessionItem(session, { showProject: true })),
-      );
-    }
-
     if (element instanceof ProjectItem) {
       const group = this.groups.find((item) => item.project === element.project);
       return Promise.resolve((group?.sessions || []).map((session) => new SessionItem(session)));
@@ -141,7 +146,20 @@ class SessionsProvider {
       return Promise.resolve([item]);
     }
 
-    if (this.groups.length === 0 && (!this.attentionSessions.length || this.statusFilter)) {
+    if (this.viewMode === "attention" || this.viewMode === "hidden") {
+      if (this.items.length === 0) {
+        const item = new vscode.TreeItem(
+          this.viewMode === "attention" ? "No attention sessions" : "No hidden sessions",
+        );
+        item.iconPath = new vscode.ThemeIcon("info");
+        return Promise.resolve([item]);
+      }
+      return Promise.resolve(
+        this.items.map((session) => new SessionItem(session, { showProject: true })),
+      );
+    }
+
+    if (this.groups.length === 0) {
       const label = this.statusFilter
         ? `No sessions match ${this.statusFilter}`
         : "No sessions indexed";
@@ -151,16 +169,11 @@ class SessionsProvider {
       return Promise.resolve([item]);
     }
 
-    const roots = [];
-    if (!this.statusFilter && this.attentionSessions.length > 0) {
-      roots.push(new AttentionItem(this.attentionSessions));
-    }
-    roots.push(
-      ...this.groups.map((group) => {
+    return Promise.resolve(
+      this.groups.map((group) => {
         return new ProjectItem(group.project, group.sessions);
       }),
     );
-    return Promise.resolve(roots);
   }
 
   setStatusFilter(statusFilter) {
@@ -176,8 +189,17 @@ class SessionsProvider {
     return readStateFromValue(this.globalState.get(READ_DONE_KEYS_KEY, []));
   }
 
+  hiddenKeys() {
+    return readStateFromValue(this.globalState.get(HIDDEN_SESSION_KEYS_KEY, []));
+  }
+
   async updateReadKeys(readKeys) {
     await this.globalState.update(READ_DONE_KEYS_KEY, readStateToValue(readKeys));
+    this.refresh();
+  }
+
+  async updateHiddenKeys(hiddenKeys) {
+    await this.globalState.update(HIDDEN_SESSION_KEYS_KEY, readStateToValue(hiddenKeys));
     this.refresh();
   }
 
@@ -188,10 +210,24 @@ class SessionsProvider {
   async markSessionUnread(session) {
     await this.updateReadKeys(markDoneUnread(this.readKeys(), session));
   }
+
+  async hideSession(session) {
+    await this.updateHiddenKeys(markSessionHidden(this.hiddenKeys(), session));
+  }
+
+  async restoreSession(session) {
+    await this.updateHiddenKeys(restoreSession(this.hiddenKeys(), session));
+  }
 }
 
-function syncTreeViewBadge(treeView, provider) {
-  treeView.badge = provider.attentionBadge();
+function refreshProviders(providers) {
+  for (const provider of providers) {
+    provider.refresh();
+  }
+}
+
+function syncTreeViewBadge(attentionTreeView, provider) {
+  attentionTreeView.badge = provider.attentionBadge();
 }
 
 function configuredStateDir() {
@@ -302,37 +338,62 @@ async function openOfficialCodexThread(target) {
   return opened;
 }
 
-async function openSessionInCodex(target, provider, treeView) {
+async function openSessionInCodex(target, providers, attentionTreeView) {
   const session = sessionFromTarget(target);
   const opened = await openOfficialCodexThread(session);
   if (opened && session && isDoneSession(session)) {
-    await provider.markSessionRead(session);
-    syncTreeViewBadge(treeView, provider);
+    await providers[0].markSessionRead(session);
+    refreshProviders(providers);
+    syncTreeViewBadge(attentionTreeView, providers[0]);
   }
   return opened;
 }
 
-async function markSessionReadCommand(target, provider, treeView) {
+async function markSessionReadCommand(target, providers, attentionTreeView) {
   const session = sessionFromTarget(target);
   if (!session || !isDoneSession(session)) {
     await vscode.window.showWarningMessage("Select a done Codex Radar session to mark read.");
     return;
   }
-  await provider.markSessionRead(session);
-  syncTreeViewBadge(treeView, provider);
+  await providers[0].markSessionRead(session);
+  refreshProviders(providers);
+  syncTreeViewBadge(attentionTreeView, providers[0]);
 }
 
-async function markSessionUnreadCommand(target, provider, treeView) {
+async function markSessionUnreadCommand(target, providers, attentionTreeView) {
   const session = sessionFromTarget(target);
   if (!session || !isDoneSession(session)) {
     await vscode.window.showWarningMessage("Select a done Codex Radar session to mark unread.");
     return;
   }
-  await provider.markSessionUnread(session);
-  syncTreeViewBadge(treeView, provider);
+  await providers[0].markSessionUnread(session);
+  refreshProviders(providers);
+  syncTreeViewBadge(attentionTreeView, providers[0]);
 }
 
-async function configureRetentionCommand(provider, treeView) {
+async function hideSessionCommand(target, providers, attentionTreeView) {
+  const session = sessionFromTarget(target);
+  if (!session) {
+    await vscode.window.showWarningMessage("Select a Codex Radar session to hide.");
+    return;
+  }
+  await providers[0].hideSession(session);
+  refreshProviders(providers);
+  syncTreeViewBadge(attentionTreeView, providers[0]);
+}
+
+async function restoreSessionCommand(target, providers, attentionTreeView) {
+  const session = sessionFromTarget(target);
+  if (!session) {
+    await vscode.window.showWarningMessage("Select a hidden Codex Radar session to restore.");
+    return;
+  }
+  await providers[0].restoreSession(session);
+  refreshProviders(providers);
+  syncTreeViewBadge(attentionTreeView, providers[0]);
+}
+
+async function configureRetentionCommand(providers, attentionTreeView) {
   const cliInvocation = configuredCliInvocation(vscode);
   const stateDir = configuredStateDir();
   let currentDays = 7;
@@ -358,8 +419,8 @@ async function configureRetentionCommand(provider, treeView) {
   const days = retentionDaysFromInput(input);
   try {
     await runRadarCli(cliInvocation, configSetRetentionArgs(stateDir, days));
-    provider.refresh();
-    syncTreeViewBadge(treeView, provider);
+    refreshProviders(providers);
+    syncTreeViewBadge(attentionTreeView, providers[0]);
     await vscode.window.showInformationMessage(`Codex Radar retention set to ${days} day${days === 1 ? "" : "s"}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -367,13 +428,13 @@ async function configureRetentionCommand(provider, treeView) {
   }
 }
 
-async function pruneNowCommand(provider, treeView) {
+async function pruneNowCommand(providers, attentionTreeView) {
   const cliInvocation = configuredCliInvocation(vscode);
   const stateDir = configuredStateDir();
   try {
     const result = await runRadarCli(cliInvocation, pruneArgs(stateDir));
-    provider.refresh();
-    syncTreeViewBadge(treeView, provider);
+    refreshProviders(providers);
+    syncTreeViewBadge(attentionTreeView, providers[0]);
     const payload = JSON.parse(result.stdout || "{}");
     const removed = Array.isArray(payload.removed_sessions) ? payload.removed_sessions.length : 0;
     await vscode.window.showInformationMessage(`Codex Radar pruned ${removed} session${removed === 1 ? "" : "s"}.`);
@@ -384,45 +445,63 @@ async function pruneNowCommand(provider, treeView) {
 }
 
 function activate(context) {
-  const provider = new SessionsProvider(context.globalState);
-  const treeView = vscode.window.createTreeView("codexRadar.sessionList", {
-    treeDataProvider: provider,
+  const attentionProvider = new SessionsProvider(context.globalState, "attention");
+  const projectsProvider = new SessionsProvider(context.globalState, "projects");
+  const hiddenProvider = new SessionsProvider(context.globalState, "hidden");
+  const providers = [attentionProvider, projectsProvider, hiddenProvider];
+  const attentionTreeView = vscode.window.createTreeView("codexRadar.attentionList", {
+    treeDataProvider: attentionProvider,
   });
-  syncTreeViewBadge(treeView, provider);
-  const watcherManager = new SessionCacheWatcherManager(provider, () =>
-    syncTreeViewBadge(treeView, provider),
-  );
+  const projectsTreeView = vscode.window.createTreeView("codexRadar.projectList", {
+    treeDataProvider: projectsProvider,
+  });
+  const hiddenTreeView = vscode.window.createTreeView("codexRadar.hiddenList", {
+    treeDataProvider: hiddenProvider,
+  });
+  syncTreeViewBadge(attentionTreeView, attentionProvider);
+  const watcherManager = new SessionCacheWatcherManager(attentionProvider, () => {
+    refreshProviders(providers);
+    syncTreeViewBadge(attentionTreeView, attentionProvider);
+  });
   context.subscriptions.push(
-    treeView,
+    attentionTreeView,
+    projectsTreeView,
+    hiddenTreeView,
     vscode.commands.registerCommand("codexRadar.refresh", () => {
-      provider.refresh();
-      syncTreeViewBadge(treeView, provider);
+      refreshProviders(providers);
+      syncTreeViewBadge(attentionTreeView, attentionProvider);
     }),
     vscode.commands.registerCommand("codexRadar.filterStatus", async () => {
-      await chooseStatusFilter(provider);
-      syncTreeViewBadge(treeView, provider);
+      await chooseStatusFilter(projectsProvider);
+      syncTreeViewBadge(attentionTreeView, attentionProvider);
     }),
     vscode.commands.registerCommand("codexRadar.configureRetention", () =>
-      configureRetentionCommand(provider, treeView),
+      configureRetentionCommand(providers, attentionTreeView),
     ),
     vscode.commands.registerCommand("codexRadar.pruneNow", () =>
-      pruneNowCommand(provider, treeView),
+      pruneNowCommand(providers, attentionTreeView),
     ),
     vscode.commands.registerCommand("codexRadar.markRead", (target) =>
-      markSessionReadCommand(target, provider, treeView),
+      markSessionReadCommand(target, providers, attentionTreeView),
     ),
     vscode.commands.registerCommand("codexRadar.markUnread", (target) =>
-      markSessionUnreadCommand(target, provider, treeView),
+      markSessionUnreadCommand(target, providers, attentionTreeView),
+    ),
+    vscode.commands.registerCommand("codexRadar.hideSession", (target) =>
+      hideSessionCommand(target, providers, attentionTreeView),
+    ),
+    vscode.commands.registerCommand("codexRadar.restoreSession", (target) =>
+      restoreSessionCommand(target, providers, attentionTreeView),
     ),
     vscode.commands.registerCommand("codexRadar.openInCodex", (target) =>
-      openSessionInCodex(target, provider, treeView),
+      openSessionInCodex(target, providers, attentionTreeView),
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
       const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
       if (stateDirChanged) {
         watcherManager.reset();
-        provider.refresh();
-        syncTreeViewBadge(treeView, provider);
+        refreshProviders(providers);
+        syncTreeViewBadge(attentionTreeView, attentionProvider);
       }
     }),
     watcherManager,
@@ -438,7 +517,10 @@ module.exports = {
   openOfficialCodexThread,
   openSessionInCodex,
   configureRetentionCommand,
+  hideSessionCommand,
   pruneNowCommand,
+  refreshProviders,
+  restoreSessionCommand,
   syncTreeViewBadge,
   statusFilterItems,
 };

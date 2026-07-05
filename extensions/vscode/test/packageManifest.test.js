@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.9");
+  assert.equal(manifest.version, "0.1.10");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -40,7 +40,7 @@ test("contributes refresh command as a view title action", () => {
   );
 
   assert.equal(refreshCommand.icon, "$(refresh)");
-  assert.equal(viewTitleMenu.when, "view == codexRadar.sessionList");
+  assert.equal(viewTitleMenu.when, "view == codexRadar.projectList");
   assert.equal(viewTitleMenu.group, "navigation@2");
 });
 
@@ -55,8 +55,17 @@ test("contributes a dedicated Codex Radar activity bar container", () => {
   assert.equal(container.icon, "media/codex-radar.svg");
   assert.deepEqual(views, [
     {
-      id: "codexRadar.sessionList",
-      name: "Sessions",
+      id: "codexRadar.attentionList",
+      name: "Attention",
+    },
+    {
+      id: "codexRadar.projectList",
+      name: "Projects",
+    },
+    {
+      id: "codexRadar.hiddenList",
+      name: "Hidden",
+      visibility: "collapsed",
     },
   ]);
   assert.equal(Object.prototype.hasOwnProperty.call(manifest.contributes.views, "explorer"), false);
@@ -72,7 +81,7 @@ test("contributes status filter as a temporary view title action", () => {
   );
 
   assert.equal(filterCommand.icon, "$(filter)");
-  assert.equal(viewTitleMenu.when, "view == codexRadar.sessionList");
+  assert.equal(viewTitleMenu.when, "view == codexRadar.projectList");
   assert.equal(viewTitleMenu.group, "navigation@1");
   assert.equal(
     Object.prototype.hasOwnProperty.call(
@@ -103,12 +112,40 @@ test("contributes retention config and prune actions", () => {
   assert.equal(pruneCommand.icon, "$(trash)");
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.configureRetention"), true);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), true);
-  assert.equal(configureMenu.when, "view == codexRadar.sessionList");
-  assert.equal(pruneMenu.when, "view == codexRadar.sessionList");
+  assert.equal(configureMenu.when, "view == codexRadar.projectList");
+  assert.equal(pruneMenu.when, "view == codexRadar.projectList");
   assert.equal(configureMenu.group, "navigation@3");
   assert.equal(pruneMenu.group, "navigation@4");
   assert.equal(properties["codexRadar.cliPath"].default, "codex-radar");
   assert.equal(properties["codexRadar.pythonPath"].default, "python3");
+});
+
+test("contributes hide and restore row actions", () => {
+  const manifest = readManifest();
+  const hideCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.hideSession",
+  );
+  const restoreCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.restoreSession",
+  );
+  const hideMenus = manifest.contributes.menus["view/item/context"].filter(
+    (item) => item.command === "codexRadar.hideSession",
+  );
+  const restoreMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.restoreSession",
+  );
+
+  assert.equal(hideCommand.title, "Codex Radar: Hide from Radar");
+  assert.equal(hideCommand.icon, "$(eye-closed)");
+  assert.equal(restoreCommand.title, "Codex Radar: Restore to Radar");
+  assert.equal(restoreCommand.icon, "$(eye)");
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.hideSession"), true);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.restoreSession"), true);
+  assert.equal(hideMenus.length, 6);
+  assert.equal(
+    restoreMenu.when,
+    "view == codexRadar.hiddenList && viewItem == codexRadar.session.hidden",
+  );
 });
 
 test("does not contribute transcript preview to the VS Code surface", () => {
@@ -163,11 +200,11 @@ test("contributes done read and unread row actions", () => {
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.markUnread"), true);
   assert.equal(
     markReadMenu.when,
-    "view == codexRadar.sessionList && viewItem == codexRadar.session.done.unread",
+    "view == codexRadar.attentionList && viewItem == codexRadar.session.done.unread",
   );
   assert.equal(
     markUnreadMenu.when,
-    "view == codexRadar.sessionList && viewItem == codexRadar.session.done.read",
+    "view == codexRadar.attentionList && viewItem == codexRadar.session.done.read",
   );
   assert.equal(markReadMenu.group, "inline@1");
   assert.equal(markUnreadMenu.group, "inline@1");
