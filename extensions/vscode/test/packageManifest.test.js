@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.12");
+  assert.equal(manifest.version, "0.1.13");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -92,7 +92,7 @@ test("contributes status filter as a temporary view title action", () => {
   );
 });
 
-test("contributes retention config and prune commands without project title icons", () => {
+test("does not expose retention config and prune commands in the palette", () => {
   const manifest = readManifest();
   const configureCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.configureRetention",
@@ -103,10 +103,10 @@ test("contributes retention config and prune commands without project title icon
   const viewTitleCommands = manifest.contributes.menus["view/title"].map((item) => item.command);
   const properties = manifest.contributes.configuration.properties;
 
-  assert.equal(configureCommand.icon, "$(settings-gear)");
-  assert.equal(pruneCommand.icon, "$(trash)");
-  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.configureRetention"), true);
-  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), true);
+  assert.equal(configureCommand, undefined);
+  assert.equal(pruneCommand, undefined);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.configureRetention"), false);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), false);
   assert.equal(viewTitleCommands.includes("codexRadar.configureRetention"), false);
   assert.equal(viewTitleCommands.includes("codexRadar.pruneNow"), false);
   assert.equal(properties["codexRadar.cliPath"].default, "");
