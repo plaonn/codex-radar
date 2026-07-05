@@ -50,10 +50,21 @@ test("keeps sidebar spacing compact and project groups visually separated", () =
 
   assert.match(css, /\.sidebar \.list\s*\{[^}]*padding:\s*4px 6px 8px;/s);
   assert.match(css, /\.sidebar \.session\s*\{[^}]*padding:\s*6px;/s);
+  assert.match(css, /\.sidebar \.session\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.sidebar \.session\.actionable\s*\{[^}]*border-color:\s*transparent;/s);
   assert.match(css, /\.sidebar \.project\s*\{[^}]*border-top:\s*1px solid var\(--vscode-panel-border\);/s);
   assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*8px;/s);
   assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*border-left:/s);
+});
+
+test("reveals sidebar row actions as hover and focus overlays", () => {
+  const css = readDashboardCss();
+
+  assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*position:\s*absolute;/s);
+  assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*opacity:\s*0;/s);
+  assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*pointer-events:\s*none;/s);
+  assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*opacity:\s*1;/s);
+  assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*pointer-events:\s*auto;/s);
 });
 
 test("keeps preview content aligned with narrower editor gutters", () => {

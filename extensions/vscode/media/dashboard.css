@@ -126,6 +126,7 @@ select {
   gap: 6px;
   padding: 6px;
   border-radius: 4px;
+  position: relative;
 }
 
 .sidebar .session.actionable {
@@ -526,6 +527,39 @@ select {
 .row-actions.compact button {
   min-height: 24px;
   padding: 2px 7px;
+}
+
+.sidebar .row-actions.compact {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: calc(100% - 28px);
+  margin-top: 0;
+  padding-left: 16px;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--vscode-list-hoverBackground) 16px);
+  transition: opacity 80ms ease;
+}
+
+.sidebar .session:hover .row-actions.compact,
+.sidebar .session:focus-within .row-actions.compact {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar .session.active .row-actions.compact {
+  background: linear-gradient(90deg, transparent, var(--vscode-list-activeSelectionBackground) 16px);
+}
+
+.sidebar .row-actions.compact button {
+  flex: 0 0 auto;
+  min-height: 22px;
+  padding: 1px 6px;
+  white-space: nowrap;
 }
 
 .empty,
