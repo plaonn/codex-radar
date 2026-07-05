@@ -313,6 +313,11 @@ function cleanTitleSourceText(text) {
   return value;
 }
 
+function nameTagText(text) {
+  const match = String(text || "").trim().match(/^<name\b[^>]*>([\s\S]*?)<\/name>$/i);
+  return match ? compactText(match[1]) : "";
+}
+
 function titleLineFromText(text) {
   const cleaned = cleanTitleSourceText(text);
   for (const rawLine of cleaned.split("\n")) {
@@ -324,6 +329,10 @@ function titleLineFromText(text) {
       .trim();
     if (!line) {
       continue;
+    }
+    const nameTitle = nameTagText(line);
+    if (nameTitle) {
+      return nameTitle;
     }
     if (/^(selected text|files mentioned by the user|selection \d+|my request for codex):?$/i.test(line)) {
       continue;
@@ -377,10 +386,11 @@ function snippetFromEntry(entry, options = {}) {
   if (!entry || !entry.text) {
     return { speaker: "", role: "", text: "" };
   }
+  const text = nameTagText(entry.text) || entry.text;
   return {
     speaker: entry.label || (entry.role === "assistant" ? "Codex" : "You"),
     role: entry.role || "",
-    text: truncateText(compactText(redactText(entry.text, options)), options.snippetLength ?? DEFAULT_DISPLAY_SNIPPET_LENGTH),
+    text: truncateText(compactText(redactText(text, options)), options.snippetLength ?? DEFAULT_DISPLAY_SNIPPET_LENGTH),
   };
 }
 

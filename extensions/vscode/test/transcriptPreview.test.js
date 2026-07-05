@@ -181,6 +181,22 @@ test("derives display title from user request before first Codex message and sni
   assert.equal(fields.snippetText, "그리고 snippet은 마지막 메시지를 보여줘");
 });
 
+test("unwraps Codex name-tag title messages before rendering cards", () => {
+  const entries = skimTranscriptText([
+    JSON.stringify({ role: "user", content: [{ text: "<name>Review sidebar titles</name>" }] }),
+    JSON.stringify({ role: "assistant", content: [{ text: "Review sidebar titles" }] }),
+  ].join("\n"), { limit: 0 });
+  const fields = sessionDisplayFieldsFromEntries({
+    session_id: "session-1",
+    project: "codex-radar",
+    display_status: "done",
+  }, entries);
+
+  assert.equal(fields.title, "Review sidebar titles");
+  assert.equal(fields.snippetText, "");
+  assert.equal(fields.snippetSpeaker, "");
+});
+
 test("builds display fields from transcript path without leaking tool output", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-display-fields-"));
   const transcriptPath = path.join(tmp, "transcript.jsonl");
