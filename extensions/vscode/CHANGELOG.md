@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.14
+
+Release candidate package for leftover retention/prune cleanup. This version is not a Marketplace publication.
+
+### Fixed
+
+- Remove leftover retention/prune command registrations, CLI settings, implementation files, and smoke-test copy from the VS Code extension surface.
+
 ## 0.1.13
 
 Release candidate package for Command Palette cleanup. This version is not a Marketplace publication.

@@ -127,8 +127,7 @@ GUI read contract v1:
 - 나중에 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커지면 adapter를 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 교체할 수 있다.
 - future CLI/export read adapter는 missing state directory에서 directory나 state file을 생성하지 않아야 한다.
 - GUI는 `events.jsonl`을 기본 navigation 입력으로 읽지 않는다. 현재 default runtime state는 raw hook event log를 누적 저장하지 않는다.
-- GUI는 `config.json`을 직접 수정하지 않고, server-side config 변경이 필요하면 `codex-radar config` 같은 Python core command를 통해 처리한다.
-- VS Code extension은 `codexRadar.cliPath` setting으로 `codex-radar` executable path를 override할 수 있다.
+- GUI는 `config.json`을 직접 수정하지 않는다. server-side config 변경이 필요하면 TreeView surface 밖의 terminal `codex-radar config` 같은 Python core command를 사용한다.
 
 GUI display contract v1:
 
@@ -146,8 +145,7 @@ GUI display contract v1:
 - 첫 notification surface는 VS Code extension 안의 badge/highlight 같은 in-surface attention cue로 제한한다.
 - GUI는 session row click으로 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급한다. done session을 성공적으로 열면 extension-local read state를 read로 갱신할 수 있다.
 - GUI는 done session row의 inline action으로 read/unread를 토글할 수 있다.
-- GUI는 `codex-radar config`를 통해 server-side `retention_days`를 설정할 수 있다.
-- GUI는 `codex-radar prune`을 통해 server-side pruning을 명시적으로 실행할 수 있다.
+- 현재 VS Code TreeView release candidate는 retention config/prune controls를 노출하지 않는다. server-side retention 운영은 terminal `codex-radar config`와 `codex-radar prune` workflow에 맡긴다.
 - OS notification, external notification channel, toast content template은 별도 milestone 전까지 scope 밖이다.
 
 GUI privacy/action boundary v1:
@@ -155,8 +153,7 @@ GUI privacy/action boundary v1:
 - 첫 GUI milestone은 session/transcript navigation에 대해 read-only dashboard다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
-- GUI는 server-side retention config/prune에 한해 Python core CLI를 호출할 수 있다. `config.json`과 `sessions.json`을 직접 수정하지 않는다.
-- VS Code extension의 retention config/prune command는 `codexRadar.cliPath`로 설정한 executable을 우선 사용한다. 기본값 `codex-radar`가 extension host PATH에서 `ENOENT`로 실패하면 remote user login shell에서 `command -v codex-radar`를 실행해 shell-installed executable을 다시 찾는다. `cliPath`가 비어 있고 현재 workspace가 `src/codex_radar/cli.py`를 포함한 codex-radar source checkout이면 `codexRadar.pythonPath`로 `python3 -m codex_radar.cli`를 실행하고 `PYTHONPATH=src`를 붙인다. source checkout fallback은 local development와 VSIX smoke validation 편의이며, 일반 설치 환경에서는 extension host PATH, login shell, 또는 explicit `codexRadar.cliPath` 중 하나로 `codex-radar` CLI를 찾을 수 있어야 한다.
+- 현재 VS Code TreeView release candidate는 Python core CLI를 실행하지 않는다. retention config/prune GUI는 clearer surface가 생길 때 별도 requirement로 재도입한다.
 - GUI는 raw transcript file을 기본 list에 자동 노출하지 않는다. 기본 navigation에는 session cache의 redacted latest assistant summary를 짧은 식별 snippet으로 표시할 수 있지만 raw transcript path는 표시하지 않는다.
 - VS Code extension은 transcript preview row action을 제공하지 않는다. 자세한 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.

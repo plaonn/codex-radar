@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -88,16 +88,6 @@
           "type": "string",
           "default": "",
           "description": "Override codex-radar state directory. Empty uses CODEX_RADAR_HOME, XDG_STATE_HOME/codex-radar, or ~/.local/state/codex-radar."
-        },
-        "codexRadar.cliPath": {
-          "type": "string",
-          "default": "",
-          "description": "Override codex-radar CLI executable path used for config and prune commands. Empty uses a source checkout when available, otherwise codex-radar resolved through the remote login shell."
-        },
-        "codexRadar.pythonPath": {
-          "type": "string",
-          "default": "python3",
-          "description": "Python executable used only when Codex Radar falls back to a source checkout with src/codex_radar/cli.py in the current workspace."
         }
       }
     },

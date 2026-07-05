@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.13");
+  assert.equal(manifest.version, "0.1.14");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -92,7 +92,7 @@ test("contributes status filter as a temporary view title action", () => {
   );
 });
 
-test("does not expose retention config and prune commands in the palette", () => {
+test("does not expose retention config and prune commands or CLI settings", () => {
   const manifest = readManifest();
   const configureCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.configureRetention",
@@ -109,8 +109,8 @@ test("does not expose retention config and prune commands in the palette", () =>
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), false);
   assert.equal(viewTitleCommands.includes("codexRadar.configureRetention"), false);
   assert.equal(viewTitleCommands.includes("codexRadar.pruneNow"), false);
-  assert.equal(properties["codexRadar.cliPath"].default, "");
-  assert.equal(properties["codexRadar.pythonPath"].default, "python3");
+  assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.cliPath"), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.pythonPath"), false);
 });
 
 test("contributes hide and restore row actions", () => {

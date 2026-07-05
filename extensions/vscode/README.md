@@ -22,15 +22,14 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Provides a manual refresh command in the view title.
 - Opens the same session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a session row is clicked.
 - Provides a done-session row action to mark the session read or unread.
-- Lets the user configure server-side `retention_days` through `codex-radar config`.
-- Lets the user run server-side pruning through `codex-radar prune`.
 
 ## Boundaries
 
 - Does not edit `~/.codex/hooks.json`.
 - Does not install hooks.
 - Does not execute `codex resume`.
-- Does not edit `config.json` directly; retention changes go through the configured `codex-radar` CLI.
+- Does not edit `config.json` directly.
+- Does not expose retention or prune controls in the current TreeView surface; use the terminal `codex-radar config` and `codex-radar prune` commands for those operations.
 - Treats a successful experimental Codex handoff for a done session as a local read acknowledgement only.
 - Does not read `events.jsonl` for the default view.
 - Does not read raw transcript files or show raw transcript paths in default navigation labels, descriptions, or tooltips.
@@ -58,17 +57,10 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.1.13.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.1.14.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
-
-Configure the CLI used by retention and prune actions:
-
-- If `codex-radar` is installed on the VS Code extension host PATH, the default `codexRadar.cliPath` works.
-- If the extension host PATH cannot find `codex-radar`, the default command is resolved once more through the remote user's login shell with `command -v codex-radar`.
-- If that still cannot find the command, install `codex-radar` for the remote shell or set `codexRadar.cliPath`.
-- When the open workspace is a codex-radar source checkout containing `src/codex_radar/cli.py`, the extension can fall back to `python3 -m codex_radar.cli` with `PYTHONPATH=src`. Override that interpreter with `codexRadar.pythonPath` if needed.
 
 ## Remote SSH Smoke Test
 
@@ -85,11 +77,9 @@ Configure the CLI used by retention and prune actions:
 5. Use the view title actions:
    - Refresh Sessions reloads the cache.
    - Filter by Status changes only the temporary view filter.
-   - Configure Retention calls `codex-radar config`.
-   - Prune Now calls `codex-radar prune`.
 6. On a done session, mark read and unread from the inline mail-style row action.
 7. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
-8. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension except through explicit retention CLI actions.
+8. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 
