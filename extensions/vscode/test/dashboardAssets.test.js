@@ -40,3 +40,21 @@ test("supports session-specific context menu and project folding", () => {
   assert.match(css, /\.context-menu\s*\{/);
   assert.match(css, /\.project-header\.collapsible/);
 });
+
+test("keeps sidebar spacing compact and project groups visually separated", () => {
+  const css = readDashboardCss();
+
+  assert.match(css, /\.sidebar \.list\s*\{[^}]*padding:\s*4px 2px 6px;/s);
+  assert.match(css, /\.sidebar \.session\s*\{[^}]*padding:\s*6px 5px;/s);
+  assert.match(css, /\.sidebar \.project\s*\{[^}]*border-top:\s*1px solid var\(--vscode-panel-border\);/s);
+  assert.match(css, /\.sidebar \.project:not\(\.collapsed\)\s*\{[^}]*border-left:/s);
+  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*6px;/s);
+});
+
+test("keeps preview content aligned with narrower editor gutters", () => {
+  const css = readDashboardCss();
+
+  assert.match(css, /\.preview-header\s*\{[^}]*padding:\s*14px 12px 12px;/s);
+  assert.match(css, /\.preview-title-block\s*\{[^}]*width:\s*min\(100%, 980px\);/s);
+  assert.match(css, /\.preview-transcript\s*\{[^}]*padding:\s*14px 12px 24px;/s);
+});

@@ -106,6 +106,25 @@ select {
   min-height: 100vh;
 }
 
+.sidebar .list {
+  gap: 3px;
+  padding: 4px 2px 6px;
+}
+
+.sidebar .session {
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 5px;
+  padding: 6px 5px;
+}
+
+.sidebar .status-dot {
+  margin-top: 5px;
+}
+
+.sidebar .status-spinner {
+  margin-top: 2px;
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.2fr) minmax(260px, 1fr);
@@ -164,6 +183,22 @@ select {
   margin-bottom: 8px;
 }
 
+.sidebar .project {
+  margin: 2px 0 10px;
+  padding-top: 5px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.sidebar .project:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.sidebar .project:not(.collapsed) {
+  padding-left: 4px;
+  border-left: 1px solid color-mix(in srgb, var(--vscode-panel-border) 72%, transparent);
+}
+
 .project-header {
   width: 100%;
   display: flex;
@@ -180,6 +215,27 @@ select {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.sidebar .project-header {
+  min-height: 24px;
+  padding: 4px 4px 4px 0;
+  border-radius: 4px;
+}
+
+.sidebar .project:not(.collapsed) .project-header {
+  margin-left: -4px;
+  padding-left: 4px;
+}
+
+.sidebar .project .session {
+  width: calc(100% - 6px);
+  margin-left: 6px;
+}
+
+.sidebar .project.collapsed .session {
+  width: 100%;
+  margin-left: 0;
 }
 
 .project-header.collapsible {
@@ -462,12 +518,13 @@ select {
 }
 
 .preview-header {
-  padding: 18px 20px 14px;
+  padding: 14px 12px 12px;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .preview-title-block {
-  max-width: 980px;
+  width: min(100%, 980px);
+  margin: 0 auto;
 }
 
 .preview h1 {
@@ -487,21 +544,24 @@ select {
 }
 
 .preview-summary {
-  max-width: 980px;
-  padding: 14px 20px 0;
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 12px 12px 0;
   color: var(--vscode-descriptionForeground);
   line-height: 1.5;
 }
 
 .preview-details {
-  max-width: 980px;
-  padding: 14px 20px;
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 12px;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .preview-transcript {
-  max-width: 980px;
-  padding: 16px 20px 24px;
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 14px 12px 24px;
 }
 
 .preview-list {
