@@ -2,7 +2,6 @@ const STATUS_TEXT = new Map([
   ["active", "Active"],
   ["done", "Done"],
   ["running", "Running"],
-  ["stale", "Stale"],
   ["tool_running", "Tool running"],
   ["unknown", "Unknown"],
   ["waiting_approval", "Waiting approval"],
@@ -76,18 +75,12 @@ function sessionLabel(session) {
 }
 
 function sessionIconId(session) {
-  if (session.is_hidden) {
-    return "eye-closed";
-  }
   const status = String(session.display_status || "");
   if (status === "waiting_approval") {
     return "warning";
   }
   if (status === "running" || status === "tool_running") {
     return "sync~spin";
-  }
-  if (status === "stale") {
-    return "watch";
   }
   if (status === "done") {
     return session.is_unread_done ? "mail" : "mail-read";

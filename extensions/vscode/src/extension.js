@@ -13,18 +13,15 @@ const {
   sessionCacheWatchTarget,
 } = require("./sessionWatcher");
 const {
-  HIDDEN_SESSION_KEYS_KEY,
   READ_DONE_KEYS_KEY,
   decorateSessions,
   isDoneSession,
-  markSessionHidden,
   markDoneRead,
   markDoneUnread,
   readStateFromValue,
   readStateToValue,
-  restoreSession,
 } = require("./readState");
-const { buildDashboardModel, findSessionByKey } = require("./dashboardViewModel");
+const { buildDashboardModel, findSessionByKey, isArchivedSession } = require("./dashboardViewModel");
 const { buildSessionPreviewModel } = require("./transcriptPreview");
 
 function configuredStateDir() {
@@ -39,20 +36,12 @@ function readKeys(globalState) {
   return readStateFromValue(globalState.get(READ_DONE_KEYS_KEY, []));
 }
 
-function hiddenKeys(globalState) {
-  return readStateFromValue(globalState.get(HIDDEN_SESSION_KEYS_KEY, []));
-}
-
 async function updateReadKeys(globalState, keys) {
   await globalState.update(READ_DONE_KEYS_KEY, readStateToValue(keys));
 }
 
-async function updateHiddenKeys(globalState, keys) {
-  await globalState.update(HIDDEN_SESSION_KEYS_KEY, readStateToValue(keys));
-}
-
 function loadDecoratedSessions(globalState, stateDir = configuredStateDir()) {
-  return decorateSessions(loadSessionCache(stateDir), readKeys(globalState), hiddenKeys(globalState));
+  return decorateSessions(loadSessionCache(stateDir), readKeys(globalState));
 }
 
 function sessionFromTarget(target) {
@@ -81,6 +70,10 @@ async function openOfficialCodexThread(target) {
   const uri = officialCodexThreadUri(session);
   if (!uri) {
     await vscode.window.showWarningMessage("Codex session id is not available for this session.");
+    return false;
+  }
+  if (isArchivedSession(session, { homeDir: process.env.HOME || "" })) {
+    await vscode.window.showWarningMessage("Archived Codex sessions cannot be opened in the Codex extension.");
     return false;
   }
 
@@ -366,14 +359,6 @@ class RadarWebviewController {
     await updateReadKeys(this.context.globalState, markDoneUnread(readKeys(this.context.globalState), session));
   }
 
-  async hideSession(session) {
-    await updateHiddenKeys(this.context.globalState, markSessionHidden(hiddenKeys(this.context.globalState), session));
-  }
-
-  async restoreSession(session) {
-    await updateHiddenKeys(this.context.globalState, restoreSession(hiddenKeys(this.context.globalState), session));
-  }
-
   async handleSessionAction(key, action) {
     const session = this.sessionForKey(key);
     if (!session) {
@@ -391,10 +376,6 @@ class RadarWebviewController {
       await this.markSessionRead(session);
     } else if (action === "markUnread") {
       await this.markSessionUnread(session);
-    } else if (action === "hide") {
-      await this.hideSession(session);
-    } else if (action === "restore") {
-      await this.restoreSession(session);
     }
 
     this.selectedKey = key;
@@ -481,8 +462,8 @@ function activate(context) {
     vscode.window.registerWebviewViewProvider("codexRadar.projectList", {
       resolveWebviewView: (view) => controller.resolveSidebarView("projects", view),
     }),
-    vscode.window.registerWebviewViewProvider("codexRadar.hiddenList", {
-      resolveWebviewView: (view) => controller.resolveSidebarView("hidden", view),
+    vscode.window.registerWebviewViewProvider("codexRadar.archivedList", {
+      resolveWebviewView: (view) => controller.resolveSidebarView("archived", view),
     }),
     vscode.commands.registerCommand("codexRadar.refresh", () => controller.refresh()),
     vscode.commands.registerCommand("codexRadar.openDashboard", () => controller.openDashboard()),

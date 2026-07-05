@@ -16,9 +16,9 @@
 - Python core는 stdlib-first를 유지하고, Node/extension dependency는 extension subtree에 격리한다.
 - 현재 GUI milestone은 `sessions.json`을 직접 읽는 sectioned Webview sidebar와 editor Webview dashboard의 hybrid surface다.
 - GUI implementation은 read adapter를 통해 state source를 캡슐화하고, 나중에 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 전환할 수 있어야 한다.
-- GUI는 thread 상태(`waiting_approval`, `running`, `done`, `stale`)를 navigation 안에서 구분해야 한다.
+- GUI는 thread 상태(`waiting_approval`, `running`, `tool_running`, `done`, `unknown`)와 Codex archived state를 navigation 안에서 구분해야 한다.
 - 첫 GUI notification surface는 sidebar section badge와 dashboard count/highlight 같은 in-surface cue로 제한한다.
-- 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard/sidebar다. Extension-local read/unread/hidden UI state는 허용하지만 VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
+- 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard/sidebar다. Extension-local read/unread UI state는 허용하지만 VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
 - CLI/export contract로 전환하는 시점은 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커질 때 재검토한다.
 
@@ -36,4 +36,4 @@
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
 - Sectioned Webview sidebar, editor preview, editor dashboard가 Remote SSH에서 안정화된 뒤 command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
-- `stale_after_minutes` 같은 stale freshness threshold config를 검토. 기본값은 현재 30분이며, 도입 시 CLI/TUI와 VS Code GUI가 같은 source를 사용해야 한다.
+- terminal CLI/TUI용 `stale_after_minutes` 같은 stale freshness threshold config를 검토. 기본값은 현재 30분이다.

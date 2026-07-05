@@ -91,10 +91,10 @@
 #### R7b: GUI attention state
 
 - Status: confirmed direction
-- Requirement: GUI는 `waiting_approval`, `running`, `done`, `stale` 같은 thread 상태를 navigation 안에서 구분하고, attention badge는 `waiting_approval`, `stale`, unread `done`처럼 사용자 확인이 필요한 상태를 표현해야 한다.
+- Requirement: GUI는 `waiting_approval`, `running`, `tool_running`, `done`, `unknown` 같은 thread 상태를 navigation 안에서 구분하고, attention badge는 `waiting_approval`과 unread `done`처럼 사용자 확인이 필요한 상태를 표현해야 한다. Codex archived session은 active navigation에서 분리되어야 한다.
 - Rationale: 사용자는 VS Code workflow 안에서 어떤 thread가 주의가 필요한지 확인해야 하지만, OS/external notification은 content template과 redaction policy 없이는 scope가 커진다.
 - Failure prevented: thread 상태를 놓치거나, 초기 GUI milestone이 OS/external notification 설계로 과도하게 확장되는 문제.
-- Derived specs/tests: GUI notification rules, in-surface cue only, extension-local read/unread toggle, Webview sidebar attention badge, Webview attention counts, no OS/external notification before explicit opt-in milestone.
+- Derived specs/tests: GUI notification rules, in-surface cue only, extension-local read/unread toggle, Webview sidebar attention badge, Webview attention counts, archived section routing, no OS/external notification before explicit opt-in milestone.
 
 #### R7c: GUI privacy boundary
 

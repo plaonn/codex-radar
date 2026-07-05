@@ -2,6 +2,17 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.0
+
+Release candidate package for archived section routing and read-done row dimming. This version is not a Marketplace publication.
+
+### Changed
+
+- Replace the sidebar `Hidden` section with `Archived`, backed by host-local Codex archived transcript resolution.
+- Exclude archived sessions from `Attention` and `Projects`, and disable `Open in Codex` for archived sessions.
+- Remove VS Code GUI stale freshness filtering/styling; `running` and `tool_running` remain neutral spinner states.
+- Apply the muted row treatment to read `done` sessions instead of stale sessions.
+
 ## 0.2.9
 
 Release candidate package for archived transcript preview and duplicate message cleanup. This version is not a Marketplace publication.

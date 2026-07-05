@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.2.9");
+  assert.equal(manifest.version, "0.3.0");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -51,8 +51,8 @@ test("contributes native sidebar sections whose contents are Webviews", () => {
       type: "webview",
     },
     {
-      id: "codexRadar.hiddenList",
-      name: "Hidden",
+      id: "codexRadar.archivedList",
+      name: "Archived",
       type: "webview",
       visibility: "collapsed",
     },
@@ -82,7 +82,7 @@ test("contributes only global commands for refresh, filtering, and editor dashbo
   );
   assert.equal(
     titleCommands.find((item) => item.command === "codexRadar.refresh").when,
-    "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
+    "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.archivedList",
   );
 });
 
@@ -91,7 +91,7 @@ test("activates on section Webviews and dashboard command", () => {
 
   assert.equal(manifest.activationEvents.includes("onView:codexRadar.attentionList"), true);
   assert.equal(manifest.activationEvents.includes("onView:codexRadar.projectList"), true);
-  assert.equal(manifest.activationEvents.includes("onView:codexRadar.hiddenList"), true);
+  assert.equal(manifest.activationEvents.includes("onView:codexRadar.archivedList"), true);
   assert.equal(manifest.activationEvents.includes("onView:codexRadar.dashboard"), false);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openDashboard"), true);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openInCodex"), false);

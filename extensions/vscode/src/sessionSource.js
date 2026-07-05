@@ -3,8 +3,6 @@ const os = require("node:os");
 const path = require("node:path");
 
 const CACHE_SCHEMA_VERSION = 1;
-const STALE_SESSION_SECONDS = 30 * 60;
-const STALE_ELIGIBLE_STATUSES = new Set(["active", "running", "tool_running"]);
 const STATUS_FILTER_VALUES = Object.freeze([
   "all",
   "attention",
@@ -13,7 +11,6 @@ const STATUS_FILTER_VALUES = Object.freeze([
   "tool_running",
   "waiting_approval",
   "done",
-  "stale",
   "unknown",
 ]);
 
@@ -44,30 +41,8 @@ function sessionCachePath(stateDir) {
   return path.join(stateDir, "sessions.json");
 }
 
-function parseTimestamp(value) {
-  if (typeof value !== "string" || !value.trim()) {
-    return null;
-  }
-  const time = Date.parse(value);
-  return Number.isNaN(time) ? null : time;
-}
-
-function isStaleSession(session, options = {}) {
-  const status = String(session.status || "");
-  if (!STALE_ELIGIBLE_STATUSES.has(status)) {
-    return false;
-  }
-  const lastSeen = parseTimestamp(session.last_seen_at);
-  if (lastSeen === null) {
-    return false;
-  }
-  const nowMs = options.nowMs ?? Date.now();
-  const staleMs = (options.staleSeconds ?? STALE_SESSION_SECONDS) * 1000;
-  return nowMs - lastSeen > staleMs;
-}
-
-function sessionDisplayStatus(session, options = {}) {
-  return isStaleSession(session, options) ? "stale" : String(session.status || "");
+function sessionDisplayStatus(session) {
+  return String(session.status || "");
 }
 
 function normalizeSession(sessionId, session, options = {}) {
@@ -144,12 +119,10 @@ function groupSessionsByProject(sessions) {
 module.exports = {
   CACHE_SCHEMA_VERSION,
   STATUS_FILTER_VALUES,
-  STALE_SESSION_SECONDS,
   defaultStateDir,
   expandHome,
   filterSessionsByStatus,
   groupSessionsByProject,
-  isStaleSession,
   loadSessionCache,
   normalizeStatusFilter,
   sessionCachePath,

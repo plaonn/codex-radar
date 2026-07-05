@@ -69,21 +69,15 @@ function sessionActions(session, options = {}) {
   if (session.actions.canMarkUnread) {
     actions.appendChild(actionButton("Unread", "markUnread", session, "secondary"));
   }
-  if (session.actions.canHide) {
-    actions.appendChild(actionButton("Hide", "hide", session));
-  }
-  if (session.actions.canRestore) {
-    actions.appendChild(actionButton("Restore", "restore", session));
-  }
   return actions;
 }
 
 function sessionNode(session, options = {}) {
   const isActive = session.key && session.key === selectedKey();
   const readClass = session.isUnreadDone ? " unread" : session.isDoneRead ? " read" : "";
-  const staleClass = session.isStale ? " stale" : "";
+  const archivedClass = session.isArchived ? " archived" : "";
   const node = el("div", {
-    className: `session status-${session.status}${readClass}${staleClass}${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
+    className: `session status-${session.status}${readClass}${archivedClass}${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
   });
   node.tabIndex = 0;
   node.setAttribute("role", "button");
@@ -140,12 +134,12 @@ function attentionPane(model) {
     el("span", { className: "count", text: String(model.counts.attention) }),
   ]));
   pane.appendChild(sessionList(model.attention, "No attention sessions"));
-  if (model.hidden.length) {
+  if (model.archived.length) {
     pane.appendChild(el("div", { className: "section-divider" }, [
-      el("span", { className: "pane-title", text: "Hidden" }),
-      el("span", { className: "count", text: String(model.counts.hidden) }),
+      el("span", { className: "pane-title", text: "Archived" }),
+      el("span", { className: "count", text: String(model.counts.archived) }),
     ]));
-    pane.appendChild(sessionList(model.hidden, ""));
+    pane.appendChild(sessionList(model.archived, ""));
   }
   return pane;
 }
@@ -203,8 +197,7 @@ function inspectorPane(model) {
   body.appendChild(el("div", { className: "tag-row" }, [
     el("span", { className: "tag", text: session.statusText }),
     session.isAttention ? el("span", { className: "tag", text: "Attention" }) : null,
-    session.isHidden ? el("span", { className: "tag", text: "Hidden" }) : null,
-    session.isStale ? el("span", { className: "tag", text: "Stale" }) : null,
+    session.isArchived ? el("span", { className: "tag", text: "Archived" }) : null,
     session.isUnreadDone ? el("span", { className: "tag", text: "Unread" }) : null,
   ]));
 
@@ -233,16 +226,6 @@ function inspectorPane(model) {
   if (session.actions.canMarkUnread) {
     actions.appendChild(button("Mark unread", "secondary", () => {
       send({ type: "sessionAction", action: "markUnread", key: session.key });
-    }));
-  }
-  if (session.actions.canHide) {
-    actions.appendChild(button("Hide", "ghost", () => {
-      send({ type: "sessionAction", action: "hide", key: session.key });
-    }));
-  }
-  if (session.actions.canRestore) {
-    actions.appendChild(button("Restore", "ghost", () => {
-      send({ type: "sessionAction", action: "restore", key: session.key });
     }));
   }
   body.appendChild(actions);
@@ -330,10 +313,10 @@ function sidebarProjects(model) {
   return root;
 }
 
-function sidebarHidden(model) {
+function sidebarArchived(model) {
   const root = el("div", { className: "app sidebar" });
-  root.appendChild(sidebarTopbar(model, "Hidden", String(model.counts.hidden)));
-  root.appendChild(sessionList(model.hidden, "No hidden sessions", { showActions: true }));
+  root.appendChild(sidebarTopbar(model, "Archived", String(model.counts.archived)));
+  root.appendChild(sessionList(model.archived, "No archived sessions", { showActions: true }));
   return root;
 }
 
@@ -363,8 +346,8 @@ function render() {
     app.appendChild(sidebarAttention(state.model));
   } else if (state.surface === "projects") {
     app.appendChild(sidebarProjects(state.model));
-  } else if (state.surface === "hidden") {
-    app.appendChild(sidebarHidden(state.model));
+  } else if (state.surface === "archived") {
+    app.appendChild(sidebarArchived(state.model));
   } else {
     app.appendChild(dashboardView(state.model));
   }

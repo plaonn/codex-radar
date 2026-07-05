@@ -1,5 +1,4 @@
 const {
-  STALE_SESSION_SECONDS,
   STATUS_FILTER_VALUES,
   filterSessionsByStatus,
   groupSessionsByProject,
@@ -14,23 +13,34 @@ const {
   statusText,
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
+const { resolveTranscriptPathInfo } = require("./transcriptPreview");
 
 function baseDisplayStatus(session) {
-  const displayStatus = String(session.display_status || session.status || "unknown");
-  if (displayStatus === "stale") {
-    return String(session.status || "unknown");
-  }
-  return displayStatus;
+  return String(session.display_status || session.status || "unknown");
 }
 
-function isStaleByAge(session, options = {}) {
-  const valueMs = Date.parse(String(session.last_seen_at || ""));
-  if (!Number.isFinite(valueMs)) {
-    return false;
+function transcriptPathInfo(session, options = {}) {
+  if (typeof options.resolveTranscriptPathInfo === "function") {
+    return options.resolveTranscriptPathInfo(session, options);
   }
-  const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
-  const staleMs = (options.staleSeconds ?? STALE_SESSION_SECONDS) * 1000;
-  return nowMs - valueMs > staleMs;
+  return resolveTranscriptPathInfo(session, options);
+}
+
+function archiveCacheKey(session) {
+  return sessionStateKey(session) || String(session?.session_id || "");
+}
+
+function isArchivedSession(session, options = {}) {
+  const key = archiveCacheKey(session);
+  const cache = options.archivedSessionCache instanceof Map ? options.archivedSessionCache : null;
+  if (cache && key && cache.has(key)) {
+    return cache.get(key);
+  }
+  const isArchived = transcriptPathInfo(session, options).source === "archived";
+  if (cache && key) {
+    cache.set(key, isArchived);
+  }
+  return isArchived;
 }
 
 function statusOptions(currentStatusFilter = "") {
@@ -42,11 +52,11 @@ function statusOptions(currentStatusFilter = "") {
   }));
 }
 
-function sessionActionState(session) {
+function sessionActionState(session, options = {}) {
+  const isArchived = isArchivedSession(session, options);
   return {
-    canOpen: Boolean(session.session_id && session.session_id !== "unknown" && !String(session.session_id).startsWith("unknown:")),
-    canHide: !session.is_hidden,
-    canRestore: Boolean(session.is_hidden),
+    canOpen: !isArchived
+      && Boolean(session.session_id && session.session_id !== "unknown" && !String(session.session_id).startsWith("unknown:")),
     canMarkRead: isDoneSession(session) && session.is_unread_done,
     canMarkUnread: isDoneSession(session) && session.is_done_read,
   };
@@ -54,7 +64,7 @@ function sessionActionState(session) {
 
 function sessionCard(session, options = {}) {
   const status = baseDisplayStatus(session);
-  const isStale = isStaleByAge(session, options);
+  const isArchived = isArchivedSession(session, options);
   const lifecycleSession = { ...session, display_status: status };
   const description = sessionDescription(lifecycleSession, options);
   return {
@@ -66,7 +76,7 @@ function sessionCard(session, options = {}) {
     project: String(session.project || "-"),
     status,
     statusText: statusText(status),
-    description: isStale ? `${description} | Stale` : description,
+    description: isArchived ? `${description} | Archived` : description,
     icon: sessionIconId({ ...session, display_status: status }),
     relativeLastSeen: relativeTimeText(session.last_seen_at, options),
     lastSeenAt: String(session.last_seen_at || ""),
@@ -74,11 +84,10 @@ function sessionCard(session, options = {}) {
     model: String(session.model || ""),
     currentTool: String(session.current_tool || ""),
     isAttention: Boolean(session.is_attention),
-    isHidden: Boolean(session.is_hidden),
+    isArchived,
     isUnreadDone: Boolean(session.is_unread_done),
     isDoneRead: Boolean(session.is_done_read),
-    isStale,
-    actions: sessionActionState(session),
+    actions: sessionActionState(session, options),
   };
 }
 
@@ -109,14 +118,16 @@ function projectGroups(sessions, options = {}) {
 }
 
 function buildDashboardModel(sessions, options = {}) {
+  const modelOptions = {
+    ...options,
+    archivedSessionCache: options.archivedSessionCache instanceof Map ? options.archivedSessionCache : new Map(),
+  };
   const statusFilter = normalizeStatusFilter(options.statusFilter);
-  const activeSessions = sessions.filter((session) => !session.is_hidden);
-  const hiddenSessions = sessions.filter((session) => session.is_hidden);
-  const filteredSessions = statusFilter === "stale"
-    ? activeSessions.filter((session) => isStaleByAge(session, options))
-    : filterSessionsByStatus(activeSessions, statusFilter);
+  const archivedSessions = sessions.filter((session) => isArchivedSession(session, modelOptions));
+  const activeSessions = sessions.filter((session) => !isArchivedSession(session, modelOptions));
+  const filteredSessions = filterSessionsByStatus(activeSessions, statusFilter);
   const attentionSessions = activeSessions.filter((session) => session.is_attention);
-  const allCards = cardsForSessions(sessions, options);
+  const allCards = cardsForSessions(sessions, modelOptions);
   const selectedKey = options.selectedKey && indexCards(allCards).has(options.selectedKey)
     ? options.selectedKey
     : "";
@@ -127,7 +138,7 @@ function buildDashboardModel(sessions, options = {}) {
     selectedSession = byKey.get(selectedKey) || null;
   }
   if (!selectedSession) {
-    selectedSession = attentionSessions[0] || filteredSessions[0] || hiddenSessions[0] || sessions[0] || null;
+    selectedSession = attentionSessions[0] || filteredSessions[0] || archivedSessions[0] || sessions[0] || null;
   }
 
   return {
@@ -139,12 +150,12 @@ function buildDashboardModel(sessions, options = {}) {
       visible: activeSessions.length,
       filtered: filteredSessions.length,
       attention: attentionSessions.length,
-      hidden: hiddenSessions.length,
+      archived: archivedSessions.length,
     },
-    attention: cardsForSessions(attentionSessions, { ...options, showProject: true }),
-    groups: projectGroups(filteredSessions, options),
-    hidden: cardsForSessions(hiddenSessions, { ...options, showProject: true }),
-    selected: selectedSession ? sessionCard(selectedSession, options) : null,
+    attention: cardsForSessions(attentionSessions, { ...modelOptions, showProject: true }),
+    groups: projectGroups(filteredSessions, modelOptions),
+    archived: cardsForSessions(archivedSessions, { ...modelOptions, showProject: true }),
+    selected: selectedSession ? sessionCard(selectedSession, modelOptions) : null,
     emptyState: sessions.length === 0 ? "No sessions indexed" : "",
   };
 }
@@ -161,7 +172,7 @@ module.exports = {
   baseDisplayStatus,
   buildDashboardModel,
   findSessionByKey,
-  isStaleByAge,
+  isArchivedSession,
   sessionCard,
   statusOptions,
 };

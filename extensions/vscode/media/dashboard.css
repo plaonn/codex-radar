@@ -225,9 +225,13 @@ select {
   border-color: var(--vscode-panel-border);
 }
 
-.session.stale {
+.session.read {
   opacity: 0.68;
-  border-style: dashed;
+}
+
+.session.read:hover,
+.session.read.active {
+  opacity: 1;
 }
 
 .session.read .title {

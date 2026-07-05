@@ -39,7 +39,7 @@ test("groups sessions by project without changing recent project order", () => {
   );
 });
 
-test("marks only active running statuses stale", () => {
+test("keeps lifecycle status as display status", () => {
   const nowMs = Date.parse("2026-07-04T00:40:01+00:00");
 
   assert.equal(
@@ -47,7 +47,7 @@ test("marks only active running statuses stale", () => {
       { status: "running", last_seen_at: "2026-07-04T00:00:00+00:00" },
       { nowMs },
     ),
-    "stale",
+    "running",
   );
   assert.equal(
     sessionDisplayStatus(
@@ -95,7 +95,7 @@ test("resolves state directory like codex-radar core", () => {
 test("filters sessions by display status", () => {
   const sessions = [
     { session_id: "approval", display_status: "waiting_approval", is_attention: true },
-    { session_id: "stale", display_status: "stale", is_attention: true },
+    { session_id: "running", display_status: "running", is_attention: false },
     { session_id: "done", display_status: "done", is_attention: false },
   ];
 
@@ -108,6 +108,6 @@ test("filters sessions by display status", () => {
   );
   assert.deepEqual(
     filterSessionsByStatus(sessions, "attention").map((session) => session.session_id),
-    ["approval", "stale"],
+    ["approval"],
   );
 });

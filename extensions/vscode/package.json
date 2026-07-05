@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -33,7 +33,7 @@
   "activationEvents": [
     "onView:codexRadar.attentionList",
     "onView:codexRadar.projectList",
-    "onView:codexRadar.hiddenList",
+    "onView:codexRadar.archivedList",
     "onCommand:codexRadar.refresh",
     "onCommand:codexRadar.openDashboard",
     "onCommand:codexRadar.filterStatus"
@@ -89,8 +89,8 @@
           "type": "webview"
         },
         {
-          "id": "codexRadar.hiddenList",
-          "name": "Hidden",
+          "id": "codexRadar.archivedList",
+          "name": "Archived",
           "type": "webview",
           "visibility": "collapsed"
         }
@@ -105,7 +105,7 @@
         },
         {
           "command": "codexRadar.refresh",
-          "when": "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
+          "when": "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.archivedList",
           "group": "navigation@2"
         }
       ]

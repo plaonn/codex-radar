@@ -84,7 +84,7 @@ test("builds human-readable title and redacted snippet from session cache", () =
     sessionTitle({ ...session, thread_title: "  Release\nreadiness  " }),
     "Release readiness",
   );
-  assert.equal(sessionTitle({ display_status: "stale" }), "unknown - Stale thread");
+  assert.equal(sessionTitle({ display_status: "running" }), "unknown - Running thread");
 });
 
 test("makes done read state visible in row descriptions", () => {
@@ -99,7 +99,6 @@ test("makes done read state visible in row descriptions", () => {
 });
 
 test("uses distinct row icons for unread and read done sessions", () => {
-  assert.equal(sessionIconId({ display_status: "done", is_hidden: true }), "eye-closed");
   assert.equal(sessionIconId({ display_status: "done", is_unread_done: true }), "mail");
   assert.equal(sessionIconId({ display_status: "done", is_done_read: true }), "mail-read");
   assert.equal(sessionIconId({ display_status: "waiting_approval" }), "warning");
@@ -121,11 +120,11 @@ test("summarizes project attention in group labels", () => {
     { display_status: "waiting_approval", is_attention: true },
     { display_status: "done", is_attention: false },
     { display_status: "done", is_attention: true },
-    { display_status: "stale", is_attention: true },
+    { display_status: "running", is_attention: false },
   ];
 
-  assert.equal(attentionCount(sessions), 3);
-  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 3 attention / 4");
+  assert.equal(attentionCount(sessions), 2);
+  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 2 attention / 4");
   assert.equal(projectLabel("idle-project", [{ display_status: "done" }]), "idle-project (1)");
 });
 
@@ -134,14 +133,13 @@ test("builds an attention badge from decorated attention state only", () => {
     { display_status: "waiting_approval", is_attention: true },
     { display_status: "running", is_attention: false },
     { display_status: "tool_running", is_attention: false },
-    { display_status: "stale", is_attention: true },
     { display_status: "done", is_attention: true },
     { display_status: "done", is_attention: false },
   ];
 
   assert.deepEqual(attentionBadge(sessions), {
-    value: 3,
-    tooltip: "3 attention sessions",
+    value: 2,
+    tooltip: "2 attention sessions",
   });
   assert.equal(attentionBadge([{ display_status: "done", is_attention: false }]), undefined);
   assert.deepEqual(attentionBadge([{ display_status: "done", is_attention: true }]), {
