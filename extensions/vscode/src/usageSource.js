@@ -218,47 +218,10 @@ function usageStatusTooltip(snapshot) {
   return lines.join("\n");
 }
 
-function usageDetailItems(snapshot) {
-  if (!snapshot || !snapshot.available) {
-    return [
-      {
-        label: "Codex usage unavailable",
-        description: snapshot?.reason || "unknown",
-      },
-    ];
-  }
-  const items = [];
-  if (snapshot.primary) {
-    items.push({
-      label: `5h remaining ${Math.round(snapshot.primary.remaining_percent)}%`,
-      description: `${Math.round(snapshot.primary.used_percent)}% used`,
-      detail: snapshot.primary.resets_at_iso ? `Reset: ${formatReset(snapshot.primary.resets_at_iso)}` : "",
-    });
-  }
-  if (snapshot.secondary) {
-    items.push({
-      label: `7d remaining ${Math.round(snapshot.secondary.remaining_percent)}%`,
-      description: `${Math.round(snapshot.secondary.used_percent)}% used`,
-      detail: snapshot.secondary.resets_at_iso ? `Reset: ${formatReset(snapshot.secondary.resets_at_iso)}` : "",
-    });
-  }
-  if (snapshot.plan_type) {
-    items.push({ label: `Plan ${snapshot.plan_type}` });
-  }
-  if (snapshot.last_token_usage && Number.isFinite(Number(snapshot.last_token_usage.total_tokens))) {
-    items.push({ label: `Last turn tokens ${snapshot.last_token_usage.total_tokens}` });
-  }
-  if (snapshot.context_window) {
-    items.push({ label: `Context window ${snapshot.context_window}` });
-  }
-  return items;
-}
-
 module.exports = {
   defaultCodexHome,
   loadUsageSnapshot,
   recentRolloutFiles,
-  usageDetailItems,
   usageStatusText,
   usageStatusTooltip,
 };

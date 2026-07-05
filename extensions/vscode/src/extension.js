@@ -15,7 +15,6 @@ const {
 const {
   defaultCodexHome,
   loadUsageSnapshot,
-  usageDetailItems,
   usageStatusText,
   usageStatusTooltip,
 } = require("./usageSource");
@@ -573,9 +572,9 @@ class UsageStatusBar {
 
   async showDetails() {
     const snapshot = this.snapshot || loadUsageSnapshot();
-    await vscode.window.showQuickPick(usageDetailItems(snapshot), {
-      title: "Codex usage remaining",
-      placeHolder: usageStatusText(snapshot).replace(/\$\([^)]+\)\s*/, ""),
+    await vscode.window.showInformationMessage("Codex usage remaining", {
+      modal: true,
+      detail: usageStatusTooltip(snapshot),
     });
   }
 

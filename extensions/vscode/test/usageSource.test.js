@@ -7,7 +7,6 @@ const test = require("node:test");
 const {
   defaultCodexHome,
   loadUsageSnapshot,
-  usageDetailItems,
   usageStatusText,
   usageStatusTooltip,
 } = require("../src/usageSource");
@@ -113,8 +112,8 @@ test("formats status text as remaining primary and secondary percentages", () =>
   );
 });
 
-test("builds click detail items from usage snapshot", () => {
-  const items = usageDetailItems({
+test("builds hover-compatible tooltip detail from usage snapshot", () => {
+  const tooltip = usageStatusTooltip({
     available: true,
     plan_type: "prolite",
     primary: {
@@ -131,9 +130,8 @@ test("builds click detail items from usage snapshot", () => {
     context_window: 258400,
   });
 
-  assert.equal(items[0].label, "5h remaining 3%");
-  assert.equal(items[0].description, "97% used");
-  assert.equal(items[1].label, "7d remaining 85%");
-  assert.equal(items.some((item) => item.label === "Plan prolite"), true);
-  assert.equal(items.some((item) => item.label === "Last turn tokens 145501"), true);
+  assert.match(tooltip, /5h remaining: 3%/);
+  assert.match(tooltip, /7d remaining: 85%/);
+  assert.match(tooltip, /Plan: prolite/);
+  assert.match(tooltip, /Last turn tokens: 145501/);
 });

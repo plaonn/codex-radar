@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.17
+
+Release candidate package for click-to-read usage detail. This version is not a Marketplace publication.
+
+### Changed
+
+- Open the same usage detail text shown in the status bar hover when the status item is clicked.
+
 ## 0.3.16
 
 Release candidate package for compact remaining-usage status. This version is not a Marketplace publication.
