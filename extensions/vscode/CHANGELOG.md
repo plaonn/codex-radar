@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.11
+
+Release candidate package for a persistent preview Webview renderer. This version is not a Marketplace publication.
+
+### Fixed
+
+- Stop replacing the preview Webview HTML on transcript updates.
+- Render preview updates through a persistent `preview.js` Webview app so scroll state is based on the current DOM before each update.
+- Match messenger behavior: only new preview sessions force bottom scroll; same-session updates follow bottom only if the user was already near the bottom.
+
 ## 0.3.10
 
 Release candidate package for host-backed preview scroll restoration. This version is not a Marketplace publication.

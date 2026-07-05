@@ -114,40 +114,11 @@ function dashboardHtml(webview, extensionUri) {
 </html>`;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function previewDetail(label, value) {
-  if (!value) {
-    return "";
-  }
-  return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`;
-}
-
-function previewHtml(webview, extensionUri, model, options = {}) {
+function previewHtml(webview, extensionUri) {
   const nonce = webviewNonce();
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
+  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "preview.js"));
   const cspSource = webview.cspSource;
-  const initialScrollToBottom = options.initialScrollToBottom !== false;
-  const sessionIdentity = JSON.stringify(String(options.sessionIdentity || model.shortSessionId || ""));
-  const restoreScroll = JSON.stringify(options.restoreScroll || null);
-  const notice = model.transcriptMessage
-    ? `<div class="preview-notice">${escapeHtml(model.transcriptMessage)}</div>`
-    : "";
-  const entries = model.transcriptEntries.length
-    ? model.transcriptEntries.map((entry) => `
-      <article class="preview-entry ${escapeHtml(entry.role)}">
-        <div class="preview-role">${escapeHtml(entry.label || entry.role)}</div>
-        <div class="preview-bubble">${entry.html}</div>
-      </article>
-    `).join("")
-    : `<div class="empty">${escapeHtml(model.transcriptMessage || "No transcript preview available.")}</div>`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -161,98 +132,16 @@ function previewHtml(webview, extensionUri, model, options = {}) {
   <main class="preview">
     <header class="preview-header">
       <div class="preview-title-block">
-        <h1>${escapeHtml(model.title)}</h1>
-        <div class="preview-meta">${escapeHtml(model.project)} | ${escapeHtml(model.status)} | ${escapeHtml(model.shortSessionId)}</div>
+        <h1 id="preview-title"></h1>
+        <div id="preview-meta" class="preview-meta"></div>
       </div>
-      <dl class="details preview-details">
-        ${previewDetail("Last seen", model.lastSeen)}
-        ${previewDetail("Last event", model.lastEvent)}
-        ${previewDetail("Model", model.model)}
-        ${previewDetail("Tool", model.currentTool)}
-      </dl>
+      <dl id="preview-details" class="details preview-details"></dl>
     </header>
     <section class="preview-body" aria-label="Transcript preview">
-      <div class="preview-transcript">
-        ${notice}
-        <div class="preview-list">${entries}</div>
-      </div>
+      <div id="preview-transcript" class="preview-transcript"></div>
     </section>
   </main>
-  <script nonce="${nonce}">
-    const vscode = acquireVsCodeApi();
-    const previewBody = document.querySelector(".preview-body");
-    const previewSessionIdentity = ${sessionIdentity};
-    const initialScrollToBottom = ${initialScrollToBottom ? "true" : "false"};
-    const restoreScroll = ${restoreScroll};
-    const previousState = vscode.getState() || {};
-    const previousScroll = previousState.previewScroll || {};
-
-    function isNearBottom() {
-      return previewBody
-        ? previewBody.scrollHeight - previewBody.scrollTop - previewBody.clientHeight < 48
-        : false;
-    }
-
-    function saveScroll() {
-      if (!previewBody) {
-        return;
-      }
-      const scroll = {
-        sessionIdentity: previewSessionIdentity,
-        scrollTop: previewBody.scrollTop,
-        nearBottom: isNearBottom(),
-      };
-      vscode.setState({
-        ...previousState,
-        previewScroll: scroll,
-      });
-      vscode.postMessage({
-        type: "previewScroll",
-        ...scroll,
-      });
-    }
-
-    function scrollToBottom() {
-      if (!previewBody) {
-        return;
-      }
-      previewBody.scrollTop = previewBody.scrollHeight;
-      saveScroll();
-    }
-
-    function restoreScroll() {
-      if (!previewBody) {
-        return;
-      }
-      if (
-        initialScrollToBottom
-        || restoreScroll?.nearBottom
-        || (!restoreScroll && previousScroll.sessionIdentity !== previewSessionIdentity)
-        || previousScroll.nearBottom
-      ) {
-        scrollToBottom();
-        return;
-      }
-      if (Number.isFinite(restoreScroll?.scrollTop)) {
-        const maxScroll = Math.max(0, previewBody.scrollHeight - previewBody.clientHeight);
-        previewBody.scrollTop = Math.min(restoreScroll.scrollTop, maxScroll);
-        saveScroll();
-        return;
-      }
-      if (Number.isFinite(previousScroll.scrollTop)) {
-        const maxScroll = Math.max(0, previewBody.scrollHeight - previewBody.clientHeight);
-        previewBody.scrollTop = Math.min(previousScroll.scrollTop, maxScroll);
-      }
-      saveScroll();
-    }
-
-    if (previewBody) {
-      previewBody.addEventListener("scroll", saveScroll, { passive: true });
-      requestAnimationFrame(restoreScroll);
-      window.addEventListener("load", restoreScroll, { once: true });
-      setTimeout(restoreScroll, 0);
-    }
-  </script>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
 }
@@ -332,7 +221,8 @@ class RadarWebviewController {
     this.panel = null;
     this.previewPanel = null;
     this.previewSessionKey = "";
-    this.previewScrollStates = new Map();
+    this.previewReady = false;
+    this.pendingPreviewState = null;
     this.refresh();
   }
 
@@ -446,9 +336,12 @@ class RadarWebviewController {
         },
       );
       this.previewPanel.webview.onDidReceiveMessage((message) => this.handlePreviewMessage(message));
+      this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri);
       this.previewPanel.onDidDispose(() => {
         this.previewPanel = null;
         this.previewSessionKey = "";
+        this.previewReady = false;
+        this.pendingPreviewState = null;
       });
     } else if (options.reveal !== false) {
       this.previewPanel.reveal(vscode.ViewColumn.Active);
@@ -456,29 +349,32 @@ class RadarWebviewController {
     const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
     const model = buildSessionPreviewModel(session, { homeDir: process.env.HOME || "" });
     this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
-    const restoreScroll = this.previewScrollStates.get(sessionIdentity) || null;
-    this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri, model, {
+    this.pendingPreviewState = {
+      type: "previewState",
+      model,
       initialScrollToBottom: shouldScrollToBottom,
       sessionIdentity,
-      restoreScroll,
-    });
+    };
     this.previewSessionKey = sessionIdentity;
+    this.postPreviewState();
   }
 
   handlePreviewMessage(message) {
-    if (!message || typeof message !== "object" || message.type !== "previewScroll") {
+    if (!message || typeof message !== "object") {
       return;
     }
-    const sessionIdentity = String(message.sessionIdentity || "");
-    if (!sessionIdentity) {
+    if (message.type === "previewReady") {
+      this.previewReady = true;
+      this.postPreviewState();
       return;
     }
-    const scrollTop = Number(message.scrollTop);
-    this.previewScrollStates.set(sessionIdentity, {
-      sessionIdentity,
-      scrollTop: Number.isFinite(scrollTop) ? scrollTop : 0,
-      nearBottom: Boolean(message.nearBottom),
-    });
+  }
+
+  postPreviewState() {
+    if (!this.previewPanel || !this.previewReady || !this.pendingPreviewState) {
+      return;
+    }
+    this.previewPanel.webview.postMessage(this.pendingPreviewState);
   }
 
   updatePreviewPanel() {
@@ -639,7 +535,6 @@ module.exports = {
   configuredStateDir,
   dashboardHtml,
   deactivate,
-  escapeHtml,
   loadDecoratedSessions,
   officialCodexThreadUri,
   openOfficialCodexThread,

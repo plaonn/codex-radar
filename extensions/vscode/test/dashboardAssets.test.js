@@ -11,6 +11,10 @@ function readDashboardJs() {
   return fs.readFileSync(path.join(__dirname, "..", "media", "dashboard.js"), "utf8");
 }
 
+function readPreviewJs() {
+  return fs.readFileSync(path.join(__dirname, "..", "media", "preview.js"), "utf8");
+}
+
 test("scopes status colors to status indicators instead of session rows", () => {
   const css = readDashboardCss();
 
@@ -66,20 +70,20 @@ test("keeps preview content aligned with narrower editor gutters", () => {
 
 test("uses a fixed preview header and scrollable transcript body", () => {
   const css = readDashboardCss();
-  const js = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+  const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+  const preview = readPreviewJs();
 
   assert.match(css, /\.preview\s*\{[^}]*height:\s*100vh;[^}]*overflow:\s*hidden;/s);
   assert.match(css, /\.preview-header\s*\{[^}]*flex:\s*0 0 auto;/s);
   assert.match(css, /\.preview-body\s*\{[^}]*overflow-y:\s*auto;/s);
-  assert.match(js, /<section class="preview-body" aria-label="Transcript preview">/);
-  assert.match(js, /enableScripts:\s*true/);
-  assert.match(js, /previewBody\.scrollTop = previewBody\.scrollHeight;/);
-  assert.match(js, /acquireVsCodeApi\(\)/);
-  assert.match(js, /type:\s*"previewScroll"/);
-  assert.match(js, /previousScroll\.nearBottom/);
-  assert.match(js, /restoreScroll\?\.nearBottom/);
-  assert.match(js, /previewBody\.addEventListener\("scroll", saveScroll/);
-  assert.match(js, /this\.previewScrollStates\.get\(sessionIdentity\)/);
-  assert.match(js, /session\.session_id \|\| session\.key/);
-  assert.match(js, /this\.refresh\(\{ updatePreview:\s*false \}\);/);
+  assert.match(extension, /<section class="preview-body" aria-label="Transcript preview">/);
+  assert.match(extension, /media", "preview\.js"/);
+  assert.match(extension, /enableScripts:\s*true/);
+  assert.doesNotMatch(extension, /webview\.html = previewHtml\(this\.previewPanel\.webview, this\.context\.extensionUri, model/);
+  assert.match(extension, /this\.previewPanel\.webview\.postMessage\(this\.pendingPreviewState\)/);
+  assert.match(extension, /session\.session_id \|\| session\.key/);
+  assert.match(preview, /acquireVsCodeApi\(\)/);
+  assert.match(preview, /message\.initialScrollToBottom \|\| isNewSession \|\| isNearBottom\(\)/);
+  assert.match(preview, /addEventListener\("scroll", saveScroll/);
+  assert.match(preview, /vscode\.postMessage\(\{ type:\s*"previewReady" \}\)/);
 });
