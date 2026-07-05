@@ -150,7 +150,7 @@ GUI display contract v1:
 
 GUI privacy/action boundary v1:
 
-- 첫 GUI milestone은 session/transcript navigation에 대해 read-only dashboard다.
+- 첫 GUI milestone은 Codex/codex-radar runtime state에 대해 read-only dashboard다. Extension-local read/unread/hidden UI state는 허용하지만, `sessions.json`, transcript, Codex thread, hook config, server-side `config.json`은 수정하지 않는다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
 - 현재 VS Code TreeView release candidate는 Python core CLI를 실행하지 않는다. retention config/prune GUI는 clearer surface가 생길 때 별도 requirement로 재도입한다.

@@ -1,8 +1,8 @@
 # codex-radar
 
-원격 개발 환경에서 로컬 Codex thread 상태를 빠르게 확인하는 radar.
+원격 개발 환경에서 host-local Codex thread 상태를 빠르게 확인하는 radar.
 
-`codex-radar`는 VS Code Remote SSH와 로컬 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 프로젝트 단위로 thread를 구분해 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 최종적으로는 VS Code extension 같은 GUI surface와 통합하는 것을 지향하지만, 초기 MVP는 terminal-first workflow를 제공한다.
+`codex-radar`는 VS Code Remote SSH와 remote host 안의 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 프로젝트 단위로 thread를 구분해 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 최종적으로는 VS Code extension 같은 GUI surface와 통합하는 것을 지향하지만, 초기 MVP는 terminal-first workflow를 제공한다.
 
 ## 상태
 

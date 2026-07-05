@@ -18,7 +18,7 @@
 - GUI implementation은 read adapter를 통해 state source를 캡슐화하고, 나중에 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 전환할 수 있어야 한다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `done`, `stale`)를 navigation 안에서 구분해야 한다.
 - 첫 GUI notification surface는 project grouping 안의 badge/highlight 같은 in-surface cue로 제한한다.
-- 첫 GUI action boundary는 session/transcript navigation에 대해 read-only dashboard다. TreeView release candidate에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
+- 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard다. Extension-local read/unread/hidden UI state는 허용하지만 TreeView release candidate에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
 - CLI/export contract로 전환하는 시점은 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커질 때 재검토한다.
 

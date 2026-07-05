@@ -70,9 +70,9 @@
 - Derived specs/tests: local state directory, runbook-only hook install, minimal watcher alert, no default raw event log, retention pruning, privacy/automation boundary docs.
 - Revisit when: notification, GUI integration, external sync, automation surface를 도입할 때.
 
-### R7: future GUI integration
+### R7: staged GUI integration
 
-- Status: confirmed direction, staged specs pending implementation
+- Status: confirmed direction, TreeView release candidate active
 - Requirement: 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 thread 상태/알림을 통합해야 한다.
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
