@@ -2,6 +2,20 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.0
+
+Release candidate package for the Webview dashboard surface. This version is not a Marketplace publication.
+
+### Changed
+
+- Replace the native TreeView sections with one Webview dashboard in the Codex Radar Activity Bar container.
+- Move attention inbox, project grouping, hidden-session restore, status filtering, and selected-session actions into the dashboard surface.
+- Keep only the global refresh command as a VS Code command; row/session actions now use the Webview message boundary.
+
+### Boundary
+
+- Continue to avoid hook installation, direct `codex resume`, raw transcript display, retention/prune controls, and external transmission of transcript or session metadata.
+
 ## 0.1.15
 
 Release candidate package for row action command palette cleanup. This version is not a Marketplace publication.

@@ -4,20 +4,9 @@ const vscode = require("vscode");
 const { officialCodexThreadUriString } = require("./codexLink");
 const {
   defaultStateDir,
-  filterSessionsByStatus,
-  groupSessionsByProject,
   loadSessionCache,
   normalizeStatusFilter,
-  STATUS_FILTER_VALUES,
 } = require("./sessionSource");
-const {
-  attentionBadge,
-  projectLabel,
-  sessionDescription,
-  sessionIconId,
-  sessionLabel,
-  sessionTooltip,
-} = require("./sessionViewModel");
 const {
   registerRefreshHandlers,
   sessionCacheWatchTarget,
@@ -34,191 +23,7 @@ const {
   readStateToValue,
   restoreSession,
 } = require("./readState");
-
-class ProjectItem extends vscode.TreeItem {
-  constructor(project, sessions) {
-    super(projectLabel(project, sessions), vscode.TreeItemCollapsibleState.Expanded);
-    this.contextValue = "codexRadar.project";
-    this.iconPath = new vscode.ThemeIcon("folder");
-    this.project = project;
-  }
-}
-
-class SessionItem extends vscode.TreeItem {
-  constructor(session, options = {}) {
-    super(sessionLabel(session), vscode.TreeItemCollapsibleState.None);
-    this.contextValue = sessionContextValue(session);
-    this.session = session;
-    this.description = sessionDescription(session, options);
-    this.tooltip = sessionTooltip(session);
-    this.iconPath = sessionIcon(session);
-    this.command = {
-      command: "codexRadar.openInCodex",
-      title: "Open in Codex",
-      arguments: [this],
-    };
-  }
-}
-
-function sessionIcon(session) {
-  return new vscode.ThemeIcon(sessionIconId(session));
-}
-
-function sessionContextValue(session) {
-  if (session.is_hidden) {
-    return "codexRadar.session.hidden";
-  }
-  if (isDoneSession(session)) {
-    return session.is_unread_done ? "codexRadar.session.done.unread" : "codexRadar.session.done.read";
-  }
-  return "codexRadar.session";
-}
-
-class SessionsProvider {
-  constructor(globalState, viewMode = "projects") {
-    this.globalState = globalState;
-    this.viewMode = viewMode;
-    this._onDidChangeTreeData = new vscode.EventEmitter();
-    this.onDidChangeTreeData = this._onDidChangeTreeData.event;
-    this.lastError = "";
-    this.statusFilter = "";
-    this.sessions = [];
-    this.items = [];
-    this.attentionSessions = [];
-    this.groups = [];
-    this.refresh();
-  }
-
-  refresh() {
-    try {
-      const stateDir = configuredStateDir();
-      const readKeys = this.readKeys();
-      const hiddenKeys = this.hiddenKeys();
-      const decorated = decorateSessions(loadSessionCache(stateDir), readKeys, hiddenKeys);
-      const activeSessions = decorated.filter((session) => !session.is_hidden);
-      this.sessions = activeSessions;
-      this.items = [];
-      this.attentionSessions = activeSessions.filter((session) => session.is_attention);
-      this.groups = [];
-      if (this.viewMode === "attention") {
-        this.items = this.attentionSessions;
-      } else if (this.viewMode === "hidden") {
-        this.items = decorated.filter((session) => session.is_hidden);
-      } else {
-        const visibleSessions = filterSessionsByStatus(activeSessions, this.statusFilter);
-        this.groups = groupSessionsByProject(visibleSessions);
-      }
-      this.lastError = "";
-    } catch (error) {
-      this.sessions = [];
-      this.items = [];
-      this.attentionSessions = [];
-      this.groups = [];
-      this.lastError = error instanceof Error ? error.message : String(error);
-    }
-    this._onDidChangeTreeData.fire();
-  }
-
-  getTreeItem(element) {
-    return element;
-  }
-
-  getChildren(element) {
-    if (element instanceof ProjectItem) {
-      const group = this.groups.find((item) => item.project === element.project);
-      return Promise.resolve((group?.sessions || []).map((session) => new SessionItem(session)));
-    }
-
-    if (this.lastError) {
-      const item = new vscode.TreeItem("Could not read codex-radar sessions");
-      item.description = this.lastError;
-      item.iconPath = new vscode.ThemeIcon("error");
-      return Promise.resolve([item]);
-    }
-
-    if (this.viewMode === "attention" || this.viewMode === "hidden") {
-      if (this.items.length === 0) {
-        const item = new vscode.TreeItem(
-          this.viewMode === "attention" ? "No attention sessions" : "No hidden sessions",
-        );
-        item.iconPath = new vscode.ThemeIcon("info");
-        return Promise.resolve([item]);
-      }
-      return Promise.resolve(
-        this.items.map((session) => new SessionItem(session, { showProject: true })),
-      );
-    }
-
-    if (this.groups.length === 0) {
-      const label = this.statusFilter
-        ? `No sessions match ${this.statusFilter}`
-        : "No sessions indexed";
-      const item = new vscode.TreeItem(label);
-      item.description = this.statusFilter ? "Clear the filter to show all sessions." : "";
-      item.iconPath = new vscode.ThemeIcon("info");
-      return Promise.resolve([item]);
-    }
-
-    return Promise.resolve(
-      this.groups.map((group) => {
-        return new ProjectItem(group.project, group.sessions);
-      }),
-    );
-  }
-
-  setStatusFilter(statusFilter) {
-    this.statusFilter = normalizeStatusFilter(statusFilter);
-    this.refresh();
-  }
-
-  attentionBadge() {
-    return attentionBadge(this.sessions);
-  }
-
-  readKeys() {
-    return readStateFromValue(this.globalState.get(READ_DONE_KEYS_KEY, []));
-  }
-
-  hiddenKeys() {
-    return readStateFromValue(this.globalState.get(HIDDEN_SESSION_KEYS_KEY, []));
-  }
-
-  async updateReadKeys(readKeys) {
-    await this.globalState.update(READ_DONE_KEYS_KEY, readStateToValue(readKeys));
-    this.refresh();
-  }
-
-  async updateHiddenKeys(hiddenKeys) {
-    await this.globalState.update(HIDDEN_SESSION_KEYS_KEY, readStateToValue(hiddenKeys));
-    this.refresh();
-  }
-
-  async markSessionRead(session) {
-    await this.updateReadKeys(markDoneRead(this.readKeys(), session));
-  }
-
-  async markSessionUnread(session) {
-    await this.updateReadKeys(markDoneUnread(this.readKeys(), session));
-  }
-
-  async hideSession(session) {
-    await this.updateHiddenKeys(markSessionHidden(this.hiddenKeys(), session));
-  }
-
-  async restoreSession(session) {
-    await this.updateHiddenKeys(restoreSession(this.hiddenKeys(), session));
-  }
-}
-
-function refreshProviders(providers) {
-  for (const provider of providers) {
-    provider.refresh();
-  }
-}
-
-function syncTreeViewBadge(attentionTreeView, provider) {
-  attentionTreeView.badge = provider.attentionBadge();
-}
+const { buildDashboardModel, findSessionByKey } = require("./dashboardViewModel");
 
 function configuredStateDir() {
   const configured = vscode.workspace.getConfiguration("codexRadar").get("stateDir", "");
@@ -228,68 +33,24 @@ function configuredStateDir() {
   return defaultStateDir();
 }
 
-function createSessionCacheWatcher(provider, afterRefresh = () => {}) {
-  const target = sessionCacheWatchTarget(configuredStateDir());
-  const watcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(target.base, target.pattern),
-  );
-  const refreshHandlers = registerRefreshHandlers(watcher, () => {
-    provider.refresh();
-    afterRefresh();
-  });
-
-  return {
-    dispose() {
-      refreshHandlers.dispose();
-      watcher.dispose();
-    },
-  };
+function readKeys(globalState) {
+  return readStateFromValue(globalState.get(READ_DONE_KEYS_KEY, []));
 }
 
-class SessionCacheWatcherManager {
-  constructor(provider, afterRefresh = () => {}) {
-    this.provider = provider;
-    this.afterRefresh = afterRefresh;
-    this.current = null;
-    this.reset();
-  }
-
-  reset() {
-    this.disposeCurrent();
-    this.current = createSessionCacheWatcher(this.provider, this.afterRefresh);
-  }
-
-  disposeCurrent() {
-    if (this.current) {
-      this.current.dispose();
-      this.current = null;
-    }
-  }
-
-  dispose() {
-    this.disposeCurrent();
-  }
+function hiddenKeys(globalState) {
+  return readStateFromValue(globalState.get(HIDDEN_SESSION_KEYS_KEY, []));
 }
 
-function statusFilterItems(currentStatusFilter = "") {
-  const current = normalizeStatusFilter(currentStatusFilter) || "all";
-  return STATUS_FILTER_VALUES.map((status) => {
-    const value = normalizeStatusFilter(status);
-    return {
-      label: status === "all" ? "All statuses" : status === "attention" ? "Attention" : status,
-      description: status === current ? "current" : "",
-      value,
-    };
-  });
+async function updateReadKeys(globalState, keys) {
+  await globalState.update(READ_DONE_KEYS_KEY, readStateToValue(keys));
 }
 
-async function chooseStatusFilter(provider) {
-  const selected = await vscode.window.showQuickPick(statusFilterItems(provider.statusFilter), {
-    placeHolder: "Filter Codex Radar sessions by status",
-  });
-  if (selected) {
-    provider.setStatusFilter(selected.value);
-  }
+async function updateHiddenKeys(globalState, keys) {
+  await globalState.update(HIDDEN_SESSION_KEYS_KEY, readStateToValue(keys));
+}
+
+function loadDecoratedSessions(globalState, stateDir = configuredStateDir()) {
+  return decorateSessions(loadSessionCache(stateDir), readKeys(globalState), hiddenKeys(globalState));
 }
 
 function sessionFromTarget(target) {
@@ -328,113 +89,213 @@ async function openOfficialCodexThread(target) {
   return opened;
 }
 
-async function openSessionInCodex(target, providers, attentionTreeView) {
-  const session = sessionFromTarget(target);
-  const opened = await openOfficialCodexThread(session);
-  if (opened && session && isDoneSession(session)) {
-    await providers[0].markSessionRead(session);
-    refreshProviders(providers);
-    syncTreeViewBadge(attentionTreeView, providers[0]);
+function webviewNonce() {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let value = "";
+  for (let index = 0; index < 32; index += 1) {
+    value += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
-  return opened;
+  return value;
 }
 
-async function markSessionReadCommand(target, providers, attentionTreeView) {
-  const session = sessionFromTarget(target);
-  if (!session || !isDoneSession(session)) {
-    await vscode.window.showWarningMessage("Select a done Codex Radar session to mark read.");
-    return;
-  }
-  await providers[0].markSessionRead(session);
-  refreshProviders(providers);
-  syncTreeViewBadge(attentionTreeView, providers[0]);
+function dashboardHtml(webview, extensionUri) {
+  const nonce = webviewNonce();
+  const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
+  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.js"));
+  const cspSource = webview.cspSource;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource}; script-src 'nonce-${nonce}';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="${cssUri}">
+  <title>Codex Radar</title>
+</head>
+<body>
+  <main id="app" aria-live="polite"></main>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
 }
 
-async function markSessionUnreadCommand(target, providers, attentionTreeView) {
-  const session = sessionFromTarget(target);
-  if (!session || !isDoneSession(session)) {
-    await vscode.window.showWarningMessage("Select a done Codex Radar session to mark unread.");
-    return;
+class DashboardController {
+  constructor(context) {
+    this.context = context;
+    this.statusFilter = "";
+    this.selectedKey = "";
+    this.sessions = [];
+    this.model = null;
+    this.lastError = "";
+    this.view = null;
+    this.refresh();
   }
-  await providers[0].markSessionUnread(session);
-  refreshProviders(providers);
-  syncTreeViewBadge(attentionTreeView, providers[0]);
+
+  refresh() {
+    try {
+      this.sessions = loadDecoratedSessions(this.context.globalState);
+      this.model = buildDashboardModel(this.sessions, {
+        homeDir: process.env.HOME || "",
+        selectedKey: this.selectedKey,
+        statusFilter: this.statusFilter,
+      });
+      this.selectedKey = this.model.selected?.key || "";
+      this.lastError = "";
+    } catch (error) {
+      this.sessions = [];
+      this.model = buildDashboardModel([], {
+        selectedKey: this.selectedKey,
+        statusFilter: this.statusFilter,
+      });
+      this.lastError = error instanceof Error ? error.message : String(error);
+    }
+    this.postState();
+  }
+
+  postState() {
+    if (!this.view) {
+      return;
+    }
+    this.view.webview.postMessage({
+      type: "state",
+      error: this.lastError,
+      model: this.model,
+    });
+  }
+
+  resolveWebviewView(webviewView) {
+    this.view = webviewView;
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "media")],
+    };
+    webviewView.webview.html = dashboardHtml(webviewView.webview, this.context.extensionUri);
+    webviewView.webview.onDidReceiveMessage((message) => this.handleMessage(message));
+    this.postState();
+  }
+
+  sessionForKey(key) {
+    return findSessionByKey(this.sessions, key);
+  }
+
+  async markSessionRead(session) {
+    await updateReadKeys(this.context.globalState, markDoneRead(readKeys(this.context.globalState), session));
+  }
+
+  async markSessionUnread(session) {
+    await updateReadKeys(this.context.globalState, markDoneUnread(readKeys(this.context.globalState), session));
+  }
+
+  async hideSession(session) {
+    await updateHiddenKeys(this.context.globalState, markSessionHidden(hiddenKeys(this.context.globalState), session));
+  }
+
+  async restoreSession(session) {
+    await updateHiddenKeys(this.context.globalState, restoreSession(hiddenKeys(this.context.globalState), session));
+  }
+
+  async handleSessionAction(key, action) {
+    const session = this.sessionForKey(key);
+    if (!session) {
+      await vscode.window.showWarningMessage("Codex Radar session is no longer available.");
+      this.refresh();
+      return;
+    }
+
+    if (action === "open") {
+      const opened = await openOfficialCodexThread(session);
+      if (opened && isDoneSession(session)) {
+        await this.markSessionRead(session);
+      }
+    } else if (action === "markRead") {
+      await this.markSessionRead(session);
+    } else if (action === "markUnread") {
+      await this.markSessionUnread(session);
+    } else if (action === "hide") {
+      await this.hideSession(session);
+    } else if (action === "restore") {
+      await this.restoreSession(session);
+    }
+
+    this.selectedKey = key;
+    this.refresh();
+  }
+
+  async handleMessage(message) {
+    if (!message || typeof message !== "object") {
+      return;
+    }
+    if (message.type === "ready" || message.type === "refresh") {
+      this.refresh();
+      return;
+    }
+    if (message.type === "setStatusFilter") {
+      this.statusFilter = normalizeStatusFilter(message.value);
+      this.refresh();
+      return;
+    }
+    if (message.type === "selectSession") {
+      this.selectedKey = String(message.key || "");
+      this.refresh();
+      return;
+    }
+    if (message.type === "sessionAction") {
+      await this.handleSessionAction(String(message.key || ""), String(message.action || ""));
+    }
+  }
 }
 
-async function hideSessionCommand(target, providers, attentionTreeView) {
-  const session = sessionFromTarget(target);
-  if (!session) {
-    await vscode.window.showWarningMessage("Select a Codex Radar session to hide.");
-    return;
-  }
-  await providers[0].hideSession(session);
-  refreshProviders(providers);
-  syncTreeViewBadge(attentionTreeView, providers[0]);
+function createSessionCacheWatcher(controller) {
+  const target = sessionCacheWatchTarget(configuredStateDir());
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(target.base, target.pattern),
+  );
+  const refreshHandlers = registerRefreshHandlers(watcher, () => controller.refresh());
+
+  return {
+    dispose() {
+      refreshHandlers.dispose();
+      watcher.dispose();
+    },
+  };
 }
 
-async function restoreSessionCommand(target, providers, attentionTreeView) {
-  const session = sessionFromTarget(target);
-  if (!session) {
-    await vscode.window.showWarningMessage("Select a hidden Codex Radar session to restore.");
-    return;
+class SessionCacheWatcherManager {
+  constructor(controller) {
+    this.controller = controller;
+    this.current = null;
+    this.reset();
   }
-  await providers[0].restoreSession(session);
-  refreshProviders(providers);
-  syncTreeViewBadge(attentionTreeView, providers[0]);
+
+  reset() {
+    this.disposeCurrent();
+    this.current = createSessionCacheWatcher(this.controller);
+  }
+
+  disposeCurrent() {
+    if (this.current) {
+      this.current.dispose();
+      this.current = null;
+    }
+  }
+
+  dispose() {
+    this.disposeCurrent();
+  }
 }
 
 function activate(context) {
-  const attentionProvider = new SessionsProvider(context.globalState, "attention");
-  const projectsProvider = new SessionsProvider(context.globalState, "projects");
-  const hiddenProvider = new SessionsProvider(context.globalState, "hidden");
-  const providers = [attentionProvider, projectsProvider, hiddenProvider];
-  const attentionTreeView = vscode.window.createTreeView("codexRadar.attentionList", {
-    treeDataProvider: attentionProvider,
-  });
-  const projectsTreeView = vscode.window.createTreeView("codexRadar.projectList", {
-    treeDataProvider: projectsProvider,
-  });
-  const hiddenTreeView = vscode.window.createTreeView("codexRadar.hiddenList", {
-    treeDataProvider: hiddenProvider,
-  });
-  syncTreeViewBadge(attentionTreeView, attentionProvider);
-  const watcherManager = new SessionCacheWatcherManager(attentionProvider, () => {
-    refreshProviders(providers);
-    syncTreeViewBadge(attentionTreeView, attentionProvider);
-  });
+  const controller = new DashboardController(context);
+  const watcherManager = new SessionCacheWatcherManager(controller);
   context.subscriptions.push(
-    attentionTreeView,
-    projectsTreeView,
-    hiddenTreeView,
-    vscode.commands.registerCommand("codexRadar.refresh", () => {
-      refreshProviders(providers);
-      syncTreeViewBadge(attentionTreeView, attentionProvider);
+    vscode.window.registerWebviewViewProvider("codexRadar.dashboard", controller, {
+      webviewOptions: { retainContextWhenHidden: true },
     }),
-    vscode.commands.registerCommand("codexRadar.filterStatus", async () => {
-      await chooseStatusFilter(projectsProvider);
-      syncTreeViewBadge(attentionTreeView, attentionProvider);
-    }),
-    vscode.commands.registerCommand("codexRadar.markRead", (target) =>
-      markSessionReadCommand(target, providers, attentionTreeView),
-    ),
-    vscode.commands.registerCommand("codexRadar.markUnread", (target) =>
-      markSessionUnreadCommand(target, providers, attentionTreeView),
-    ),
-    vscode.commands.registerCommand("codexRadar.hideSession", (target) =>
-      hideSessionCommand(target, providers, attentionTreeView),
-    ),
-    vscode.commands.registerCommand("codexRadar.restoreSession", (target) =>
-      restoreSessionCommand(target, providers, attentionTreeView),
-    ),
-    vscode.commands.registerCommand("codexRadar.openInCodex", (target) =>
-      openSessionInCodex(target, providers, attentionTreeView),
-    ),
+    vscode.commands.registerCommand("codexRadar.refresh", () => controller.refresh()),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      const stateDirChanged = event.affectsConfiguration("codexRadar.stateDir");
-      if (stateDirChanged) {
+      if (event.affectsConfiguration("codexRadar.stateDir")) {
         watcherManager.reset();
-        refreshProviders(providers);
-        syncTreeViewBadge(attentionTreeView, attentionProvider);
+        controller.refresh();
       }
     }),
     watcherManager,
@@ -444,14 +305,12 @@ function activate(context) {
 function deactivate() {}
 
 module.exports = {
+  DashboardController,
   activate,
+  configuredStateDir,
+  dashboardHtml,
   deactivate,
+  loadDecoratedSessions,
   officialCodexThreadUri,
   openOfficialCodexThread,
-  openSessionInCodex,
-  hideSessionCommand,
-  refreshProviders,
-  restoreSessionCommand,
-  syncTreeViewBadge,
-  statusFilterItems,
 };

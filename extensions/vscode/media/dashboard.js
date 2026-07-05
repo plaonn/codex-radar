@@ -1,0 +1,253 @@
+const vscode = acquireVsCodeApi();
+
+let state = {
+  error: "",
+  model: null,
+};
+
+function send(message) {
+  vscode.postMessage(message);
+}
+
+function clear(element) {
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+}
+
+function el(tagName, options = {}, children = []) {
+  const node = document.createElement(tagName);
+  if (options.className) {
+    node.className = options.className;
+  }
+  if (options.text !== undefined) {
+    node.textContent = options.text;
+  }
+  if (options.title) {
+    node.title = options.title;
+  }
+  if (options.dataset) {
+    for (const [key, value] of Object.entries(options.dataset)) {
+      node.dataset[key] = String(value);
+    }
+  }
+  for (const child of children) {
+    if (child) {
+      node.appendChild(child);
+    }
+  }
+  return node;
+}
+
+function button(label, className, onClick, disabled = false) {
+  const node = el("button", { className, text: label });
+  node.disabled = disabled;
+  node.addEventListener("click", onClick);
+  return node;
+}
+
+function selectedKey() {
+  return state.model?.selected?.key || "";
+}
+
+function sessionNode(session) {
+  const isActive = session.key && session.key === selectedKey();
+  const node = button("", `session${isActive ? " active" : ""}`, () => {
+    send({ type: "selectSession", key: session.key });
+  });
+  node.appendChild(el("span", { className: `status-dot status-${session.status}` }));
+  const text = el("span");
+  text.appendChild(el("span", { className: "title", text: session.title }));
+  if (session.snippet) {
+    text.appendChild(el("span", { className: "snippet", text: session.snippet }));
+  }
+  text.appendChild(el("span", { className: "meta", text: session.description || session.statusText }));
+  node.appendChild(text);
+  return node;
+}
+
+function sessionList(sessions, emptyText) {
+  const list = el("div", { className: "list" });
+  if (!sessions.length) {
+    list.appendChild(el("div", { className: "empty", text: emptyText }));
+    return list;
+  }
+  for (const session of sessions) {
+    list.appendChild(sessionNode(session));
+  }
+  return list;
+}
+
+function attentionPane(model) {
+  const pane = el("section", { className: "pane" });
+  pane.appendChild(el("div", { className: "pane-header" }, [
+    el("span", { className: "pane-title", text: "Attention" }),
+    el("span", { className: "count", text: String(model.counts.attention) }),
+  ]));
+  pane.appendChild(sessionList(model.attention, "No attention sessions"));
+  if (model.hidden.length) {
+    pane.appendChild(el("div", { className: "section-divider" }, [
+      el("span", { className: "pane-title", text: "Hidden" }),
+      el("span", { className: "count", text: String(model.counts.hidden) }),
+    ]));
+    pane.appendChild(sessionList(model.hidden, ""));
+  }
+  return pane;
+}
+
+function projectsPane(model) {
+  const pane = el("section", { className: "pane" });
+  pane.appendChild(el("div", { className: "pane-header" }, [
+    el("span", { className: "pane-title", text: "Projects" }),
+    el("span", { className: "count", text: `${model.counts.filtered}/${model.counts.visible}` }),
+  ]));
+  const body = el("div", { className: "list" });
+  if (!model.groups.length) {
+    body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
+  }
+  for (const group of model.groups) {
+    const project = el("section", { className: "project" });
+    project.appendChild(el("div", { className: "project-header" }, [
+      el("span", { text: group.project }),
+      el("span", { text: group.attention ? `${group.attention} attention / ${group.total}` : String(group.total) }),
+    ]));
+    for (const session of group.sessions) {
+      project.appendChild(sessionNode(session));
+    }
+    body.appendChild(project);
+  }
+  pane.appendChild(body);
+  return pane;
+}
+
+function detailRow(label, value) {
+  if (!value) {
+    return [];
+  }
+  return [el("dt", { text: label }), el("dd", { text: value })];
+}
+
+function inspectorPane(model) {
+  const pane = el("section", { className: "pane" });
+  pane.appendChild(el("div", { className: "pane-header" }, [
+    el("span", { className: "pane-title", text: "Session" }),
+    el("span", { className: "count", text: model.selected?.statusText || "" }),
+  ]));
+
+  if (!model.selected) {
+    pane.appendChild(el("div", { className: "empty", text: "No session selected" }));
+    return pane;
+  }
+
+  const session = model.selected;
+  const body = el("div", { className: "inspector" });
+  body.appendChild(el("h2", { text: session.title }));
+  if (session.snippet) {
+    body.appendChild(el("div", { className: "snippet", text: session.snippet }));
+  }
+  body.appendChild(el("div", { className: "tag-row" }, [
+    el("span", { className: "tag", text: session.statusText }),
+    session.isAttention ? el("span", { className: "tag", text: "Attention" }) : null,
+    session.isHidden ? el("span", { className: "tag", text: "Hidden" }) : null,
+    session.isUnreadDone ? el("span", { className: "tag", text: "Unread" }) : null,
+  ]));
+
+  const details = el("dl", { className: "details" });
+  for (const node of [
+    ...detailRow("Project", session.project),
+    ...detailRow("Last seen", session.relativeLastSeen || session.lastSeenAt),
+    ...detailRow("Last event", session.lastEventName),
+    ...detailRow("Model", session.model),
+    ...detailRow("Tool", session.currentTool),
+    ...detailRow("Session", session.shortSessionId),
+  ]) {
+    details.appendChild(node);
+  }
+  body.appendChild(details);
+
+  const actions = el("div", { className: "actions" });
+  actions.appendChild(button("Open in Codex", "", () => {
+    send({ type: "sessionAction", action: "open", key: session.key });
+  }, !session.actions.canOpen));
+  if (session.actions.canMarkRead) {
+    actions.appendChild(button("Mark read", "secondary", () => {
+      send({ type: "sessionAction", action: "markRead", key: session.key });
+    }));
+  }
+  if (session.actions.canMarkUnread) {
+    actions.appendChild(button("Mark unread", "secondary", () => {
+      send({ type: "sessionAction", action: "markUnread", key: session.key });
+    }));
+  }
+  if (session.actions.canHide) {
+    actions.appendChild(button("Hide", "ghost", () => {
+      send({ type: "sessionAction", action: "hide", key: session.key });
+    }));
+  }
+  if (session.actions.canRestore) {
+    actions.appendChild(button("Restore", "ghost", () => {
+      send({ type: "sessionAction", action: "restore", key: session.key });
+    }));
+  }
+  body.appendChild(actions);
+  pane.appendChild(body);
+  return pane;
+}
+
+function topbar(model) {
+  const select = el("select");
+  for (const option of model.statusOptions) {
+    const child = el("option", { text: option.label });
+    child.value = option.value;
+    child.selected = option.isSelected;
+    select.appendChild(child);
+  }
+  select.addEventListener("change", () => {
+    send({ type: "setStatusFilter", value: select.value });
+  });
+
+  return el("header", { className: "topbar" }, [
+    el("div", { className: "brand" }, [
+      el("strong", { text: "Codex Radar" }),
+      el("span", { text: `${model.counts.attention} attention / ${model.counts.visible} visible` }),
+    ]),
+    el("div", { className: "toolbar" }, [
+      select,
+      button("Refresh", "secondary", () => send({ type: "refresh" })),
+    ]),
+  ]);
+}
+
+function render() {
+  const app = document.getElementById("app");
+  clear(app);
+  if (state.error) {
+    app.appendChild(el("div", { className: "error", text: state.error }));
+  }
+  if (!state.model) {
+    app.appendChild(el("div", { className: "empty", text: "Loading Codex Radar sessions" }));
+    return;
+  }
+
+  const root = el("div", { className: "app" });
+  root.appendChild(topbar(state.model));
+  root.appendChild(el("div", { className: "layout" }, [
+    attentionPane(state.model),
+    projectsPane(state.model),
+    inspectorPane(state.model),
+  ]));
+  app.appendChild(root);
+}
+
+window.addEventListener("message", (event) => {
+  if (event.data?.type === "state") {
+    state = {
+      error: event.data.error || "",
+      model: event.data.model || null,
+    };
+    render();
+  }
+});
+
+send({ type: "ready" });
+render();

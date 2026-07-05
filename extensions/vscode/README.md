@@ -9,20 +9,20 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Provides a dedicated Codex Radar Activity Bar container.
 - Reads `sessions.json` through a small `SessionSource` adapter.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted.
-- Splits navigation into native `Attention`, `Projects`, and collapsed `Hidden` sections.
-- Shows `waiting_approval`, `stale`, and unread `done` sessions in `Attention`.
-- Keeps project-grouped navigation in `Projects`.
-- Lets the user hide sessions from Radar and restore them from `Hidden`.
-- Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and inbox-like session rows.
-- Prefixes rows with a short session id when no readable thread title is available in `sessions.json`.
-- Shows the total unfiltered attention count in the VS Code view badge. Attention means `waiting_approval`, `stale`, or unread `done`.
-- Distinguishes unread/read done rows with row text and mail-style icons.
-- Filters the view by display status with a temporary view-title action.
+- Provides one Webview dashboard with an attention inbox, project-grouped session list, and selected-session inspector.
+- Shows `waiting_approval`, `stale`, and unread `done` sessions in the attention inbox.
+- Keeps project-grouped navigation in the dashboard project list.
+- Lets the user hide sessions from Radar and restore them from the dashboard hidden list.
+- Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as dashboard state, with project attention counts and inbox-like session cards.
+- Prefixes cards with a short session id when no readable thread title is available in `sessions.json`.
+- Shows the total unfiltered attention count in the dashboard top bar and attention pane. Attention means `waiting_approval`, `stale`, or unread `done`.
+- Distinguishes unread/read done sessions in the selected-session inspector.
+- Filters the project list by display status with a temporary dashboard filter.
 - Includes an `attention` filter for only attention-worthy sessions.
 - Provides a manual refresh command in the view title.
-- Opens the same session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a session row is clicked.
-- Provides a done-session row action to mark the session read or unread.
-- Keeps row-target actions out of the Command Palette; only global view actions should appear there.
+- Opens the selected session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>`.
+- Provides selected-session actions to mark done sessions read/unread and hide/restore sessions.
+- Exposes only global refresh as a VS Code command; dashboard actions stay inside the Webview message boundary.
 
 ## Boundaries
 
@@ -30,11 +30,11 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Does not install hooks.
 - Does not execute `codex resume`.
 - Does not edit `config.json` directly.
-- Does not expose retention or prune controls in the current TreeView surface; use the terminal `codex-radar config` and `codex-radar prune` commands for those operations.
+- Does not expose retention or prune controls in the current Webview surface; use the terminal `codex-radar config` and `codex-radar prune` commands for those operations.
 - Treats a successful experimental Codex handoff for a done session as a local read acknowledgement only.
 - Does not read `events.jsonl` for the default view.
-- Does not read raw transcript files or show raw transcript paths in default navigation labels, descriptions, or tooltips.
-- Shows only a redacted snippet from `sessions.json` cached assistant summary in default navigation.
+- Does not read raw transcript files or show raw transcript paths in dashboard labels, descriptions, or inspector fields.
+- Shows only a redacted snippet from `sessions.json` cached assistant summary in the dashboard.
 - Does not send transcript or session metadata outside the extension host.
 
 ## Version Policy
@@ -58,7 +58,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.1.15.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.2.0.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -74,14 +74,13 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 
 2. In the Remote SSH VS Code window, install the generated VSIX and reload the window.
 3. Open the Codex Radar Activity Bar container.
-4. Confirm sessions are grouped by project and show status, model/tool metadata, and redacted snippets from `sessions.json`.
-5. Use the view title actions:
-   - Refresh Sessions reloads the cache.
-   - Filter by Status changes only the temporary view filter.
-   - Command Palette search for "Codex Radar" should not show row-target actions such as Hide, Restore, Mark Read, Mark Unread, or Open in Codex.
-6. On a done session, mark read and unread from the inline mail-style row action.
-7. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
-8. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
+4. Confirm the Webview dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
+5. Use the dashboard status filter and confirm it changes only the project list, not the attention count.
+6. Use Refresh Sessions from the view title and confirm the cache reloads.
+7. On a done session, mark read and unread from the inspector.
+8. Hide a session, then select it from the hidden list and restore it.
+9. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
+10. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 
