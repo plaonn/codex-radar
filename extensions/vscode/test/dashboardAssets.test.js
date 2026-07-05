@@ -72,5 +72,8 @@ test("uses a fixed preview header and scrollable transcript body", () => {
   assert.match(css, /\.preview-header\s*\{[^}]*flex:\s*0 0 auto;/s);
   assert.match(css, /\.preview-body\s*\{[^}]*overflow-y:\s*auto;/s);
   assert.match(js, /<section class="preview-body" aria-label="Transcript preview">/);
+  assert.match(js, /enableScripts:\s*true/);
   assert.match(js, /previewBody\.scrollTop = previewBody\.scrollHeight;/);
+  assert.match(js, /this\.selectedKey === this\.previewSessionKey/);
+  assert.match(js, /this\.refresh\(\{ updatePreview:\s*false \}\);/);
 });

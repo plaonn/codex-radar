@@ -130,10 +130,11 @@ function previewDetail(label, value) {
   return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`;
 }
 
-function previewHtml(webview, extensionUri, model) {
+function previewHtml(webview, extensionUri, model, options = {}) {
   const nonce = webviewNonce();
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
   const cspSource = webview.cspSource;
+  const initialScrollToBottom = options.initialScrollToBottom !== false;
   const notice = model.transcriptMessage
     ? `<div class="preview-notice">${escapeHtml(model.transcriptMessage)}</div>`
     : "";
@@ -177,7 +178,7 @@ function previewHtml(webview, extensionUri, model) {
   </main>
   <script nonce="${nonce}">
     const previewBody = document.querySelector(".preview-body");
-    if (previewBody) {
+    if (previewBody && ${initialScrollToBottom ? "true" : "false"}) {
       requestAnimationFrame(() => {
         previewBody.scrollTop = previewBody.scrollHeight;
       });
@@ -261,10 +262,11 @@ class RadarWebviewController {
     this.sidebarViews = new Map();
     this.panel = null;
     this.previewPanel = null;
+    this.previewSessionKey = "";
     this.refresh();
   }
 
-  refresh() {
+  refresh(options = {}) {
     try {
       this.sessions = loadDecoratedSessions(this.context.globalState);
       this.model = buildDashboardModel(this.sessions, {
@@ -282,7 +284,7 @@ class RadarWebviewController {
       });
       this.lastError = error instanceof Error ? error.message : String(error);
     }
-    this.postState();
+    this.postState(options);
   }
 
   resolveSidebarView(surface, webviewView) {
@@ -321,14 +323,16 @@ class RadarWebviewController {
     this.postStateTo(this.panel, "dashboard");
   }
 
-  postState() {
+  postState(options = {}) {
     for (const [surface, view] of this.sidebarViews.entries()) {
       this.postStateTo(view, surface);
     }
     if (this.panel) {
       this.postStateTo(this.panel, "dashboard");
     }
-    this.updatePreviewPanel();
+    if (options.updatePreview !== false) {
+      this.updatePreviewPanel();
+    }
   }
 
   postStateTo(target, surface) {
@@ -359,30 +363,39 @@ class RadarWebviewController {
     if (!session) {
       return;
     }
+    const sessionKey = String(session.key || "");
     if (!this.previewPanel) {
       this.previewPanel = vscode.window.createWebviewPanel(
         "codexRadar.preview",
         "Codex Radar Preview",
         vscode.ViewColumn.Active,
         {
-          enableScripts: false,
+          enableScripts: true,
           retainContextWhenHidden: true,
           localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "media")],
         },
       );
       this.previewPanel.onDidDispose(() => {
         this.previewPanel = null;
+        this.previewSessionKey = "";
       });
     } else if (options.reveal !== false) {
       this.previewPanel.reveal(vscode.ViewColumn.Active);
     }
+    const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionKey !== this.previewSessionKey);
     const model = buildSessionPreviewModel(session, { homeDir: process.env.HOME || "" });
     this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
-    this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri, model);
+    this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri, model, {
+      initialScrollToBottom: shouldScrollToBottom,
+    });
+    this.previewSessionKey = sessionKey;
   }
 
   updatePreviewPanel() {
     if (!this.previewPanel || !this.selectedKey) {
+      return;
+    }
+    if (this.selectedKey === this.previewSessionKey) {
       return;
     }
     const session = this.sessionForKey(this.selectedKey);
@@ -449,7 +462,7 @@ class RadarWebviewController {
     }
     if (message.type === "selectSession") {
       this.selectedKey = String(message.key || "");
-      this.refresh();
+      this.refresh({ updatePreview: false });
       if (surface !== "dashboard") {
         this.openPreview(this.sessionForKey(this.selectedKey));
       }

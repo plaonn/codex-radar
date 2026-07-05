@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.8
+
+Release candidate package for preview scroll behavior correction. This version is not a Marketplace publication.
+
+### Fixed
+
+- Enable preview Webview scripts so the initial scroll-to-latest behavior can run.
+- Only auto-scroll a preview when opening a new session; refreshes for the same selected session preserve the user's current scroll position.
+
 ## 0.3.7
 
 Release candidate package for messenger-style preview scrolling. This version is not a Marketplace publication.
