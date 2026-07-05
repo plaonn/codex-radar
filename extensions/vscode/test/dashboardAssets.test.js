@@ -62,9 +62,11 @@ test("reveals sidebar row actions as hover and focus overlays", () => {
 
   assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*position:\s*absolute;/s);
   assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*opacity:\s*0;/s);
-  assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*pointer-events:\s*none;/s);
+  assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*visibility:\s*hidden;/s);
+  assert.match(css, /\.sidebar \.row-actions\.compact\s*\{[^}]*visibility 0s linear 120ms;/s);
   assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*opacity:\s*1;/s);
-  assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*pointer-events:\s*auto;/s);
+  assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*visibility:\s*visible;/s);
+  assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*transition-delay:\s*0s;/s);
 });
 
 test("renders speaker snippets with compact text badges", () => {

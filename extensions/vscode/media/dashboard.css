@@ -563,15 +563,18 @@ select {
   margin-top: 0;
   padding-left: 16px;
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
   background: linear-gradient(90deg, transparent, var(--vscode-list-hoverBackground) 16px);
-  transition: opacity 80ms ease;
+  transition:
+    opacity 80ms ease,
+    visibility 0s linear 120ms;
 }
 
 .sidebar .session:hover .row-actions.compact,
 .sidebar .session:focus-within .row-actions.compact {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .sidebar .session.active .row-actions.compact {
