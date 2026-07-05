@@ -164,14 +164,16 @@ function loadUsageSnapshot(options = {}) {
 
 function usageStatusText(snapshot) {
   if (!snapshot || !snapshot.available || !snapshot.primary) {
-    return "$(pulse) Codex --";
+    return "$(hubot) -- · --";
   }
-  const usedPercent = Number(snapshot.primary.used_percent);
-  if (!Number.isFinite(usedPercent)) {
-    return "$(pulse) Codex --";
+  const primaryRemaining = Number(snapshot.primary.remaining_percent);
+  if (!Number.isFinite(primaryRemaining)) {
+    return "$(hubot) -- · --";
   }
-  const icon = usedPercent >= 90 ? "$(error)" : usedPercent >= 70 ? "$(warning)" : "$(pulse)";
-  return `${icon} Codex ${Math.round(usedPercent)}%`;
+  const secondaryRemaining = Number(snapshot.secondary?.remaining_percent);
+  const secondaryText = Number.isFinite(secondaryRemaining) ? `${Math.round(secondaryRemaining)}%` : "--";
+  const icon = primaryRemaining <= 10 ? "$(error)" : primaryRemaining <= 30 ? "$(warning)" : "$(hubot)";
+  return `${icon} ${Math.round(primaryRemaining)}% · ${secondaryText}`;
 }
 
 function formatReset(value) {
@@ -187,17 +189,19 @@ function formatReset(value) {
 
 function usageStatusTooltip(snapshot) {
   if (!snapshot || !snapshot.available) {
-    return `Codex usage unavailable: ${snapshot?.reason || "unknown"}`;
+    return `Codex usage remaining unavailable: ${snapshot?.reason || "unknown"}`;
   }
   const lines = [];
   if (snapshot.primary) {
-    lines.push(`5h window: ${Math.round(snapshot.primary.used_percent)}% used`);
+    lines.push(`5h remaining: ${Math.round(snapshot.primary.remaining_percent)}%`);
+    lines.push(`5h used: ${Math.round(snapshot.primary.used_percent)}%`);
     if (snapshot.primary.resets_at_iso) {
       lines.push(`5h reset: ${formatReset(snapshot.primary.resets_at_iso)}`);
     }
   }
   if (snapshot.secondary) {
-    lines.push(`7d window: ${Math.round(snapshot.secondary.used_percent)}% used`);
+    lines.push(`7d remaining: ${Math.round(snapshot.secondary.remaining_percent)}%`);
+    lines.push(`7d used: ${Math.round(snapshot.secondary.used_percent)}%`);
     if (snapshot.secondary.resets_at_iso) {
       lines.push(`7d reset: ${formatReset(snapshot.secondary.resets_at_iso)}`);
     }
@@ -214,10 +218,47 @@ function usageStatusTooltip(snapshot) {
   return lines.join("\n");
 }
 
+function usageDetailItems(snapshot) {
+  if (!snapshot || !snapshot.available) {
+    return [
+      {
+        label: "Codex usage unavailable",
+        description: snapshot?.reason || "unknown",
+      },
+    ];
+  }
+  const items = [];
+  if (snapshot.primary) {
+    items.push({
+      label: `5h remaining ${Math.round(snapshot.primary.remaining_percent)}%`,
+      description: `${Math.round(snapshot.primary.used_percent)}% used`,
+      detail: snapshot.primary.resets_at_iso ? `Reset: ${formatReset(snapshot.primary.resets_at_iso)}` : "",
+    });
+  }
+  if (snapshot.secondary) {
+    items.push({
+      label: `7d remaining ${Math.round(snapshot.secondary.remaining_percent)}%`,
+      description: `${Math.round(snapshot.secondary.used_percent)}% used`,
+      detail: snapshot.secondary.resets_at_iso ? `Reset: ${formatReset(snapshot.secondary.resets_at_iso)}` : "",
+    });
+  }
+  if (snapshot.plan_type) {
+    items.push({ label: `Plan ${snapshot.plan_type}` });
+  }
+  if (snapshot.last_token_usage && Number.isFinite(Number(snapshot.last_token_usage.total_tokens))) {
+    items.push({ label: `Last turn tokens ${snapshot.last_token_usage.total_tokens}` });
+  }
+  if (snapshot.context_window) {
+    items.push({ label: `Context window ${snapshot.context_window}` });
+  }
+  return items;
+}
+
 module.exports = {
   defaultCodexHome,
   loadUsageSnapshot,
   recentRolloutFiles,
+  usageDetailItems,
   usageStatusText,
   usageStatusTooltip,
 };

@@ -7,6 +7,7 @@ const test = require("node:test");
 const {
   defaultCodexHome,
   loadUsageSnapshot,
+  usageDetailItems,
   usageStatusText,
   usageStatusTooltip,
 } = require("../src/usageSource");
@@ -78,15 +79,61 @@ test("returns unavailable when rate limits are missing", () => {
 
     assert.equal(snapshot.available, false);
     assert.equal(snapshot.reason, "rate_limits_unavailable");
-    assert.equal(usageStatusText(snapshot), "$(pulse) Codex --");
+    assert.equal(usageStatusText(snapshot), "$(hubot) -- · --");
     assert.match(usageStatusTooltip(snapshot), /rate_limits_unavailable/);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
 
-test("formats usage status text by threshold", () => {
-  assert.equal(usageStatusText({ available: true, primary: { used_percent: 20 } }), "$(pulse) Codex 20%");
-  assert.equal(usageStatusText({ available: true, primary: { used_percent: 71 } }), "$(warning) Codex 71%");
-  assert.equal(usageStatusText({ available: true, primary: { used_percent: 90 } }), "$(error) Codex 90%");
+test("formats status text as remaining primary and secondary percentages", () => {
+  assert.equal(
+    usageStatusText({
+      available: true,
+      primary: { used_percent: 20, remaining_percent: 80 },
+      secondary: { used_percent: 11, remaining_percent: 89 },
+    }),
+    "$(hubot) 80% · 89%",
+  );
+  assert.equal(
+    usageStatusText({
+      available: true,
+      primary: { used_percent: 71, remaining_percent: 29 },
+      secondary: { used_percent: 15, remaining_percent: 85 },
+    }),
+    "$(warning) 29% · 85%",
+  );
+  assert.equal(
+    usageStatusText({
+      available: true,
+      primary: { used_percent: 97, remaining_percent: 3 },
+      secondary: { used_percent: 15, remaining_percent: 85 },
+    }),
+    "$(error) 3% · 85%",
+  );
+});
+
+test("builds click detail items from usage snapshot", () => {
+  const items = usageDetailItems({
+    available: true,
+    plan_type: "prolite",
+    primary: {
+      used_percent: 97,
+      remaining_percent: 3,
+      resets_at_iso: "2026-07-05T21:00:08.000Z",
+    },
+    secondary: {
+      used_percent: 15,
+      remaining_percent: 85,
+      resets_at_iso: "2026-07-12T16:00:08.000Z",
+    },
+    last_token_usage: { total_tokens: 145501 },
+    context_window: 258400,
+  });
+
+  assert.equal(items[0].label, "5h remaining 3%");
+  assert.equal(items[0].description, "97% used");
+  assert.equal(items[1].label, "7d remaining 85%");
+  assert.equal(items.some((item) => item.label === "Plan prolite"), true);
+  assert.equal(items.some((item) => item.label === "Last turn tokens 145501"), true);
 });

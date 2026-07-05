@@ -15,6 +15,7 @@ const {
 const {
   defaultCodexHome,
   loadUsageSnapshot,
+  usageDetailItems,
   usageStatusText,
   usageStatusTooltip,
 } = require("./usageSource");
@@ -537,6 +538,8 @@ class UsageStatusBar {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.interval = null;
     this.watcher = null;
+    this.snapshot = null;
+    this.item.command = "codexRadar.showUsageDetails";
     this.reset();
   }
 
@@ -562,9 +565,18 @@ class UsageStatusBar {
         reason: error instanceof Error ? error.message : String(error),
       };
     }
+    this.snapshot = snapshot;
     this.item.text = usageStatusText(snapshot);
     this.item.tooltip = usageStatusTooltip(snapshot);
     this.item.show();
+  }
+
+  async showDetails() {
+    const snapshot = this.snapshot || loadUsageSnapshot();
+    await vscode.window.showQuickPick(usageDetailItems(snapshot), {
+      title: "Codex usage remaining",
+      placeHolder: usageStatusText(snapshot).replace(/\$\([^)]+\)\s*/, ""),
+    });
   }
 
   disposeWatcher() {
@@ -606,6 +618,7 @@ function activate(context) {
     vscode.commands.registerCommand("codexRadar.refresh", () => controller.refresh()),
     vscode.commands.registerCommand("codexRadar.openDashboard", () => controller.openDashboard()),
     vscode.commands.registerCommand("codexRadar.filterStatus", () => chooseStatusFilter(controller)),
+    vscode.commands.registerCommand("codexRadar.showUsageDetails", () => usageStatusBar.showDetails()),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("codexRadar.stateDir")) {
         watcherManager.reset();

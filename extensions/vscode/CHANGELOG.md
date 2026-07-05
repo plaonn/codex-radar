@@ -2,6 +2,24 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.16
+
+Release candidate package for compact remaining-usage status. This version is not a Marketplace publication.
+
+### Changed
+
+- Show Codex usage in the status bar as remaining 5h and 7d percentages.
+- Open a usage detail picker from the status bar item.
+
+## 0.3.15
+
+Release candidate package for host-local Codex usage visibility. This version is not a Marketplace publication.
+
+### Added
+
+- Add a status bar item backed by host-local Codex rollout usage snapshots.
+- Add an experimental `codex-radar usage --json` command for read-only usage snapshots.
+
 ## 0.3.14
 
 Release candidate package for a larger transcript preview window. This version is not a Marketplace publication.
