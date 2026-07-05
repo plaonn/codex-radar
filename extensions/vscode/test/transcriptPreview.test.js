@@ -6,24 +6,25 @@ const test = require("node:test");
 
 const {
   buildSessionPreviewModel,
+  markdownToSafeHtml,
   skimTranscriptText,
 } = require("../src/transcriptPreview");
 
-test("skims transcript JSONL text with role extraction and redaction", () => {
+test("skims only user and Codex transcript messages with redaction", () => {
   const text = [
     JSON.stringify({ role: "user", content: [{ text: "hello" }] }),
     "{invalid json",
     JSON.stringify(["not previewable"]),
     JSON.stringify({ author: { role: "assistant" }, content: [{ text: "token=supersecret" }] }),
     JSON.stringify({ type: "event", message: `${os.homedir()}/private/file` }),
+    JSON.stringify({ role: "tool", content: [{ text: "internal tool output" }] }),
   ].join("\n");
 
   const entries = skimTranscriptText(text, { limit: 0, homeDir: os.homedir() });
 
-  assert.deepEqual(entries, [
-    { role: "user", text: "hello" },
-    { role: "assistant", text: "[REDACTED]" },
-    { role: "event", text: "~/private/file" },
+  assert.deepEqual(entries.map(({ role, label, text }) => ({ role, label, text })), [
+    { role: "user", label: "You", text: "hello" },
+    { role: "assistant", label: "Codex", text: "[REDACTED]" },
   ]);
 });
 
@@ -34,10 +35,65 @@ test("limits transcript preview to latest entries", () => {
     JSON.stringify({ role: "user", content: [{ text: "third" }] }),
   ].join("\n");
 
-  assert.deepEqual(skimTranscriptText(text, { limit: 2 }), [
+  assert.deepEqual(skimTranscriptText(text, { limit: 2 }).map(({ role, text }) => ({ role, text })), [
     { role: "assistant", text: "second" },
     { role: "user", text: "third" },
   ]);
+});
+
+test("extracts conversation messages from nested Codex transcript shapes", () => {
+  const text = [
+    JSON.stringify({
+      type: "response_item",
+      item: {
+        role: "assistant",
+        content: [{ type: "output_text", text: "## Done\n- wrote `code`" }],
+      },
+    }),
+    JSON.stringify({
+      type: "event_msg",
+      message: {
+        role: "user",
+        content: [{ type: "input_text", text: "show **summary**" }],
+      },
+    }),
+    JSON.stringify({
+      type: "tool_result",
+      message: { role: "tool", content: [{ type: "text", text: "hidden" }] },
+    }),
+  ].join("\n");
+
+  const entries = skimTranscriptText(text, { limit: 0 });
+
+  assert.deepEqual(entries.map(({ role, text }) => ({ role, text })), [
+    { role: "assistant", text: "## Done\n- wrote `code`" },
+    { role: "user", text: "show **summary**" },
+  ]);
+  assert.match(entries[0].html, /<h4>Done<\/h4>/);
+  assert.match(entries[0].html, /<code>code<\/code>/);
+  assert.match(entries[1].html, /<strong>summary<\/strong>/);
+});
+
+test("renders markdown as safe html", () => {
+  const html = markdownToSafeHtml([
+    "# Heading",
+    "",
+    "hello **bold** and `code`",
+    "",
+    "- one",
+    "- <script>alert(1)</script>",
+    "",
+    "```",
+    "<unsafe>",
+    "```",
+  ].join("\n"));
+
+  assert.match(html, /<h3>Heading<\/h3>/);
+  assert.match(html, /<strong>bold<\/strong>/);
+  assert.match(html, /<code>code<\/code>/);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(html, /&lt;unsafe&gt;/);
+  assert.doesNotMatch(html, /<script>/);
 });
 
 test("builds a session preview model without exposing transcript paths", () => {
@@ -65,6 +121,7 @@ test("builds a session preview model without exposing transcript paths", () => {
   assert.equal(model.status, "Done");
   assert.equal(model.lastSeen, "10m ago");
   assert.equal(model.transcriptEntries[0].text, "[REDACTED] done");
+  assert.equal(model.transcriptEntries[0].label, "Codex");
   assert.equal(model.summary, "open [REDACTED]");
   assert.equal(JSON.stringify(model).includes(transcriptPath), false);
 });

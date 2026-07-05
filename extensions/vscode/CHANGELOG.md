@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.6
+
+Release candidate package for preview conversation cleanup. This version is not a Marketplace publication.
+
+### Changed
+
+- Filter the preview transcript to user and Codex messages instead of broad internal transcript text.
+- Render preview messages as chat bubbles with safe Markdown support.
+
 ## 0.2.5
 
 Release candidate package for sidebar item preview. This version is not a Marketplace publication.

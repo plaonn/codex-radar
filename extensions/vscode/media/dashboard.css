@@ -454,34 +454,96 @@ select {
 .preview-list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  border: 1px solid var(--vscode-panel-border);
+  gap: 14px;
 }
 
 .preview-entry {
-  display: grid;
-  grid-template-columns: minmax(80px, 120px) minmax(0, 1fr);
-  gap: 12px;
-  padding: 8px 10px;
-  background: var(--vscode-sideBar-background);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 82%;
 }
 
-.preview-entry + .preview-entry {
-  border-top: 1px solid var(--vscode-panel-border);
+.preview-entry.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.preview-entry.assistant {
+  align-self: flex-start;
+  align-items: flex-start;
 }
 
 .preview-role {
+  padding: 0 4px;
   color: var(--vscode-descriptionForeground);
   font-size: 11px;
-  text-align: right;
-  text-transform: uppercase;
 }
 
-.preview-text {
+.preview-bubble {
   min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background);
   line-height: 1.45;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
+}
+
+.preview-entry.user .preview-bubble {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border-color: var(--vscode-button-background);
+}
+
+.preview-bubble > :first-child {
+  margin-top: 0;
+}
+
+.preview-bubble > :last-child {
+  margin-bottom: 0;
+}
+
+.preview-bubble p,
+.preview-bubble ul,
+.preview-bubble ol,
+.preview-bubble blockquote,
+.preview-bubble pre {
+  margin: 0 0 9px;
+}
+
+.preview-bubble ul,
+.preview-bubble ol {
+  padding-left: 20px;
+}
+
+.preview-bubble blockquote {
+  padding-left: 10px;
+  border-left: 3px solid var(--vscode-panel-border);
+  color: var(--vscode-descriptionForeground);
+}
+
+.preview-bubble code {
+  border-radius: 4px;
+  padding: 1px 4px;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+}
+
+.preview-bubble pre {
+  overflow-x: auto;
+  padding: 9px;
+  border-radius: 5px;
+  background: var(--vscode-textCodeBlock-background);
+}
+
+.preview-bubble pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.preview-bubble a {
+  color: var(--vscode-textLink-foreground);
 }
 
 @media (max-width: 920px) {
@@ -494,11 +556,6 @@ select {
   }
 
   .preview-entry {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-
-  .preview-role {
-    text-align: left;
+    max-width: 100%;
   }
 }

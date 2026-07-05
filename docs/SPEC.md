@@ -140,7 +140,7 @@ GUI display contract v1:
 - Editor dashboard는 `Attention`, project-grouped session list, selected-session inspector를 같은 wide surface에 보여준다.
 - Hidden session은 `Attention`과 project list에서 제외되지만 sidebar `Hidden` section 또는 dashboard hidden list에서 선택하고 restore할 수 있다.
 - Sidebar card와 dashboard card/inspector는 readable title/snippet, scan-friendly status text, read/unread state, current tool/model/relative last-seen metadata를 표시한다. 기본 snippet은 session cache의 redacted latest assistant summary를 사용하고 raw transcript file을 card마다 읽지 않는다.
-- Sidebar item selection opens a `Codex Radar Preview` editor tab for the selected session. The preview shows session metadata and a bounded redacted transcript skim when `transcript_path` is available on the extension host.
+- Sidebar item selection opens a `Codex Radar Preview` editor tab for the selected session. The preview shows session metadata and a bounded redacted transcript skim when `transcript_path` is available on the extension host. The skim is filtered to user/Codex conversation messages, hides tool/internal events by default, and renders messages as chat bubbles with safe Markdown support.
 - GUI는 lifecycle status(`waiting_approval`, `running`, `tool_running`, `done`, `unknown`), done read state, and freshness modifier(`stale`)를 분리해 표시한다.
 - GUI에서 `running`과 `tool_running`은 무채색 loading spinner로 표시한다.
 - GUI에서 unread `done`은 blue/cyan filled indicator와 bold title로 표시하고, read `done`은 hollow gray indicator와 normal/muted title로 표시한다.
@@ -165,7 +165,7 @@ GUI privacy/action boundary v1:
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
 - 현재 VS Code GUI는 Python core CLI를 실행하지 않는다. retention config/prune GUI는 clearer surface가 생길 때 별도 requirement로 재도입한다.
 - GUI는 raw transcript file을 기본 list에 자동 노출하지 않는다. 기본 navigation에는 session cache의 redacted latest assistant summary를 짧은 식별 snippet으로 표시할 수 있지만 raw transcript path는 표시하지 않는다.
-- VS Code extension은 sidebar item selection처럼 사용자가 명시적으로 고른 단일 session에 한해 editor preview에서 transcript skim을 제공할 수 있다. Preview Webview에는 extension host가 만든 bounded, redacted entries만 전달하고 raw transcript path는 표시하지 않는다. 전체 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
+- VS Code extension은 sidebar item selection처럼 사용자가 명시적으로 고른 단일 session에 한해 editor preview에서 transcript skim을 제공할 수 있다. Preview Webview에는 extension host가 만든 bounded, redacted user/Codex message entries와 sanitized Markdown HTML만 전달하고 raw transcript path나 tool/internal event text는 표시하지 않는다. 전체 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.
 
 ## Automation Boundary

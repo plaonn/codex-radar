@@ -142,9 +142,9 @@ function previewHtml(webview, extensionUri, model) {
   const cspSource = webview.cspSource;
   const entries = model.transcriptEntries.length
     ? model.transcriptEntries.map((entry) => `
-      <article class="preview-entry">
-        <div class="preview-role">${escapeHtml(entry.role)}</div>
-        <div class="preview-text">${escapeHtml(entry.text)}</div>
+      <article class="preview-entry ${escapeHtml(entry.role)}">
+        <div class="preview-role">${escapeHtml(entry.label || entry.role)}</div>
+        <div class="preview-bubble">${entry.html}</div>
       </article>
     `).join("")
     : `<div class="empty">${escapeHtml(model.transcriptMessage || "No transcript preview available.")}</div>`;
