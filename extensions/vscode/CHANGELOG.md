@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.1
+
+Release candidate package for sidebar Projects filter cleanup. This version is not a Marketplace publication.
+
+### Changed
+
+- Remove the inline status dropdown from the sidebar `Projects` Webview body; the native section title filter button remains the sidebar filter entrypoint.
+- Keep the editor dashboard topbar status dropdown for the wide dashboard surface.
+
 ## 0.3.0
 
 Release candidate package for archived section routing and read-done row dimming. This version is not a Marketplace publication.

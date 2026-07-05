@@ -62,7 +62,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.0.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.1.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -80,7 +80,7 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 3. Open the Codex Radar Activity Bar container.
 4. Confirm the sidebar shows native `Attention`, `Projects`, and collapsed `Archived` sections whose bodies are rendered as Webview content.
 5. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
-6. Use the sidebar status filter and confirm it changes only the `Projects` section, not the attention badge.
+6. Use the `Projects` section title filter button and confirm it changes only the `Projects` section, not the attention badge.
 7. Select a sidebar session item and confirm `Codex Radar Preview` opens in the editor area with metadata and only user/Codex transcript messages in chat bubbles. Confirm Markdown renders and private transcript paths/internal tool events are not shown.
 8. Use `Codex Radar: Open Dashboard` from the Command Palette.
 9. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.

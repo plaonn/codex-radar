@@ -275,25 +275,7 @@ function sidebarAttention(model) {
 
 function sidebarProjects(model) {
   const root = el("div", { className: "app sidebar" });
-  const select = el("select");
-  for (const option of model.statusOptions) {
-    const child = el("option", { text: option.label });
-    child.value = option.value;
-    child.selected = option.isSelected;
-    select.appendChild(child);
-  }
-  select.addEventListener("change", () => {
-    send({ type: "setStatusFilter", value: select.value });
-  });
-  root.appendChild(el("header", { className: "topbar compact" }, [
-    el("div", { className: "brand" }, [
-      el("strong", { text: "Projects" }),
-      el("span", { text: `${model.counts.filtered}/${model.counts.visible}` }),
-    ]),
-    el("div", { className: "toolbar" }, [
-      select,
-    ]),
-  ]));
+  root.appendChild(sidebarTopbar(model, "Projects", `${model.counts.filtered}/${model.counts.visible}`));
   const body = el("div", { className: "list" });
   if (!model.groups.length) {
     body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
