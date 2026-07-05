@@ -14,6 +14,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Shows `waiting_approval`, stale active sessions, and unread `done` sessions in the sidebar and dashboard attention inbox.
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Lets the user hide sessions from Radar and restore them from the sidebar `Hidden` section or dashboard hidden list.
+- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus a redacted transcript skim when the transcript file is available on the extension host.
 - Separates lifecycle status, done read state, and stale freshness in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator.
@@ -61,7 +62,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.2.4.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.2.5.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -80,13 +81,14 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 4. Confirm the sidebar shows native `Attention`, `Projects`, and collapsed `Hidden` sections whose bodies are rendered as Webview content.
 5. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
 6. Use the sidebar status filter and confirm it changes only the `Projects` section, not the attention badge.
-7. Use `Codex Radar: Open Dashboard` from the Command Palette.
-8. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
-9. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator, and `unknown` uses a colored `!` indicator.
-10. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
-11. Hide a session, then restore it from `Hidden` or the dashboard hidden list.
-12. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
-13. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
+7. Select a sidebar session item and confirm `Codex Radar Preview` opens in the editor area with metadata and redacted transcript skim. Confirm private transcript paths are not shown.
+8. Use `Codex Radar: Open Dashboard` from the Command Palette.
+9. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
+10. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator, and `unknown` uses a colored `!` indicator.
+11. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
+12. Hide a session, then restore it from `Hidden` or the dashboard hidden list.
+13. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
+14. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 

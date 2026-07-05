@@ -35,5 +35,5 @@
 - stdlib MVP가 유용하다는 것이 확인된 뒤 Rich/Textual TUI 검토.
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
-- Sectioned Webview sidebar와 editor dashboard가 Remote SSH에서 안정화된 뒤 transcript preview, command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
+- Sectioned Webview sidebar, editor preview, editor dashboard가 Remote SSH에서 안정화된 뒤 command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
 - `stale_after_minutes` 같은 stale freshness threshold config를 검토. 기본값은 현재 30분이며, 도입 시 CLI/TUI와 VS Code GUI가 같은 source를 사용해야 한다.

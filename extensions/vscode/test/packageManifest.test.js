@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.2.4");
+  assert.equal(manifest.version, "0.2.5");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -110,7 +110,7 @@ test("keeps row/session actions inside the Webview message boundary", () => {
   assert.equal(Object.prototype.hasOwnProperty.call(manifest.contributes.menus, "commandPalette"), false);
 });
 
-test("does not expose retention config, prune commands, CLI settings, or transcript preview", () => {
+test("does not expose retention config, prune commands, CLI settings, or transcript preview commands", () => {
   const manifest = readManifest();
   const commandIds = manifest.contributes.commands.map((command) => command.command);
   const viewTitleCommands = manifest.contributes.menus["view/title"].map((item) => item.command);

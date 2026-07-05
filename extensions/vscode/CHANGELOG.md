@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.5
+
+Release candidate package for sidebar item preview. This version is not a Marketplace publication.
+
+### Added
+
+- Open a `Codex Radar Preview` editor tab when a sidebar session item is selected.
+- Show session metadata and a redacted transcript skim in the preview when the transcript file is available on the extension host.
+
 ## 0.2.4
 
 Release candidate package for a sidebar status indicator CSS fix. This version is not a Marketplace publication.

@@ -58,7 +58,7 @@
 - Requirement: 사용자가 전체 transcript를 열지 않고도 최근 맥락을 훑을 수 있어야 하며, transcript skim output은 secret-like token과 home path를 best-effort로 redact해야 한다.
 - Rationale: 최근 context 확인 비용을 줄이되 transcript와 hook payload가 민감한 로컬 데이터라는 전제를 유지해야 한다.
 - Failure prevented: 최근 context를 확인하려고 매번 전체 transcript를 열거나, skim 과정에서 민감 정보가 부주의하게 노출되는 문제.
-- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code redacted cached snippet display, transcript redaction tests.
+- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code redacted cached snippet display, explicit VS Code editor preview, transcript redaction tests.
 - Revisit when: transcript format이나 redaction threat model이 바뀔 때.
 
 ### R6: privacy and automation boundary
@@ -77,7 +77,7 @@
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Derived specs/tests: planned GUI read contract v1, project-grouped Webview sidebar sections, in-surface attention cues, editor Webview dashboard, extension-local read/unread state, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
+- Derived specs/tests: planned GUI read contract v1, project-grouped Webview sidebar sections, in-surface attention cues, editor Webview dashboard, editor session preview, extension-local read/unread state, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
 - Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
 
 #### R7a: GUI project navigation

@@ -25,6 +25,7 @@ const {
   restoreSession,
 } = require("./readState");
 const { buildDashboardModel, findSessionByKey } = require("./dashboardViewModel");
+const { buildSessionPreviewModel } = require("./transcriptPreview");
 
 function configuredStateDir() {
   const configured = vscode.workspace.getConfiguration("codexRadar").get("stateDir", "");
@@ -120,6 +121,66 @@ function dashboardHtml(webview, extensionUri) {
 </html>`;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function previewDetail(label, value) {
+  if (!value) {
+    return "";
+  }
+  return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`;
+}
+
+function previewHtml(webview, extensionUri, model) {
+  const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
+  const cspSource = webview.cspSource;
+  const entries = model.transcriptEntries.length
+    ? model.transcriptEntries.map((entry) => `
+      <article class="preview-entry">
+        <div class="preview-role">${escapeHtml(entry.role)}</div>
+        <div class="preview-text">${escapeHtml(entry.text)}</div>
+      </article>
+    `).join("")
+    : `<div class="empty">${escapeHtml(model.transcriptMessage || "No transcript preview available.")}</div>`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource};">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="${cssUri}">
+  <title>Codex Radar Preview</title>
+</head>
+<body>
+  <main class="preview">
+    <header class="preview-header">
+      <div class="preview-title-block">
+        <h1>${escapeHtml(model.title)}</h1>
+        <div class="preview-meta">${escapeHtml(model.project)} | ${escapeHtml(model.status)} | ${escapeHtml(model.shortSessionId)}</div>
+      </div>
+    </header>
+    ${model.summary ? `<section class="preview-summary">${escapeHtml(model.summary)}</section>` : ""}
+    <dl class="details preview-details">
+      ${previewDetail("Last seen", model.lastSeen)}
+      ${previewDetail("Last event", model.lastEvent)}
+      ${previewDetail("Model", model.model)}
+      ${previewDetail("Tool", model.currentTool)}
+    </dl>
+    <section class="preview-transcript">
+      <h2>Transcript Preview</h2>
+      <div class="preview-list">${entries}</div>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
 function statusFilterItems(currentStatusFilter = "") {
   const current = normalizeStatusFilter(currentStatusFilter) || "all";
   return STATUS_FILTER_VALUES.map((status) => {
@@ -162,6 +223,7 @@ class RadarWebviewController {
     this.lastError = "";
     this.sidebarViews = new Map();
     this.panel = null;
+    this.previewPanel = null;
     this.refresh();
   }
 
@@ -229,6 +291,7 @@ class RadarWebviewController {
     if (this.panel) {
       this.postStateTo(this.panel, "dashboard");
     }
+    this.updatePreviewPanel();
   }
 
   postStateTo(target, surface) {
@@ -253,6 +316,42 @@ class RadarWebviewController {
 
   sessionForKey(key) {
     return findSessionByKey(this.sessions, key);
+  }
+
+  openPreview(session, options = {}) {
+    if (!session) {
+      return;
+    }
+    if (!this.previewPanel) {
+      this.previewPanel = vscode.window.createWebviewPanel(
+        "codexRadar.preview",
+        "Codex Radar Preview",
+        vscode.ViewColumn.Active,
+        {
+          enableScripts: false,
+          retainContextWhenHidden: true,
+          localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "media")],
+        },
+      );
+      this.previewPanel.onDidDispose(() => {
+        this.previewPanel = null;
+      });
+    } else if (options.reveal !== false) {
+      this.previewPanel.reveal(vscode.ViewColumn.Active);
+    }
+    const model = buildSessionPreviewModel(session, { homeDir: process.env.HOME || "" });
+    this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
+    this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri, model);
+  }
+
+  updatePreviewPanel() {
+    if (!this.previewPanel || !this.selectedKey) {
+      return;
+    }
+    const session = this.sessionForKey(this.selectedKey);
+    if (session) {
+      this.openPreview(session, { reveal: false });
+    }
   }
 
   async markSessionRead(session) {
@@ -317,6 +416,9 @@ class RadarWebviewController {
     if (message.type === "selectSession") {
       this.selectedKey = String(message.key || "");
       this.refresh();
+      if (surface !== "dashboard") {
+        this.openPreview(this.sessionForKey(this.selectedKey));
+      }
       return;
     }
     if (message.type === "sessionAction") {
@@ -399,8 +501,10 @@ module.exports = {
   configuredStateDir,
   dashboardHtml,
   deactivate,
+  escapeHtml,
   loadDecoratedSessions,
   officialCodexThreadUri,
   openOfficialCodexThread,
+  previewHtml,
   statusFilterItems,
 };

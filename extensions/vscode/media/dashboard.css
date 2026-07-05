@@ -402,6 +402,88 @@ select {
   color: var(--vscode-errorForeground);
 }
 
+.preview {
+  min-height: 100vh;
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.preview-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.preview-title-block {
+  max-width: 980px;
+}
+
+.preview h1 {
+  margin: 0 0 7px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.preview h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.preview-meta {
+  color: var(--vscode-descriptionForeground);
+}
+
+.preview-summary {
+  max-width: 980px;
+  padding: 14px 20px 0;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.5;
+}
+
+.preview-details {
+  max-width: 980px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.preview-transcript {
+  max-width: 980px;
+  padding: 16px 20px 24px;
+}
+
+.preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.preview-entry {
+  display: grid;
+  grid-template-columns: minmax(80px, 120px) minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--vscode-sideBar-background);
+}
+
+.preview-entry + .preview-entry {
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.preview-role {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.preview-text {
+  min-width: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 920px) {
   .layout {
     grid-template-columns: 1fr;
@@ -409,5 +491,14 @@ select {
 
   .pane {
     max-height: none;
+  }
+
+  .preview-entry {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .preview-role {
+    text-align: left;
   }
 }
