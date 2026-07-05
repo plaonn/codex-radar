@@ -2,8 +2,10 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  baseDisplayStatus,
   buildDashboardModel,
   findSessionByKey,
+  isStaleByAge,
   sessionCard,
   statusOptions,
 } = require("../src/dashboardViewModel");
@@ -75,6 +77,34 @@ test("filters project sessions by display status without changing attention coun
   assert.deepEqual(model.groups.map((group) => group.project), ["project-a", "project-b"]);
 });
 
+test("filters stale project sessions by freshness modifier", () => {
+  const oldDone = {
+    ...baseSessions[1],
+    session_id: "done-old",
+    last_seen_at: "2026-07-04T23:00:00+09:00",
+  };
+  const oldRunning = {
+    session_id: "running-old",
+    project: "project-b",
+    display_status: "stale",
+    status: "running",
+    last_seen_at: "2026-07-04T23:01:00+09:00",
+  };
+  const sessions = decorateSessions([baseSessions[0], oldDone, oldRunning], markDoneRead(new Set(), oldDone), new Set());
+  const model = buildDashboardModel(sessions, {
+    statusFilter: "stale",
+    nowMs,
+  });
+
+  assert.deepEqual(
+    model.groups.flatMap((group) => group.sessions.map((session) => session.sessionId)),
+    ["done-old", "running-old"],
+  );
+  assert.equal(model.groups[0].sessions[0].status, "done");
+  assert.equal(model.groups[0].sessions[0].isStale, true);
+  assert.equal(model.groups[1].sessions[0].status, "running");
+});
+
 test("builds session action state for Webview buttons", () => {
   const unreadDone = decorateSessions([baseSessions[1]], new Set(), new Set())[0];
   const readDone = decorateSessions([baseSessions[1]], markDoneRead(new Set(), baseSessions[1]), new Set())[0];
@@ -87,6 +117,28 @@ test("builds session action state for Webview buttons", () => {
   assert.equal(sessionCard(hidden).actions.canRestore, true);
   assert.equal(sessionCard(hidden).actions.canHide, false);
   assert.equal(sessionCard({ ...unreadDone, session_id: "unknown" }).actions.canOpen, false);
+});
+
+test("treats stale as a freshness modifier without replacing lifecycle status", () => {
+  const staleRunning = {
+    session_id: "running-1",
+    display_status: "stale",
+    status: "tool_running",
+    last_seen_at: "2026-07-04T23:00:00+09:00",
+  };
+  const oldDone = {
+    session_id: "done-old",
+    display_status: "done",
+    status: "done",
+    last_seen_at: "2026-07-04T23:00:00+09:00",
+  };
+
+  assert.equal(baseDisplayStatus(staleRunning), "tool_running");
+  assert.equal(isStaleByAge(oldDone, { nowMs }), true);
+  assert.equal(sessionCard(staleRunning, { nowMs }).status, "tool_running");
+  assert.equal(sessionCard(staleRunning, { nowMs }).isStale, true);
+  assert.equal(sessionCard(oldDone, { nowMs }).status, "done");
+  assert.equal(sessionCard(oldDone, { nowMs }).isStale, true);
 });
 
 test("finds sessions by timestamp state key", () => {

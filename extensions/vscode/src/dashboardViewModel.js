@@ -1,4 +1,5 @@
 const {
+  STALE_SESSION_SECONDS,
   STATUS_FILTER_VALUES,
   filterSessionsByStatus,
   groupSessionsByProject,
@@ -13,6 +14,24 @@ const {
   statusText,
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
+
+function baseDisplayStatus(session) {
+  const displayStatus = String(session.display_status || session.status || "unknown");
+  if (displayStatus === "stale") {
+    return String(session.status || "unknown");
+  }
+  return displayStatus;
+}
+
+function isStaleByAge(session, options = {}) {
+  const valueMs = Date.parse(String(session.last_seen_at || ""));
+  if (!Number.isFinite(valueMs)) {
+    return false;
+  }
+  const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
+  const staleMs = (options.staleSeconds ?? STALE_SESSION_SECONDS) * 1000;
+  return nowMs - valueMs > staleMs;
+}
 
 function statusOptions(currentStatusFilter = "") {
   const current = normalizeStatusFilter(currentStatusFilter) || "all";
@@ -34,17 +53,21 @@ function sessionActionState(session) {
 }
 
 function sessionCard(session, options = {}) {
+  const status = baseDisplayStatus(session);
+  const isStale = isStaleByAge(session, options);
+  const lifecycleSession = { ...session, display_status: status };
+  const description = sessionDescription(lifecycleSession, options);
   return {
     key: sessionStateKey(session),
     sessionId: String(session.session_id || ""),
     shortSessionId: String(session.session_id || "").slice(0, 12) || "unknown",
-    title: sessionTitle(session, options),
+    title: sessionTitle(lifecycleSession, options),
     snippet: sessionSnippet(session, { ...options, maxLength: 180 }),
     project: String(session.project || "-"),
-    status: String(session.display_status || "unknown"),
-    statusText: statusText(session.display_status),
-    description: sessionDescription(session, options),
-    icon: sessionIconId(session),
+    status,
+    statusText: statusText(status),
+    description: isStale ? `${description} | Stale` : description,
+    icon: sessionIconId({ ...session, display_status: status }),
     relativeLastSeen: relativeTimeText(session.last_seen_at, options),
     lastSeenAt: String(session.last_seen_at || ""),
     lastEventName: String(session.last_event_name || ""),
@@ -54,6 +77,7 @@ function sessionCard(session, options = {}) {
     isHidden: Boolean(session.is_hidden),
     isUnreadDone: Boolean(session.is_unread_done),
     isDoneRead: Boolean(session.is_done_read),
+    isStale,
     actions: sessionActionState(session),
   };
 }
@@ -88,7 +112,9 @@ function buildDashboardModel(sessions, options = {}) {
   const statusFilter = normalizeStatusFilter(options.statusFilter);
   const activeSessions = sessions.filter((session) => !session.is_hidden);
   const hiddenSessions = sessions.filter((session) => session.is_hidden);
-  const filteredSessions = filterSessionsByStatus(activeSessions, statusFilter);
+  const filteredSessions = statusFilter === "stale"
+    ? activeSessions.filter((session) => isStaleByAge(session, options))
+    : filterSessionsByStatus(activeSessions, statusFilter);
   const attentionSessions = activeSessions.filter((session) => session.is_attention);
   const allCards = cardsForSessions(sessions, options);
   const selectedKey = options.selectedKey && indexCards(allCards).has(options.selectedKey)
@@ -132,8 +158,10 @@ function findSessionByKey(sessions, key) {
 }
 
 module.exports = {
+  baseDisplayStatus,
   buildDashboardModel,
   findSessionByKey,
+  isStaleByAge,
   sessionCard,
   statusOptions,
 };

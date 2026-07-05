@@ -80,8 +80,10 @@ function sessionActions(session, options = {}) {
 
 function sessionNode(session, options = {}) {
   const isActive = session.key && session.key === selectedKey();
+  const readClass = session.isUnreadDone ? " unread" : session.isDoneRead ? " read" : "";
+  const staleClass = session.isStale ? " stale" : "";
   const node = el("div", {
-    className: `session${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
+    className: `session status-${session.status}${readClass}${staleClass}${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
   });
   node.tabIndex = 0;
   node.setAttribute("role", "button");
@@ -94,7 +96,7 @@ function sessionNode(session, options = {}) {
       send({ type: "selectSession", key: session.key });
     }
   });
-  node.appendChild(el("span", { className: `status-dot status-${session.status}` }));
+  node.appendChild(statusIndicator(session));
   const text = el("span");
   text.appendChild(el("span", { className: "title", text: session.title }));
   if (session.snippet) {
@@ -106,6 +108,17 @@ function sessionNode(session, options = {}) {
   }
   node.appendChild(text);
   return node;
+}
+
+function statusIndicator(session) {
+  if (session.status === "running" || session.status === "tool_running") {
+    return el("span", { className: "status-spinner", title: session.statusText });
+  }
+  if (session.status === "unknown") {
+    return el("span", { className: "status-alert", text: "!", title: "Unknown status" });
+  }
+  const readClass = session.isUnreadDone ? " unread" : session.isDoneRead ? " read" : "";
+  return el("span", { className: `status-dot status-${session.status}${readClass}`, title: session.statusText });
 }
 
 function sessionList(sessions, emptyText, options = {}) {
@@ -191,6 +204,7 @@ function inspectorPane(model) {
     el("span", { className: "tag", text: session.statusText }),
     session.isAttention ? el("span", { className: "tag", text: "Attention" }) : null,
     session.isHidden ? el("span", { className: "tag", text: "Hidden" }) : null,
+    session.isStale ? el("span", { className: "tag", text: "Stale" }) : null,
     session.isUnreadDone ? el("span", { className: "tag", text: "Unread" }) : null,
   ]));
 
@@ -266,9 +280,6 @@ function sidebarTopbar(model, title, countText) {
       el("strong", { text: title }),
       el("span", { text: countText }),
     ]),
-    el("div", { className: "toolbar" }, [
-      button("Dashboard", "secondary", () => send({ type: "openDashboard" })),
-    ]),
   ]);
 }
 
@@ -298,7 +309,6 @@ function sidebarProjects(model) {
     ]),
     el("div", { className: "toolbar" }, [
       select,
-      button("Dashboard", "secondary", () => send({ type: "openDashboard" })),
     ]),
   ]));
   const body = el("div", { className: "list" });

@@ -2,6 +2,19 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.3
+
+Release candidate package for sidebar/dashboard status visual cleanup. This version is not a Marketplace publication.
+
+### Changed
+
+- Remove dashboard shortcut buttons from sidebar Webview bodies and sidebar view titles; `Codex Radar: Open Dashboard` remains available through the Command Palette.
+- Stop opening the dashboard when a sidebar session card is selected.
+- Show `running` and `tool_running` with neutral loading spinners.
+- Show unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator.
+- Show `unknown` with a colored `!` indicator.
+- Treat stale as a freshness modifier on cards instead of replacing the lifecycle indicator.
+
 ## 0.2.2
 
 Release candidate package for sectioned sidebar Webviews plus the editor dashboard. This version is not a Marketplace publication.

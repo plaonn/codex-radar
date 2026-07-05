@@ -225,6 +225,20 @@ select {
   border-color: var(--vscode-panel-border);
 }
 
+.session.stale {
+  opacity: 0.68;
+  border-style: dashed;
+}
+
+.session.read .title {
+  font-weight: 500;
+  color: var(--vscode-descriptionForeground);
+}
+
+.session.unread .title {
+  font-weight: 700;
+}
+
 .status-dot {
   width: 9px;
   height: 9px;
@@ -237,17 +251,50 @@ select {
   background: var(--vscode-charts-yellow);
 }
 
-.status-running,
-.status-tool_running {
+.status-done {
   background: var(--vscode-charts-blue);
 }
 
-.status-stale {
-  background: var(--vscode-charts-orange);
+.status-done.unread {
+  background: var(--vscode-charts-blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-charts-blue) 22%, transparent);
 }
 
-.status-done {
-  background: var(--vscode-charts-green);
+.status-done.read {
+  background: transparent;
+  border: 1px solid var(--vscode-descriptionForeground);
+}
+
+.status-alert {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 50%;
+  color: var(--vscode-editor-background);
+  background: var(--vscode-errorForeground);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-spinner {
+  width: 13px;
+  height: 13px;
+  margin-top: 3px;
+  border: 2px solid var(--vscode-descriptionForeground);
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.78;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .title,

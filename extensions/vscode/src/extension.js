@@ -317,9 +317,6 @@ class RadarWebviewController {
     if (message.type === "selectSession") {
       this.selectedKey = String(message.key || "");
       this.refresh();
-      if (surface !== "dashboard") {
-        this.openDashboard();
-      }
       return;
     }
     if (message.type === "sessionAction") {

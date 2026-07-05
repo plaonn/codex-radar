@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -99,19 +99,14 @@
     "menus": {
       "view/title": [
         {
-          "command": "codexRadar.openDashboard",
-          "when": "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
-          "group": "navigation@1"
-        },
-        {
           "command": "codexRadar.filterStatus",
           "when": "view == codexRadar.projectList",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "codexRadar.refresh",
           "when": "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
-          "group": "navigation@3"
+          "group": "navigation@2"
         }
       ]
     }

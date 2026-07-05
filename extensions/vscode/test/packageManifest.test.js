@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.2.2");
+  assert.equal(manifest.version, "0.2.3");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -75,10 +75,7 @@ test("contributes only global commands for refresh, filtering, and editor dashbo
   ]);
   assert.equal(dashboardCommand.icon, "$(layout)");
   assert.equal(dashboardCommand.title, "Codex Radar: Open Dashboard");
-  assert.equal(
-    titleCommands.find((item) => item.command === "codexRadar.openDashboard").when,
-    "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
-  );
+  assert.equal(titleCommands.some((item) => item.command === "codexRadar.openDashboard"), false);
   assert.equal(
     titleCommands.find((item) => item.command === "codexRadar.filterStatus").when,
     "view == codexRadar.projectList",
