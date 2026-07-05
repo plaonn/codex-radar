@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.3
+
+Release candidate package for Codex thread-state archived detection. This version is not a Marketplace publication.
+
+### Fixed
+
+- Treat transcript-less side sessions as archived when their `cwd` and `last_seen_at` fall inside an archived Codex thread recorded in host-local `state_5.sqlite`.
+- Keep transcript-store archived detection as the primary path, with Codex thread state as a fallback for hook/session id mismatches.
+
 ## 0.3.2
 
 Release candidate package for sidebar list cleanup, session context menu, and project folding. This version is not a Marketplace publication.

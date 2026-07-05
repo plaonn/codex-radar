@@ -13,6 +13,7 @@ const {
   statusText,
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
+const { isArchivedByCodexThreadState } = require("./codexThreadState");
 const { resolveTranscriptPathInfo } = require("./transcriptPreview");
 
 function baseDisplayStatus(session) {
@@ -36,7 +37,8 @@ function isArchivedSession(session, options = {}) {
   if (cache && key && cache.has(key)) {
     return cache.get(key);
   }
-  const isArchived = transcriptPathInfo(session, options).source === "archived";
+  const isArchived = transcriptPathInfo(session, options).source === "archived"
+    || isArchivedByCodexThreadState(session, options);
   if (cache && key) {
     cache.set(key, isArchived);
   }
@@ -121,6 +123,7 @@ function buildDashboardModel(sessions, options = {}) {
   const modelOptions = {
     ...options,
     archivedSessionCache: options.archivedSessionCache instanceof Map ? options.archivedSessionCache : new Map(),
+    codexThreadStateCache: options.codexThreadStateCache instanceof Map ? options.codexThreadStateCache : new Map(),
   };
   const statusFilter = normalizeStatusFilter(options.statusFilter);
   const archivedSessions = sessions.filter((session) => isArchivedSession(session, modelOptions));

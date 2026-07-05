@@ -45,6 +45,22 @@ function archiveResolver(session) {
   };
 }
 
+function emptyArchiveResolver() {
+  return { path: "", source: "missing" };
+}
+
+function archivedThreads() {
+  return {
+    ids: new Set(["archived-direct"]),
+    rows: [{
+      id: "archived-parent",
+      cwd: "/repo",
+      createdAt: Date.parse("2026-07-04T14:16:04Z") / 1000,
+      updatedAt: Date.parse("2026-07-04T19:18:03Z") / 1000,
+    }],
+  };
+}
+
 test("builds a sanitized dashboard model with attention, projects, archived, and selection", () => {
   const sessions = decorateSessions(baseSessions, markDoneRead(new Set(), baseSessions[1]));
   const model = buildDashboardModel(sessions, {
@@ -107,6 +123,33 @@ test("keeps lifecycle display status and detects archived sessions separately", 
   assert.equal(baseDisplayStatus(running), "tool_running");
   assert.equal(sessionCard(running, { nowMs }).status, "tool_running");
   assert.equal(isArchivedSession(baseSessions[2], { resolveTranscriptPathInfo: archiveResolver }), true);
+});
+
+test("detects archived side sessions by Codex thread state when transcript path is absent", () => {
+  const sideSession = {
+    session_id: "side-session",
+    cwd: "/repo",
+    display_status: "done",
+    last_seen_at: "2026-07-04T15:24:37Z",
+    transcript_path: "",
+  };
+  const activeSideSession = {
+    ...sideSession,
+    last_seen_at: "2026-07-04T20:24:37Z",
+  };
+
+  assert.equal(isArchivedSession(sideSession, {
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+    resolveCodexArchivedThreads: archivedThreads,
+  }), true);
+  assert.equal(isArchivedSession(activeSideSession, {
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+    resolveCodexArchivedThreads: archivedThreads,
+  }), false);
+  assert.equal(isArchivedSession({ ...sideSession, transcript_path: "/tmp/current.jsonl" }, {
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+    resolveCodexArchivedThreads: archivedThreads,
+  }), false);
 });
 
 test("finds sessions by timestamp state key", () => {
