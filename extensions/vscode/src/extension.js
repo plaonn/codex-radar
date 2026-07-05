@@ -135,6 +135,7 @@ function previewHtml(webview, extensionUri, model, options = {}) {
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
   const cspSource = webview.cspSource;
   const initialScrollToBottom = options.initialScrollToBottom !== false;
+  const sessionIdentity = JSON.stringify(String(options.sessionIdentity || model.shortSessionId || ""));
   const notice = model.transcriptMessage
     ? `<div class="preview-notice">${escapeHtml(model.transcriptMessage)}</div>`
     : "";
@@ -177,11 +178,65 @@ function previewHtml(webview, extensionUri, model, options = {}) {
     </section>
   </main>
   <script nonce="${nonce}">
+    const vscode = acquireVsCodeApi();
     const previewBody = document.querySelector(".preview-body");
-    if (previewBody && ${initialScrollToBottom ? "true" : "false"}) {
-      requestAnimationFrame(() => {
-        previewBody.scrollTop = previewBody.scrollHeight;
+    const previewSessionIdentity = ${sessionIdentity};
+    const initialScrollToBottom = ${initialScrollToBottom ? "true" : "false"};
+    const previousState = vscode.getState() || {};
+    const previousScroll = previousState.previewScroll || {};
+
+    function isNearBottom() {
+      return previewBody
+        ? previewBody.scrollHeight - previewBody.scrollTop - previewBody.clientHeight < 48
+        : false;
+    }
+
+    function saveScroll() {
+      if (!previewBody) {
+        return;
+      }
+      vscode.setState({
+        ...previousState,
+        previewScroll: {
+          sessionIdentity: previewSessionIdentity,
+          scrollTop: previewBody.scrollTop,
+          nearBottom: isNearBottom(),
+        },
       });
+    }
+
+    function scrollToBottom() {
+      if (!previewBody) {
+        return;
+      }
+      previewBody.scrollTop = previewBody.scrollHeight;
+      saveScroll();
+    }
+
+    function restoreScroll() {
+      if (!previewBody) {
+        return;
+      }
+      if (
+        initialScrollToBottom
+        || previousScroll.sessionIdentity !== previewSessionIdentity
+        || previousScroll.nearBottom
+      ) {
+        scrollToBottom();
+        return;
+      }
+      if (Number.isFinite(previousScroll.scrollTop)) {
+        const maxScroll = Math.max(0, previewBody.scrollHeight - previewBody.clientHeight);
+        previewBody.scrollTop = Math.min(previousScroll.scrollTop, maxScroll);
+      }
+      saveScroll();
+    }
+
+    if (previewBody) {
+      previewBody.addEventListener("scroll", saveScroll, { passive: true });
+      requestAnimationFrame(restoreScroll);
+      window.addEventListener("load", restoreScroll, { once: true });
+      setTimeout(restoreScroll, 0);
     }
   </script>
 </body>
@@ -363,7 +418,7 @@ class RadarWebviewController {
     if (!session) {
       return;
     }
-    const sessionKey = String(session.key || "");
+    const sessionIdentity = String(session.session_id || session.key || "");
     if (!this.previewPanel) {
       this.previewPanel = vscode.window.createWebviewPanel(
         "codexRadar.preview",
@@ -382,20 +437,18 @@ class RadarWebviewController {
     } else if (options.reveal !== false) {
       this.previewPanel.reveal(vscode.ViewColumn.Active);
     }
-    const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionKey !== this.previewSessionKey);
+    const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
     const model = buildSessionPreviewModel(session, { homeDir: process.env.HOME || "" });
     this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
     this.previewPanel.webview.html = previewHtml(this.previewPanel.webview, this.context.extensionUri, model, {
       initialScrollToBottom: shouldScrollToBottom,
+      sessionIdentity,
     });
-    this.previewSessionKey = sessionKey;
+    this.previewSessionKey = sessionIdentity;
   }
 
   updatePreviewPanel() {
     if (!this.previewPanel || !this.selectedKey) {
-      return;
-    }
-    if (this.selectedKey === this.previewSessionKey) {
       return;
     }
     const session = this.sessionForKey(this.selectedKey);

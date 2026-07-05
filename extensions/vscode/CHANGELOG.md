@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.9
+
+Release candidate package for preview scroll-state restoration. This version is not a Marketplace publication.
+
+### Fixed
+
+- Use the stable Codex session id rather than the display row key to decide whether a preview is showing the same session.
+- Persist preview body scroll state inside the Webview and restore it across transcript refreshes.
+- Keep the preview at the latest message only when opening a new session or when the user was already near the bottom before refresh.
+
 ## 0.3.8
 
 Release candidate package for preview scroll behavior correction. This version is not a Marketplace publication.
