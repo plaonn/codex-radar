@@ -36,4 +36,5 @@
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
 - Sectioned Webview sidebar, editor preview, editor dashboard가 Remote SSH에서 안정화된 뒤 command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
+- Editor preview transcript에서 latest bounded window를 넘어 과거 메시지를 볼 수 있도록 lazy loading, `Load older`, 또는 full transcript mode를 검토. 구현 전에는 scroll anchoring, privacy/redaction boundary, large transcript DOM cost를 함께 설계한다.
 - terminal CLI/TUI용 `stale_after_minutes` 같은 stale freshness threshold config를 검토. 기본값은 현재 30분이다.

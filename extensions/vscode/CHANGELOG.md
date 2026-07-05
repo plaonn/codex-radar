@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.14
+
+Release candidate package for a larger transcript preview window. This version is not a Marketplace publication.
+
+### Changed
+
+- Increase the default editor preview transcript window from 30 to 120 user/Codex messages.
+- Document lazy loading or older-message loading as the next transcript preview UX step.
+
 ## 0.3.13
 
 Release candidate package for stable sidebar selection ownership. This version is not a Marketplace publication.

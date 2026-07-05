@@ -15,7 +15,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Routes host-local Codex archived sessions to the sidebar `Archived` section and dashboard archived list.
 - Also uses Codex local thread state as a fallback for done side sessions whose hook payload has no transcript path.
-- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus a redacted user/Codex message skim with messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
+- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus the latest 120 redacted user/Codex messages with messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
 - Separates lifecycle status, done read state, and archived state in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator plus muted row treatment.
@@ -63,7 +63,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.13.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.14.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

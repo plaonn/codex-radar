@@ -6,6 +6,7 @@ const test = require("node:test");
 
 const {
   buildSessionPreviewModel,
+  DEFAULT_PREVIEW_ENTRY_LIMIT,
   dedupeAdjacentEntries,
   markdownToSafeHtml,
   resolveTranscriptPathInfo,
@@ -42,6 +43,18 @@ test("limits transcript preview to latest entries", () => {
     { role: "assistant", text: "second" },
     { role: "user", text: "third" },
   ]);
+});
+
+test("defaults transcript preview to a larger messenger-style history window", () => {
+  const text = Array.from({ length: DEFAULT_PREVIEW_ENTRY_LIMIT + 5 }, (_value, index) => (
+    JSON.stringify({ role: index % 2 ? "assistant" : "user", content: [{ text: `message-${index}` }] })
+  )).join("\n");
+  const entries = skimTranscriptText(text);
+
+  assert.equal(DEFAULT_PREVIEW_ENTRY_LIMIT, 120);
+  assert.equal(entries.length, DEFAULT_PREVIEW_ENTRY_LIMIT);
+  assert.equal(entries[0].text, "message-5");
+  assert.equal(entries.at(-1).text, `message-${DEFAULT_PREVIEW_ENTRY_LIMIT + 4}`);
 });
 
 test("extracts conversation messages from nested Codex transcript shapes", () => {

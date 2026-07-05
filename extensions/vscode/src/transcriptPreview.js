@@ -12,6 +12,7 @@ const {
 } = require("./sessionViewModel");
 
 const TEXT_PART_TYPES = new Set(["text", "input_text", "output_text", "markdown"]);
+const DEFAULT_PREVIEW_ENTRY_LIMIT = 120;
 const TRANSCRIPT_FILE_LIMIT = 5000;
 
 function escapeHtml(value) {
@@ -267,7 +268,7 @@ function skimTranscriptText(text, options = {}) {
   }
 
   const deduped = dedupeAdjacentEntries(entries);
-  const limit = options.limit ?? 30;
+  const limit = options.limit ?? DEFAULT_PREVIEW_ENTRY_LIMIT;
   return limit > 0 ? deduped.slice(-limit) : deduped;
 }
 
@@ -516,6 +517,7 @@ module.exports = {
   cachedSummaryEntries,
   collectConversationTexts,
   conversationEntriesFromItem,
+  DEFAULT_PREVIEW_ENTRY_LIMIT,
   dedupeAdjacentEntries,
   escapeHtml,
   findRole,
