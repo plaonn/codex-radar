@@ -52,6 +52,13 @@ function sessionFromTarget(target) {
   return session;
 }
 
+function previewSessionIdentity(session) {
+  if (!session || typeof session !== "object") {
+    return "";
+  }
+  return String(session.session_id || session.key || "");
+}
+
 function officialCodexThreadUri(session) {
   const uri = officialCodexThreadUriString(session);
   if (!uri) {
@@ -319,11 +326,19 @@ class RadarWebviewController {
     return findSessionByKey(this.sessions, key);
   }
 
+  sessionForPreviewIdentity(identity) {
+    const target = String(identity || "");
+    if (!target) {
+      return null;
+    }
+    return this.sessions.find((session) => previewSessionIdentity(session) === target) || null;
+  }
+
   openPreview(session, options = {}) {
     if (!session) {
       return;
     }
-    const sessionIdentity = String(session.session_id || session.key || "");
+    const sessionIdentity = previewSessionIdentity(session);
     if (!this.previewPanel) {
       this.previewPanel = vscode.window.createWebviewPanel(
         "codexRadar.preview",
@@ -378,10 +393,10 @@ class RadarWebviewController {
   }
 
   updatePreviewPanel() {
-    if (!this.previewPanel || !this.selectedKey) {
+    if (!this.previewPanel || !this.previewSessionKey) {
       return;
     }
-    const session = this.sessionForKey(this.selectedKey);
+    const session = this.sessionForPreviewIdentity(this.previewSessionKey);
     if (session) {
       this.openPreview(session, { reveal: false });
     }
@@ -444,10 +459,15 @@ class RadarWebviewController {
       return;
     }
     if (message.type === "selectSession") {
-      this.selectedKey = String(message.key || "");
+      const requestedKey = String(message.key || "");
+      const requestedSession = this.sessionForKey(requestedKey);
+      const requestedIdentity = previewSessionIdentity(requestedSession);
+      this.selectedKey = requestedKey;
       this.refresh({ updatePreview: false });
       if (surface !== "dashboard") {
-        this.openPreview(this.sessionForKey(this.selectedKey));
+        this.openPreview(
+          this.sessionForPreviewIdentity(requestedIdentity) || this.sessionForKey(requestedKey) || requestedSession,
+        );
       }
       return;
     }

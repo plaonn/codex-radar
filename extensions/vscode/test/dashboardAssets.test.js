@@ -87,3 +87,22 @@ test("uses a fixed preview header and scrollable transcript body", () => {
   assert.match(preview, /addEventListener\("scroll", saveScroll/);
   assert.match(preview, /vscode\.postMessage\(\{ type:\s*"previewReady" \}\)/);
 });
+
+test("keeps preview ownership independent from dashboard selection fallback", () => {
+  const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+
+  assert.match(extension, /function previewSessionIdentity\(session\)/);
+  assert.match(extension, /sessionForPreviewIdentity\(identity\)/);
+  assert.match(extension, /const session = this\.sessionForPreviewIdentity\(this\.previewSessionKey\);/);
+  assert.doesNotMatch(
+    extension,
+    /updatePreviewPanel\(\)\s*\{[\s\S]*?this\.sessionForKey\(this\.selectedKey\)/,
+  );
+  assert.match(extension, /const requestedKey = String\(message\.key \|\| ""\);/);
+  assert.match(extension, /const requestedSession = this\.sessionForKey\(requestedKey\);/);
+  assert.match(extension, /const requestedIdentity = previewSessionIdentity\(requestedSession\);/);
+  assert.match(
+    extension,
+    /this\.sessionForPreviewIdentity\(requestedIdentity\) \|\| this\.sessionForKey\(requestedKey\) \|\| requestedSession/,
+  );
+});

@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.12
+
+Release candidate package for stable preview session ownership. This version is not a Marketplace publication.
+
+### Fixed
+
+- Keep an open preview bound to the explicitly opened Codex session id during session-cache refreshes.
+- Prevent dashboard/sidebar selection fallback from switching the preview tab to a different thread.
+- Preserve the clicked sidebar session target across refresh so row key churn does not open the wrong preview.
+
 ## 0.3.11
 
 Release candidate package for a persistent preview Webview renderer. This version is not a Marketplace publication.
