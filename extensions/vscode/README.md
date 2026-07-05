@@ -26,7 +26,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Filters the sidebar project section or dashboard project list by display status with a temporary view-local filter.
 - Includes an `attention` filter for only attention-worthy sessions.
 - Provides a manual refresh command in the view title.
-- Opens a sidebar card or dashboard-selected session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>`.
+- Opens a sidebar card or dashboard-selected session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a host-local rollout/transcript file can be resolved for that session.
 - Provides actions to mark done sessions read/unread. Archived sessions cannot be opened through the official Codex handoff.
 
 ## Boundaries

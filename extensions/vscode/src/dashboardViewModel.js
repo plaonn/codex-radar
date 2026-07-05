@@ -58,8 +58,10 @@ function statusOptions(currentStatusFilter = "") {
 
 function sessionActionState(session, options = {}) {
   const isArchived = isArchivedSession(session, options);
+  const hasResolvableRollout = Boolean(transcriptPathInfo(session, options).path);
   return {
     canOpen: !isArchived
+      && hasResolvableRollout
       && Boolean(session.session_id && session.session_id !== "unknown" && !String(session.session_id).startsWith("unknown:")),
     canMarkRead: isDoneSession(session) && session.is_unread_done,
     canMarkUnread: isDoneSession(session) && session.is_done_read,
