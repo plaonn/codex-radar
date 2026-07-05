@@ -6,7 +6,9 @@ const test = require("node:test");
 
 const {
   buildSessionPreviewModel,
+  dedupeAdjacentEntries,
   markdownToSafeHtml,
+  resolveTranscriptPathInfo,
   resolveTranscriptPath,
   skimTranscriptText,
 } = require("../src/transcriptPreview");
@@ -82,6 +84,54 @@ test("extracts conversation messages from nested Codex transcript shapes", () =>
   assert.match(entries[0].html, /<h4>Done<\/h4>/);
   assert.match(entries[0].html, /<code>code<\/code>/);
   assert.match(entries[1].html, /<strong>summary<\/strong>/);
+});
+
+test("dedupes adjacent duplicated user and Codex transcript entries", () => {
+  const text = [
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: "same prompt" }],
+      },
+    }),
+    JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "same prompt",
+      },
+    }),
+    JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "agent_message",
+        message: "same answer",
+      },
+    }),
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "assistant",
+        content: [{ type: "output_text", text: "same answer" }],
+      },
+    }),
+  ].join("\n");
+
+  assert.deepEqual(skimTranscriptText(text, { limit: 0 }).map(({ role, text }) => ({ role, text })), [
+    { role: "user", text: "same prompt" },
+    { role: "assistant", text: "same answer" },
+  ]);
+  assert.deepEqual(dedupeAdjacentEntries([
+    { role: "user", text: "same prompt" },
+    { role: "user", text: "same prompt" },
+    { role: "assistant", text: "same prompt" },
+  ]).map(({ role, text }) => ({ role, text })), [
+    { role: "user", text: "same prompt" },
+    { role: "assistant", text: "same prompt" },
+  ]);
 });
 
 test("renders markdown as safe html", () => {
@@ -161,6 +211,37 @@ test("falls back to Codex transcript store when session cache has no transcript 
   assert.equal(JSON.stringify(model).includes(transcriptPath), false);
 });
 
+test("uses archived transcript with matching file name when cached transcript path moved", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-archived-codex-home-"));
+  const transcriptName = "rollout-2026-07-05T00-00-00-019f30bd-2c6e-7000-8000-archived.jsonl";
+  const missingPath = path.join(tmp, "sessions", "2026", "07", "05", transcriptName);
+  const archivedDir = path.join(tmp, "archived_sessions");
+  const archivedPath = path.join(archivedDir, transcriptName);
+  fs.mkdirSync(archivedDir, { recursive: true });
+  fs.writeFileSync(
+    archivedPath,
+    `${JSON.stringify({ type: "event_msg", payload: { type: "agent_message", message: "archived answer" } })}\n`,
+    "utf8",
+  );
+
+  const session = {
+    session_id: "019f30bd-2c6e-7000-8000-archived",
+    display_status: "done",
+    transcript_path: missingPath,
+  };
+  const model = buildSessionPreviewModel(session, { codexHome: tmp });
+
+  assert.deepEqual(resolveTranscriptPathInfo(session, { codexHome: tmp }), {
+    path: archivedPath,
+    source: "archived",
+  });
+  assert.equal(model.transcriptMessage, "Showing archived transcript from the host-local Codex store.");
+  assert.deepEqual(model.transcriptEntries.map(({ role, text }) => ({ role, text })), [
+    { role: "assistant", text: "archived answer" },
+  ]);
+  assert.equal(JSON.stringify(model).includes(archivedPath), false);
+});
+
 test("uses generic transcript errors so private paths are not displayed", () => {
   const missingPath = path.join(os.tmpdir(), "codex-radar-missing-private-transcript.jsonl");
   const model = buildSessionPreviewModel({
@@ -190,7 +271,7 @@ test("falls back to cached assistant summary when transcript is unavailable", ()
   assert.match(model.transcriptEntries[0].html, /<h4>Cached<\/h4>/);
   assert.equal(
     model.transcriptMessage,
-    "Transcript file was not found on the extension host. Showing the cached latest Codex summary.",
+    "No transcript file found for this session on the extension host. Showing the cached latest Codex summary.",
   );
   assert.equal(JSON.stringify(model).includes(tmp), false);
 });

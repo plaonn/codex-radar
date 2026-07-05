@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.9
+
+Release candidate package for archived transcript preview and duplicate message cleanup. This version is not a Marketplace publication.
+
+### Fixed
+
+- Resolve cached transcript paths that have moved from `~/.codex/sessions` to `~/.codex/archived_sessions` by matching the transcript file name.
+- Remove adjacent duplicate user/Codex preview messages caused by Codex storing the same surfaced message in both `response_item` and `event_msg` entries.
+
 ## 0.2.8
 
 Release candidate package for Codex transcript wrapper parsing. This version is not a Marketplace publication.

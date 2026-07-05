@@ -266,8 +266,22 @@ function skimTranscriptText(text, options = {}) {
     entries.push(...conversationEntriesFromItem(item, options));
   }
 
+  const deduped = dedupeAdjacentEntries(entries);
   const limit = options.limit ?? 30;
-  return limit > 0 ? entries.slice(-limit) : entries;
+  return limit > 0 ? deduped.slice(-limit) : deduped;
+}
+
+function dedupeAdjacentEntries(entries) {
+  const deduped = [];
+  let previousKey = "";
+  for (const entry of entries) {
+    const key = `${entry.role}\n${entry.text}`;
+    if (key !== previousKey) {
+      deduped.push(entry);
+    }
+    previousKey = key;
+  }
+  return deduped;
 }
 
 function codexHome(options = {}) {
@@ -284,7 +298,7 @@ function isSearchableSessionId(sessionId) {
   return Boolean(value && value !== "unknown" && !value.startsWith("unknown:") && !/[\\/]/.test(value));
 }
 
-function candidateTranscriptFiles(root, sessionId, options = {}) {
+function candidateTranscriptFiles(root, matcher, options = {}) {
   const matches = [];
   const stack = [root];
   let visitedFiles = 0;
@@ -312,7 +326,7 @@ function candidateTranscriptFiles(root, sessionId, options = {}) {
       if (visitedFiles > maxFiles) {
         return matches;
       }
-      if (entry.name.endsWith(".jsonl") && entry.name.includes(sessionId)) {
+      if (entry.name.endsWith(".jsonl") && matcher(entry.name)) {
         matches.push(fullPath);
       }
     }
@@ -338,21 +352,58 @@ function newestExistingFile(paths) {
   return selected;
 }
 
-function resolveTranscriptPath(session, options = {}) {
-  const explicitPath = String(session?.transcript_path || "");
-  if (explicitPath) {
-    return explicitPath;
+function transcriptPathSource(filePath, options = {}) {
+  const home = codexHome(options);
+  const archivedRoot = path.join(home, "archived_sessions");
+  if (filePath === archivedRoot || filePath.startsWith(`${archivedRoot}${path.sep}`)) {
+    return "archived";
   }
+  return "codex-store";
+}
 
-  const sessionId = String(session?.session_id || "");
+function findTranscriptByBasename(fileName, options = {}) {
+  if (!fileName || fileName.includes(path.sep)) {
+    return "";
+  }
+  const candidates = transcriptSearchRoots(options).flatMap((root) => (
+    candidateTranscriptFiles(root, (candidate) => candidate === fileName, options)
+  ));
+  return newestExistingFile(candidates);
+}
+
+function findTranscriptBySessionId(sessionId, options = {}) {
   if (!isSearchableSessionId(sessionId)) {
     return "";
   }
-
   const candidates = transcriptSearchRoots(options).flatMap((root) => (
-    candidateTranscriptFiles(root, sessionId, options)
+    candidateTranscriptFiles(root, (candidate) => candidate.includes(sessionId), options)
   ));
   return newestExistingFile(candidates);
+}
+
+function resolveTranscriptPathInfo(session, options = {}) {
+  const explicitPath = String(session?.transcript_path || "");
+  if (explicitPath) {
+    if (fs.existsSync(explicitPath)) {
+      return { path: explicitPath, source: "explicit" };
+    }
+    const sameNamePath = findTranscriptByBasename(path.basename(explicitPath), options);
+    if (sameNamePath) {
+      return { path: sameNamePath, source: transcriptPathSource(sameNamePath, options) };
+    }
+  }
+
+  const sessionId = String(session?.session_id || "");
+  const sessionIdPath = findTranscriptBySessionId(sessionId, options);
+  if (sessionIdPath) {
+    return { path: sessionIdPath, source: transcriptPathSource(sessionIdPath, options) };
+  }
+
+  return { path: "", source: explicitPath ? "missing-explicit" : "missing" };
+}
+
+function resolveTranscriptPath(session, options = {}) {
+  return resolveTranscriptPathInfo(session, options).path;
 }
 
 function cachedSummaryEntries(session, options = {}) {
@@ -380,13 +431,17 @@ function transcriptFallback(session, message, options = {}) {
 }
 
 function readTranscriptEntries(session, options = {}) {
-  const transcriptPath = resolveTranscriptPath(session, options);
+  const transcript = resolveTranscriptPathInfo(session, options);
+  const transcriptPath = transcript.path;
   if (!transcriptPath) {
+    const missingMessage = transcript.source === "missing-explicit"
+      ? "Transcript file is not available on this host."
+      : "No transcript file found for this session on the extension host.";
     return transcriptFallback(
       session,
       session?.last_assistant_message
-        ? "Transcript file was not found on the extension host. Showing the cached latest Codex summary."
-        : "No transcript file found for this session on the extension host.",
+        ? `${missingMessage} Showing the cached latest Codex summary.`
+        : missingMessage,
       options,
     );
   }
@@ -394,10 +449,13 @@ function readTranscriptEntries(session, options = {}) {
   try {
     const text = fs.readFileSync(transcriptPath, "utf8");
     const entries = skimTranscriptText(text, options);
+    const archiveMessage = transcript.source === "archived"
+      ? "Showing archived transcript from the host-local Codex store."
+      : "";
     return {
       entries: entries.length ? entries : cachedSummaryEntries(session, options),
       message: entries.length
-        ? ""
+        ? archiveMessage
         : session?.last_assistant_message
           ? "No user/Codex messages were found in the transcript preview. Showing the cached latest Codex summary."
           : "No user/Codex messages found in the transcript preview.",
@@ -458,10 +516,12 @@ module.exports = {
   cachedSummaryEntries,
   collectConversationTexts,
   conversationEntriesFromItem,
+  dedupeAdjacentEntries,
   escapeHtml,
   findRole,
   markdownToSafeHtml,
   readTranscriptEntries,
   resolveTranscriptPath,
+  resolveTranscriptPathInfo,
   skimTranscriptText,
 };
