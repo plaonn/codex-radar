@@ -51,12 +51,20 @@ class ProjectItem extends vscode.TreeItem {
   }
 }
 
+class AttentionItem extends vscode.TreeItem {
+  constructor(sessions) {
+    super(`Attention (${sessions.length})`, vscode.TreeItemCollapsibleState.Expanded);
+    this.contextValue = "codexRadar.attention";
+    this.iconPath = new vscode.ThemeIcon("bell-dot");
+  }
+}
+
 class SessionItem extends vscode.TreeItem {
-  constructor(session) {
+  constructor(session, options = {}) {
     super(sessionLabel(session), vscode.TreeItemCollapsibleState.None);
     this.contextValue = sessionContextValue(session);
     this.session = session;
-    this.description = sessionDescription(session);
+    this.description = sessionDescription(session, options);
     this.tooltip = sessionTooltip(session);
     this.iconPath = sessionIcon(session);
     this.command = {
@@ -86,6 +94,7 @@ class SessionsProvider {
     this.lastError = "";
     this.statusFilter = "";
     this.sessions = [];
+    this.attentionSessions = [];
     this.groups = [];
     this.refresh();
   }
@@ -96,11 +105,13 @@ class SessionsProvider {
       const readKeys = this.readKeys();
       const sessions = decorateSessions(loadSessionCache(stateDir), readKeys);
       this.sessions = sessions;
+      this.attentionSessions = sessions.filter((session) => session.is_attention);
       const visibleSessions = filterSessionsByStatus(sessions, this.statusFilter);
       this.groups = groupSessionsByProject(visibleSessions);
       this.lastError = "";
     } catch (error) {
       this.sessions = [];
+      this.attentionSessions = [];
       this.groups = [];
       this.lastError = error instanceof Error ? error.message : String(error);
     }
@@ -112,6 +123,12 @@ class SessionsProvider {
   }
 
   getChildren(element) {
+    if (element instanceof AttentionItem) {
+      return Promise.resolve(
+        this.attentionSessions.map((session) => new SessionItem(session, { showProject: true })),
+      );
+    }
+
     if (element instanceof ProjectItem) {
       const group = this.groups.find((item) => item.project === element.project);
       return Promise.resolve((group?.sessions || []).map((session) => new SessionItem(session)));
@@ -124,7 +141,7 @@ class SessionsProvider {
       return Promise.resolve([item]);
     }
 
-    if (this.groups.length === 0) {
+    if (this.groups.length === 0 && (!this.attentionSessions.length || this.statusFilter)) {
       const label = this.statusFilter
         ? `No sessions match ${this.statusFilter}`
         : "No sessions indexed";
@@ -134,11 +151,16 @@ class SessionsProvider {
       return Promise.resolve([item]);
     }
 
-    return Promise.resolve(
-      this.groups.map((group) => {
+    const roots = [];
+    if (!this.statusFilter && this.attentionSessions.length > 0) {
+      roots.push(new AttentionItem(this.attentionSessions));
+    }
+    roots.push(
+      ...this.groups.map((group) => {
         return new ProjectItem(group.project, group.sessions);
       }),
     );
+    return Promise.resolve(roots);
   }
 
   setStatusFilter(statusFilter) {
@@ -228,7 +250,7 @@ function statusFilterItems(currentStatusFilter = "") {
   return STATUS_FILTER_VALUES.map((status) => {
     const value = normalizeStatusFilter(status);
     return {
-      label: status === "all" ? "All statuses" : status,
+      label: status === "all" ? "All statuses" : status === "attention" ? "Attention" : status,
       description: status === current ? "current" : "",
       value,
     };

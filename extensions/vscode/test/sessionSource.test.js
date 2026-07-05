@@ -94,9 +94,9 @@ test("resolves state directory like codex-radar core", () => {
 
 test("filters sessions by display status", () => {
   const sessions = [
-    { session_id: "approval", display_status: "waiting_approval" },
-    { session_id: "stale", display_status: "stale" },
-    { session_id: "done", display_status: "done" },
+    { session_id: "approval", display_status: "waiting_approval", is_attention: true },
+    { session_id: "stale", display_status: "stale", is_attention: true },
+    { session_id: "done", display_status: "done", is_attention: false },
   ];
 
   assert.equal(normalizeStatusFilter("all"), "");
@@ -105,5 +105,9 @@ test("filters sessions by display status", () => {
   assert.deepEqual(
     filterSessionsByStatus(sessions, "waiting_approval").map((session) => session.session_id),
     ["approval"],
+  );
+  assert.deepEqual(
+    filterSessionsByStatus(sessions, "attention").map((session) => session.session_id),
+    ["approval", "stale"],
   );
 });

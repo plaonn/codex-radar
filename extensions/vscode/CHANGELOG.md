@@ -2,6 +2,17 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.9
+
+Release candidate package for native TreeView navigation cleanup. This version is not a Marketplace publication.
+
+### Added
+
+- Add an `Attention` root group for `waiting_approval`, `stale`, and unread `done` sessions.
+- Keep project groups below the attention inbox so project navigation remains available.
+- Add an `attention` view filter for attention-worthy sessions.
+- Show project names in session row descriptions inside the `Attention` group.
+
 ## 0.1.8
 
 Release candidate package for retention settings fixes after VSIX smoke feedback. This version is not a Marketplace publication.

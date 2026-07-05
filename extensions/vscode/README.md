@@ -9,12 +9,14 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Provides a dedicated Codex Radar Activity Bar container.
 - Reads `sessions.json` through a small `SessionSource` adapter.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted.
-- Groups sessions by `project`.
+- Shows an `Attention` group first for `waiting_approval`, `stale`, and unread `done` sessions.
+- Keeps project groups below the attention inbox for project navigation.
 - Shows `waiting_approval`, `running`, `tool_running`, `done`, and `stale` as navigation state, with project attention counts and inbox-like session rows.
 - Prefixes rows with a short session id when no readable thread title is available in `sessions.json`.
 - Shows the total unfiltered attention count in the VS Code view badge. Attention means `waiting_approval`, `stale`, or unread `done`.
 - Distinguishes unread/read done rows with row text and mail-style icons.
 - Filters the view by display status with a temporary view-title action.
+- Includes an `attention` filter for only attention-worthy sessions.
 - Provides a manual refresh command in the view title.
 - Opens the same session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a session row is clicked.
 - Provides a done-session row action to mark the session read or unread.
@@ -54,7 +56,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.1.8.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.1.9.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

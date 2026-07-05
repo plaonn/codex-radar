@@ -43,6 +43,13 @@ test("formats session rows without transcript content", () => {
     sessionDescription(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }),
     "Waiting approval | Bash | gpt-5 | 7m ago",
   );
+  assert.equal(
+    sessionDescription(
+      { ...session, project: "codex-radar" },
+      { nowMs: Date.parse("2026-07-04T00:07:00+00:00"), showProject: true },
+    ),
+    "codex-radar | Waiting approval | Bash | gpt-5 | 7m ago",
+  );
   assert.equal(sessionTooltip(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }), [
     "Project: -",
     "Status: Waiting approval",

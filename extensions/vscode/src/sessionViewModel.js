@@ -124,6 +124,9 @@ function relativeTimeText(timestamp, options = {}) {
 
 function sessionDescription(session, options = {}) {
   const parts = [];
+  if (options.showProject && session.project) {
+    parts.push(String(session.project));
+  }
   const status = statusText(session.display_status);
   if (session.is_unread_done) {
     parts.push("Unread done");

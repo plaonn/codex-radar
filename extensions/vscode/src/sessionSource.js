@@ -7,6 +7,7 @@ const STALE_SESSION_SECONDS = 30 * 60;
 const STALE_ELIGIBLE_STATUSES = new Set(["active", "running", "tool_running"]);
 const STATUS_FILTER_VALUES = Object.freeze([
   "all",
+  "attention",
   "active",
   "running",
   "tool_running",
@@ -117,6 +118,9 @@ function filterSessionsByStatus(sessions, statusFilter) {
   const status = normalizeStatusFilter(statusFilter);
   if (!status) {
     return sessions;
+  }
+  if (status === "attention") {
+    return sessions.filter((session) => session.is_attention);
   }
   return sessions.filter((session) => String(session.display_status || "") === status);
 }
