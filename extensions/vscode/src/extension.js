@@ -210,6 +210,37 @@ function attentionBadge(model) {
   };
 }
 
+function viewBadge(model, surface) {
+  const counts = model?.counts || {};
+  if (surface === "attention") {
+    return attentionBadge(model);
+  }
+  if (surface === "projects") {
+    const filtered = counts.filtered || 0;
+    if (!filtered) {
+      return undefined;
+    }
+    const visible = counts.visible || 0;
+    return {
+      value: filtered,
+      tooltip: filtered === visible
+        ? `${filtered} visible session${filtered === 1 ? "" : "s"}`
+        : `${filtered} of ${visible} visible sessions match the current filter`,
+    };
+  }
+  if (surface === "archived") {
+    const archived = counts.archived || 0;
+    if (!archived) {
+      return undefined;
+    }
+    return {
+      value: archived,
+      tooltip: `${archived} archived session${archived === 1 ? "" : "s"}`,
+    };
+  }
+  return undefined;
+}
+
 class RadarWebviewController {
   constructor(context) {
     this.context = context;
@@ -295,8 +326,8 @@ class RadarWebviewController {
     if (!target) {
       return;
     }
-    if (surface === "attention") {
-      target.badge = attentionBadge(this.model);
+    if ("badge" in target) {
+      target.badge = viewBadge(this.model, surface);
     }
     target.webview.postMessage({
       type: "state",
@@ -382,6 +413,15 @@ class RadarWebviewController {
     this.refresh();
   }
 
+  async copySessionId(sessionId) {
+    const value = String(sessionId || "").trim();
+    if (!value) {
+      return;
+    }
+    await vscode.env.clipboard.writeText(value);
+    vscode.window.setStatusBarMessage("Copied Codex session id", 1800);
+  }
+
   async handleMessage(surface, message) {
     if (!message || typeof message !== "object") {
       return;
@@ -408,6 +448,10 @@ class RadarWebviewController {
     }
     if (message.type === "sessionAction") {
       await this.handleSessionAction(String(message.key || ""), String(message.action || ""));
+      return;
+    }
+    if (message.type === "copySessionId") {
+      await this.copySessionId(message.sessionId);
     }
   }
 }

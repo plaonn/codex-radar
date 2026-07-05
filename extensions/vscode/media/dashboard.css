@@ -80,22 +80,6 @@ select {
   background: var(--vscode-editor-background);
 }
 
-.topbar.compact {
-  align-items: stretch;
-  flex-direction: column;
-  padding: 8px;
-}
-
-.topbar.compact .toolbar {
-  align-items: stretch;
-}
-
-.topbar.compact select,
-.topbar.compact button {
-  min-width: 0;
-  width: 100%;
-}
-
 .brand {
   display: flex;
   align-items: baseline;
@@ -181,13 +165,50 @@ select {
 }
 
 .project-header {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
+  min-height: 28px;
   padding: 7px 4px 5px;
   color: var(--vscode-descriptionForeground);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.project-header.collapsible {
+  cursor: pointer;
+}
+
+.project-header.collapsible:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-list-hoverBackground);
+}
+
+.chevron {
+  flex: 0 0 12px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+.project-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.project-count {
+  flex: 0 0 auto;
+  color: var(--vscode-descriptionForeground);
+  font-weight: 600;
 }
 
 .session {
@@ -382,6 +403,34 @@ select {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 20;
+  min-width: 150px;
+  padding: 3px;
+  color: var(--vscode-menu-foreground);
+  background: var(--vscode-menu-background);
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  box-shadow: 0 4px 12px var(--vscode-widget-shadow, rgb(0 0 0 / 24%));
+}
+
+.context-menu button {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 24px;
+  padding: 3px 8px;
+  color: var(--vscode-menu-foreground);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+
+.context-menu button:hover {
+  color: var(--vscode-menu-selectionForeground);
+  background: var(--vscode-menu-selectionBackground);
 }
 
 .row-actions {

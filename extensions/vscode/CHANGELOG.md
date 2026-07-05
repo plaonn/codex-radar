@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.2
+
+Release candidate package for sidebar list cleanup, session context menu, and project folding. This version is not a Marketplace publication.
+
+### Changed
+
+- Remove duplicate section-name headers from sidebar Webview bodies; section names and count badges live in the native VS Code section headers.
+- Add a session item context menu that copies the session id instead of showing default edit actions.
+- Make sidebar project headers more prominent and foldable, with quiet projects collapsed by default when no status filter is active.
+
 ## 0.3.1
 
 Release candidate package for sidebar Projects filter cleanup. This version is not a Marketplace publication.

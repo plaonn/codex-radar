@@ -1,10 +1,13 @@
 const vscode = acquireVsCodeApi();
+const persistedUiState = vscode.getState() || {};
 
 let state = {
   error: "",
   model: null,
   surface: "dashboard",
 };
+let collapsedProjects = persistedUiState.collapsedProjects || {};
+let contextMenuNode = null;
 
 function send(message) {
   vscode.postMessage(message);
@@ -47,6 +50,10 @@ function button(label, className, onClick, disabled = false) {
   return node;
 }
 
+function persistUiState() {
+  vscode.setState({ collapsedProjects });
+}
+
 function selectedKey() {
   return state.model?.selected?.key || "";
 }
@@ -56,6 +63,33 @@ function actionButton(label, action, session, className = "ghost") {
     event.stopPropagation();
     send({ type: "sessionAction", action, key: session.key });
   });
+}
+
+function closeContextMenu() {
+  if (contextMenuNode) {
+    contextMenuNode.remove();
+    contextMenuNode = null;
+  }
+}
+
+function showSessionContextMenu(event, session) {
+  event.preventDefault();
+  event.stopPropagation();
+  closeContextMenu();
+
+  const menu = el("div", { className: "context-menu" }, [
+    button("Copy Session ID", "", () => {
+      send({ type: "copySessionId", sessionId: session.sessionId });
+      closeContextMenu();
+    }),
+  ]);
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(event.clientX, window.innerWidth - rect.width - 4);
+  const top = Math.min(event.clientY, window.innerHeight - rect.height - 4);
+  menu.style.left = `${Math.max(4, left)}px`;
+  menu.style.top = `${Math.max(4, top)}px`;
+  contextMenuNode = menu;
 }
 
 function sessionActions(session, options = {}) {
@@ -78,6 +112,9 @@ function sessionNode(session, options = {}) {
   const archivedClass = session.isArchived ? " archived" : "";
   const node = el("div", {
     className: `session status-${session.status}${readClass}${archivedClass}${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
+    dataset: {
+      vscodeContext: JSON.stringify({ preventDefaultContextMenuItems: true }),
+    },
   });
   node.tabIndex = 0;
   node.setAttribute("role", "button");
@@ -89,6 +126,9 @@ function sessionNode(session, options = {}) {
       event.preventDefault();
       send({ type: "selectSession", key: session.key });
     }
+  });
+  node.addEventListener("contextmenu", (event) => {
+    showSessionContextMenu(event, session);
   });
   node.appendChild(statusIndicator(session));
   const text = el("span");
@@ -127,6 +167,58 @@ function sessionList(sessions, emptyText, options = {}) {
   return list;
 }
 
+function projectStorageKey(group) {
+  return String(group.project || "-");
+}
+
+function isProjectCollapsed(group, options = {}) {
+  const key = projectStorageKey(group);
+  if (Object.prototype.hasOwnProperty.call(collapsedProjects, key)) {
+    return Boolean(collapsedProjects[key]);
+  }
+  if (state.model?.statusFilter) {
+    return false;
+  }
+  if (group.sessions.some((session) => session.key && session.key === selectedKey())) {
+    return false;
+  }
+  return Boolean(options.defaultCollapseQuiet && group.attention === 0);
+}
+
+function projectGroupNode(group, options = {}) {
+  const collapsed = options.collapsible ? isProjectCollapsed(group, options) : false;
+  const project = el("section", { className: `project${collapsed ? " collapsed" : ""}` });
+  const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
+  const headerChildren = [];
+  if (options.collapsible) {
+    headerChildren.push(el("span", { className: "chevron", text: collapsed ? ">" : "v" }));
+  }
+  headerChildren.push(el("span", { className: "project-name", text: group.project }));
+  headerChildren.push(el("span", { className: "project-count", text: label }));
+
+  const header = el(options.collapsible ? "button" : "div", {
+    className: options.collapsible ? "project-header collapsible" : "project-header",
+  }, headerChildren);
+  if (options.collapsible) {
+    header.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    header.addEventListener("click", () => {
+      collapsedProjects = {
+        ...collapsedProjects,
+        [projectStorageKey(group)]: !collapsed,
+      };
+      persistUiState();
+      render();
+    });
+  }
+  project.appendChild(header);
+  if (!collapsed) {
+    for (const session of group.sessions) {
+      project.appendChild(sessionNode(session, { showActions: options.showActions }));
+    }
+  }
+  return project;
+}
+
 function attentionPane(model) {
   const pane = el("section", { className: "pane" });
   pane.appendChild(el("div", { className: "pane-header" }, [
@@ -155,15 +247,7 @@ function projectsPane(model) {
     body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
   }
   for (const group of model.groups) {
-    const project = el("section", { className: "project" });
-    project.appendChild(el("div", { className: "project-header" }, [
-      el("span", { text: group.project }),
-      el("span", { text: group.attention ? `${group.attention} attention / ${group.total}` : String(group.total) }),
-    ]));
-    for (const session of group.sessions) {
-      project.appendChild(sessionNode(session));
-    }
-    body.appendChild(project);
+    body.appendChild(projectGroupNode(group));
   }
   pane.appendChild(body);
   return pane;
@@ -257,39 +341,24 @@ function topbar(model) {
   ]);
 }
 
-function sidebarTopbar(model, title, countText) {
-  return el("header", { className: "topbar compact" }, [
-    el("div", { className: "brand" }, [
-      el("strong", { text: title }),
-      el("span", { text: countText }),
-    ]),
-  ]);
-}
-
 function sidebarAttention(model) {
   const root = el("div", { className: "app sidebar" });
-  root.appendChild(sidebarTopbar(model, "Attention", String(model.counts.attention)));
   root.appendChild(sessionList(model.attention, "No attention sessions", { showActions: true }));
   return root;
 }
 
 function sidebarProjects(model) {
   const root = el("div", { className: "app sidebar" });
-  root.appendChild(sidebarTopbar(model, "Projects", `${model.counts.filtered}/${model.counts.visible}`));
   const body = el("div", { className: "list" });
   if (!model.groups.length) {
     body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
   }
   for (const group of model.groups) {
-    const project = el("section", { className: "project" });
-    project.appendChild(el("div", { className: "project-header" }, [
-      el("span", { text: group.project }),
-      el("span", { text: group.attention ? `${group.attention} attention / ${group.total}` : String(group.total) }),
-    ]));
-    for (const session of group.sessions) {
-      project.appendChild(sessionNode(session, { showActions: true }));
-    }
-    body.appendChild(project);
+    body.appendChild(projectGroupNode(group, {
+      collapsible: true,
+      defaultCollapseQuiet: true,
+      showActions: true,
+    }));
   }
   root.appendChild(body);
   return root;
@@ -297,7 +366,6 @@ function sidebarProjects(model) {
 
 function sidebarArchived(model) {
   const root = el("div", { className: "app sidebar" });
-  root.appendChild(sidebarTopbar(model, "Archived", String(model.counts.archived)));
   root.appendChild(sessionList(model.archived, "No archived sessions", { showActions: true }));
   return root;
 }
@@ -345,6 +413,14 @@ window.addEventListener("message", (event) => {
     render();
   }
 });
+
+document.addEventListener("click", closeContextMenu);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeContextMenu();
+  }
+});
+window.addEventListener("blur", closeContextMenu);
 
 send({ type: "ready" });
 render();

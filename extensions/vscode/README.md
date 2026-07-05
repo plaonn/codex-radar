@@ -62,7 +62,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.1.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.2.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -79,16 +79,18 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 2. In the Remote SSH VS Code window, install the generated VSIX and reload the window.
 3. Open the Codex Radar Activity Bar container.
 4. Confirm the sidebar shows native `Attention`, `Projects`, and collapsed `Archived` sections whose bodies are rendered as Webview content.
-5. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
-6. Use the `Projects` section title filter button and confirm it changes only the `Projects` section, not the attention badge.
-7. Select a sidebar session item and confirm `Codex Radar Preview` opens in the editor area with metadata and only user/Codex transcript messages in chat bubbles. Confirm Markdown renders and private transcript paths/internal tool events are not shown.
-8. Use `Codex Radar: Open Dashboard` from the Command Palette.
-9. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
-10. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator with muted row treatment, and `unknown` uses a colored `!` indicator.
-11. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
-12. Confirm archived Codex sessions appear in `Archived`, are excluded from `Attention` and `Projects`, and have `Open in Codex` disabled.
-13. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
-14. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
+5. Confirm sidebar bodies start directly with their lists, without duplicate `Attention`, `Projects`, or `Archived` headers inside the Webview body.
+6. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
+7. Use the `Projects` section title filter button and confirm it changes only the `Projects` section, not the attention badge.
+8. In the `Projects` section, confirm project headers are visually prominent and can fold/unfold their sessions. Quiet projects should start collapsed when no status filter is active.
+9. Right-click a session item and confirm the context menu shows `Copy Session ID` instead of edit actions.
+10. Use `Codex Radar: Open Dashboard` from the Command Palette.
+11. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
+12. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator with muted row treatment, and `unknown` uses a colored `!` indicator.
+13. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
+14. Confirm archived Codex sessions appear in `Archived`, are excluded from `Attention` and `Projects`, and have `Open in Codex` disabled.
+15. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
+16. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 
