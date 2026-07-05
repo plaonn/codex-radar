@@ -2,6 +2,20 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.1
+
+Release candidate package for the hybrid sidebar and editor dashboard surface. This version is not a Marketplace publication.
+
+### Changed
+
+- Restore native sidebar `Attention`, `Projects`, and collapsed `Hidden` sections for narrow ambient monitoring.
+- Move the Webview dashboard to an editor tab opened by `Codex Radar: Open Dashboard`.
+- Keep read/unread, hide/restore, status filter, cache refresh, and experimental Codex handoff state synchronized across sidebar and dashboard surfaces.
+
+### Boundary
+
+- Continue to keep retention/prune controls, transcript preview, direct `codex resume`, hook installation, and external transmission outside the VS Code surface.
+
 ## 0.2.0
 
 Release candidate package for the Webview dashboard surface. This version is not a Marketplace publication.

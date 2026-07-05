@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.2.0");
+  assert.equal(manifest.version, "0.2.1");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -30,21 +30,7 @@ test("declares release metadata and workspace extension host scope", () => {
   assert.equal(manifest.keywords.includes("ssh"), true);
 });
 
-test("contributes refresh command as a dashboard view title action", () => {
-  const manifest = readManifest();
-  const refreshCommand = manifest.contributes.commands.find(
-    (command) => command.command === "codexRadar.refresh",
-  );
-  const viewTitleMenu = manifest.contributes.menus["view/title"].find(
-    (item) => item.command === "codexRadar.refresh",
-  );
-
-  assert.equal(refreshCommand.icon, "$(refresh)");
-  assert.equal(viewTitleMenu.when, "view == codexRadar.dashboard");
-  assert.equal(viewTitleMenu.group, "navigation@1");
-});
-
-test("contributes one dedicated Webview dashboard in the activity bar container", () => {
+test("contributes dedicated sidebar sections and no Webview view in the activity bar", () => {
   const manifest = readManifest();
   const container = manifest.contributes.viewsContainers.activitybar.find(
     (item) => item.id === "codexRadar",
@@ -55,27 +41,125 @@ test("contributes one dedicated Webview dashboard in the activity bar container"
   assert.equal(container.icon, "media/codex-radar.svg");
   assert.deepEqual(views, [
     {
-      id: "codexRadar.dashboard",
-      name: "Dashboard",
-      type: "webview",
+      id: "codexRadar.attentionList",
+      name: "Attention",
+    },
+    {
+      id: "codexRadar.projectList",
+      name: "Projects",
+    },
+    {
+      id: "codexRadar.hiddenList",
+      name: "Hidden",
+      visibility: "collapsed",
     },
   ]);
+  assert.equal(views.some((view) => view.type === "webview"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(manifest.contributes.views, "explorer"), false);
 });
 
-test("does not expose TreeView row actions, status filter commands, or retention controls", () => {
+test("contributes refresh, filter, and editor dashboard commands", () => {
   const manifest = readManifest();
-  const commandIds = manifest.contributes.commands.map((command) => command.command);
+  const refreshCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.refresh",
+  );
+  const filterCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.filterStatus",
+  );
+  const dashboardCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.openDashboard",
+  );
+  const titleCommands = manifest.contributes.menus["view/title"];
+
+  assert.equal(refreshCommand.icon, "$(refresh)");
+  assert.equal(filterCommand.icon, "$(filter)");
+  assert.equal(dashboardCommand.icon, "$(layout)");
+  assert.equal(dashboardCommand.title, "Codex Radar: Open Dashboard");
+  assert.equal(
+    titleCommands.find((item) => item.command === "codexRadar.openDashboard").when,
+    "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
+  );
+  assert.equal(
+    titleCommands.find((item) => item.command === "codexRadar.filterStatus").when,
+    "view == codexRadar.projectList",
+  );
+  assert.equal(
+    titleCommands.find((item) => item.command === "codexRadar.refresh").when,
+    "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
+  );
+});
+
+test("activates on sidebar views and dashboard command", () => {
+  const manifest = readManifest();
+
+  assert.equal(manifest.activationEvents.includes("onView:codexRadar.attentionList"), true);
+  assert.equal(manifest.activationEvents.includes("onView:codexRadar.projectList"), true);
+  assert.equal(manifest.activationEvents.includes("onView:codexRadar.hiddenList"), true);
+  assert.equal(manifest.activationEvents.includes("onView:codexRadar.dashboard"), false);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openDashboard"), true);
+});
+
+test("contributes hide and restore row actions", () => {
+  const manifest = readManifest();
+  const hideCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.hideSession",
+  );
+  const restoreCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.restoreSession",
+  );
+  const hideMenus = manifest.contributes.menus["view/item/context"].filter(
+    (item) => item.command === "codexRadar.hideSession",
+  );
+  const restoreMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.restoreSession",
+  );
+
+  assert.equal(hideCommand.title, "Codex Radar: Hide from Radar");
+  assert.equal(hideCommand.icon, "$(eye-closed)");
+  assert.equal(restoreCommand.title, "Codex Radar: Restore to Radar");
+  assert.equal(restoreCommand.icon, "$(eye)");
+  assert.equal(hideMenus.length, 6);
+  assert.equal(
+    restoreMenu.when,
+    "view == codexRadar.hiddenList && viewItem == codexRadar.session.hidden",
+  );
+});
+
+test("hides row-target actions from the command palette while keeping dashboard visible", () => {
+  const manifest = readManifest();
+  const commandPaletteRules = manifest.contributes.menus.commandPalette || [];
+  const hiddenPaletteCommands = commandPaletteRules
+    .filter((item) => item.when === "false")
+    .map((item) => item.command)
+    .sort();
+
+  assert.deepEqual(hiddenPaletteCommands, [
+    "codexRadar.hideSession",
+    "codexRadar.markRead",
+    "codexRadar.markUnread",
+    "codexRadar.openInCodex",
+    "codexRadar.restoreSession",
+  ]);
+  assert.equal(hiddenPaletteCommands.includes("codexRadar.openDashboard"), false);
+});
+
+test("does not expose retention config, prune commands, or CLI settings", () => {
+  const manifest = readManifest();
+  const configureCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.configureRetention",
+  );
+  const pruneCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.pruneNow",
+  );
+  const viewTitleCommands = manifest.contributes.menus["view/title"].map((item) => item.command);
   const properties = manifest.contributes.configuration.properties;
 
-  assert.deepEqual(commandIds, ["codexRadar.refresh"]);
-  assert.equal(manifest.activationEvents.includes("onView:codexRadar.dashboard"), true);
-  assert.equal(manifest.activationEvents.includes("onView:codexRadar.projectList"), false);
-  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.filterStatus"), false);
+  assert.equal(configureCommand, undefined);
+  assert.equal(pruneCommand, undefined);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.configureRetention"), false);
-  assert.equal(Object.prototype.hasOwnProperty.call(manifest.contributes.menus, "view/item/context"), false);
-  assert.equal(Object.prototype.hasOwnProperty.call(manifest.contributes.menus, "commandPalette"), false);
-  assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.statusFilter"), false);
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), false);
+  assert.equal(viewTitleCommands.includes("codexRadar.configureRetention"), false);
+  assert.equal(viewTitleCommands.includes("codexRadar.pruneNow"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.cliPath"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.pythonPath"), false);
 });
@@ -85,7 +169,57 @@ test("does not contribute transcript preview to the VS Code surface", () => {
   const previewCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.previewTranscript",
   );
+  const itemMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.previewTranscript",
+  );
 
   assert.equal(previewCommand, undefined);
+  assert.equal(itemMenu, undefined);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.previewTranscript"), false);
+});
+
+test("contributes experimental open in Codex as a row command", () => {
+  const manifest = readManifest();
+  const openCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.openInCodex",
+  );
+  const itemMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.openInCodex",
+  );
+
+  assert.equal(openCommand.icon, "$(link-external)");
+  assert.equal(openCommand.title, "Codex Radar: Open in Codex (Experimental)");
+  assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.openInCodex"), true);
+  assert.equal(itemMenu, undefined);
+});
+
+test("contributes done read and unread row actions", () => {
+  const manifest = readManifest();
+  const markReadCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.markRead",
+  );
+  const markUnreadCommand = manifest.contributes.commands.find(
+    (command) => command.command === "codexRadar.markUnread",
+  );
+  const markReadMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.markRead",
+  );
+  const markUnreadMenu = manifest.contributes.menus["view/item/context"].find(
+    (item) => item.command === "codexRadar.markUnread",
+  );
+
+  assert.equal(markReadCommand.icon, "$(mail-read)");
+  assert.equal(markUnreadCommand.icon, "$(mail)");
+  assert.equal(markReadCommand.title, "Codex Radar: Mark as Read");
+  assert.equal(markUnreadCommand.title, "Codex Radar: Mark as Unread");
+  assert.equal(
+    markReadMenu.when,
+    "view == codexRadar.attentionList && viewItem == codexRadar.session.done.unread",
+  );
+  assert.equal(
+    markUnreadMenu.when,
+    "view == codexRadar.attentionList && viewItem == codexRadar.session.done.read",
+  );
+  assert.equal(markReadMenu.group, "inline@1");
+  assert.equal(markUnreadMenu.group, "inline@1");
 });

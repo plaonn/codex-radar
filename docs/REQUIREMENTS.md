@@ -72,12 +72,12 @@
 
 ### R7: staged GUI integration
 
-- Status: confirmed direction, Webview dashboard active
+- Status: confirmed direction, hybrid sidebar/dashboard active
 - Requirement: 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 thread 상태/알림을 통합해야 한다.
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Derived specs/tests: planned GUI read contract v1, project-grouped navigation, in-surface attention cues, extension-local read/unread state, read-only cache-change refresh, GUI status filter, Webview dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
+- Derived specs/tests: planned GUI read contract v1, project-grouped native sidebar navigation, in-surface attention cues, editor Webview dashboard, extension-local read/unread state, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
 - Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
 
 #### R7a: GUI project navigation
@@ -86,7 +86,7 @@
 - Requirement: GUI는 프로젝트 단위로 묶인 conversation list를 primary navigation으로 제공해야 한다.
 - Rationale: VS Code용 Codex extension의 기본 대화 목록은 프로젝트별 switching에 충분하지 않으므로, GUI 통합의 첫 가치는 project grouping이다.
 - Failure prevented: terminal fallback을 열지 않으면 프로젝트별 Codex thread를 찾기 어려운 문제.
-- Derived specs/tests: GUI project grouping rules, direct `sessions.json` read contract v1, `extensions/vscode` SessionSource grouping tests, Webview dashboard project grouping tests.
+- Derived specs/tests: GUI project grouping rules, direct `sessions.json` read contract v1, `extensions/vscode` SessionSource grouping tests, native sidebar project grouping tests, Webview dashboard project grouping tests.
 
 #### R7b: GUI attention state
 
@@ -94,7 +94,7 @@
 - Requirement: GUI는 `waiting_approval`, `running`, `done`, `stale` 같은 thread 상태를 navigation 안에서 구분하고, attention badge는 `waiting_approval`, `stale`, unread `done`처럼 사용자 확인이 필요한 상태를 표현해야 한다.
 - Rationale: 사용자는 VS Code workflow 안에서 어떤 thread가 주의가 필요한지 확인해야 하지만, OS/external notification은 content template과 redaction policy 없이는 scope가 커진다.
 - Failure prevented: thread 상태를 놓치거나, 초기 GUI milestone이 OS/external notification 설계로 과도하게 확장되는 문제.
-- Derived specs/tests: GUI notification rules, in-surface cue only, extension-local read/unread toggle, Webview attention counts, no OS/external notification before explicit opt-in milestone.
+- Derived specs/tests: GUI notification rules, in-surface cue only, extension-local read/unread toggle, native sidebar attention badge, Webview attention counts, no OS/external notification before explicit opt-in milestone.
 
 #### R7c: GUI privacy boundary
 

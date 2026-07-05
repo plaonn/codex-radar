@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -31,8 +31,17 @@
     "workspace"
   ],
   "activationEvents": [
-    "onView:codexRadar.dashboard",
-    "onCommand:codexRadar.refresh"
+    "onView:codexRadar.attentionList",
+    "onView:codexRadar.projectList",
+    "onView:codexRadar.hiddenList",
+    "onCommand:codexRadar.refresh",
+    "onCommand:codexRadar.openDashboard",
+    "onCommand:codexRadar.filterStatus",
+    "onCommand:codexRadar.hideSession",
+    "onCommand:codexRadar.restoreSession",
+    "onCommand:codexRadar.markRead",
+    "onCommand:codexRadar.markUnread",
+    "onCommand:codexRadar.openInCodex"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -41,6 +50,41 @@
         "command": "codexRadar.refresh",
         "title": "Codex Radar: Refresh Sessions",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "codexRadar.openDashboard",
+        "title": "Codex Radar: Open Dashboard",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "codexRadar.filterStatus",
+        "title": "Codex Radar: Filter by Status",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "codexRadar.openInCodex",
+        "title": "Codex Radar: Open in Codex (Experimental)",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "codexRadar.hideSession",
+        "title": "Codex Radar: Hide from Radar",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "codexRadar.restoreSession",
+        "title": "Codex Radar: Restore to Radar",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "codexRadar.markRead",
+        "title": "Codex Radar: Mark as Read",
+        "icon": "$(mail-read)"
+      },
+      {
+        "command": "codexRadar.markUnread",
+        "title": "Codex Radar: Mark as Unread",
+        "icon": "$(mail)"
       }
     ],
     "configuration": {
@@ -65,18 +109,115 @@
     "views": {
       "codexRadar": [
         {
-          "id": "codexRadar.dashboard",
-          "name": "Dashboard",
-          "type": "webview"
+          "id": "codexRadar.attentionList",
+          "name": "Attention"
+        },
+        {
+          "id": "codexRadar.projectList",
+          "name": "Projects"
+        },
+        {
+          "id": "codexRadar.hiddenList",
+          "name": "Hidden",
+          "visibility": "collapsed"
         }
       ]
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "codexRadar.openInCodex",
+          "when": "false"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "false"
+        },
+        {
+          "command": "codexRadar.restoreSession",
+          "when": "false"
+        },
+        {
+          "command": "codexRadar.markRead",
+          "when": "false"
+        },
+        {
+          "command": "codexRadar.markUnread",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
-          "command": "codexRadar.refresh",
-          "when": "view == codexRadar.dashboard",
+          "command": "codexRadar.openDashboard",
+          "when": "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
           "group": "navigation@1"
+        },
+        {
+          "command": "codexRadar.filterStatus",
+          "when": "view == codexRadar.projectList",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codexRadar.refresh",
+          "when": "view == codexRadar.attentionList || view == codexRadar.projectList || view == codexRadar.hiddenList",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codexRadar.markRead",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.markUnread",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.read",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.markRead",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.markUnread",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.read",
+          "group": "inline@1"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.attentionList && viewItem == codexRadar.session.done.read",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.unread",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.hideSession",
+          "when": "view == codexRadar.projectList && viewItem == codexRadar.session.done.read",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexRadar.restoreSession",
+          "when": "view == codexRadar.hiddenList && viewItem == codexRadar.session.hidden",
+          "group": "inline@1"
         }
       ]
     }

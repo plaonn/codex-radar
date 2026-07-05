@@ -14,11 +14,11 @@
 
 - VS Code extension은 이 repository 안의 `extensions/vscode/` subtree에서 시작한다.
 - Python core는 stdlib-first를 유지하고, Node/extension dependency는 extension subtree에 격리한다.
-- 현재 GUI milestone은 `sessions.json`을 직접 읽는 Webview dashboard다.
+- 현재 GUI milestone은 `sessions.json`을 직접 읽는 native sidebar sections와 editor Webview dashboard의 hybrid surface다.
 - GUI implementation은 read adapter를 통해 state source를 캡슐화하고, 나중에 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 전환할 수 있어야 한다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `done`, `stale`)를 navigation 안에서 구분해야 한다.
-- 첫 GUI notification surface는 dashboard count/highlight 같은 in-surface cue로 제한한다.
-- 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard다. Extension-local read/unread/hidden UI state는 허용하지만 Webview dashboard에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
+- 첫 GUI notification surface는 sidebar badge와 dashboard count/highlight 같은 in-surface cue로 제한한다.
+- 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard/sidebar다. Extension-local read/unread/hidden UI state는 허용하지만 VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
 - CLI/export contract로 전환하는 시점은 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커질 때 재검토한다.
 
@@ -35,4 +35,4 @@
 - stdlib MVP가 유용하다는 것이 확인된 뒤 Rich/Textual TUI 검토.
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
-- Webview dashboard가 Remote SSH에서 안정화된 뒤 transcript preview, command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
+- Hybrid VS Code surface가 Remote SSH에서 안정화된 뒤 transcript preview, command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
