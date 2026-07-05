@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.14");
+  assert.equal(manifest.version, "0.1.15");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -139,6 +139,23 @@ test("contributes hide and restore row actions", () => {
     restoreMenu.when,
     "view == codexRadar.hiddenList && viewItem == codexRadar.session.hidden",
   );
+});
+
+test("hides row-target actions from the command palette", () => {
+  const manifest = readManifest();
+  const commandPaletteRules = manifest.contributes.menus.commandPalette || [];
+  const hiddenPaletteCommands = commandPaletteRules
+    .filter((item) => item.when === "false")
+    .map((item) => item.command)
+    .sort();
+
+  assert.deepEqual(hiddenPaletteCommands, [
+    "codexRadar.hideSession",
+    "codexRadar.markRead",
+    "codexRadar.markUnread",
+    "codexRadar.openInCodex",
+    "codexRadar.restoreSession",
+  ]);
 });
 
 test("does not contribute transcript preview to the VS Code surface", () => {

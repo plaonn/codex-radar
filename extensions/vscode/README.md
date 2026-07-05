@@ -22,6 +22,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Provides a manual refresh command in the view title.
 - Opens the same session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a session row is clicked.
 - Provides a done-session row action to mark the session read or unread.
+- Keeps row-target actions out of the Command Palette; only global view actions should appear there.
 
 ## Boundaries
 
@@ -57,7 +58,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.1.14.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.1.15.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -77,6 +78,7 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 5. Use the view title actions:
    - Refresh Sessions reloads the cache.
    - Filter by Status changes only the temporary view filter.
+   - Command Palette search for "Codex Radar" should not show row-target actions such as Hide, Restore, Mark Read, Mark Unread, or Open in Codex.
 6. On a done session, mark read and unread from the inline mail-style row action.
 7. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
 8. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.

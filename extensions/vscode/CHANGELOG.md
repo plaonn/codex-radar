@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.15
+
+Release candidate package for row action command palette cleanup. This version is not a Marketplace publication.
+
+### Fixed
+
+- Hide row-target actions from the Command Palette so only global view actions appear there.
+
 ## 0.1.14
 
 Release candidate package for leftover retention/prune cleanup. This version is not a Marketplace publication.
