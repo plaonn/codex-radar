@@ -427,6 +427,29 @@ select {
   -webkit-box-orient: vertical;
 }
 
+.snippet-speaker {
+  display: inline-block;
+  margin-right: 5px;
+  border: 1px solid var(--vscode-badge-background);
+  border-radius: 3px;
+  padding: 0 4px;
+  color: var(--vscode-badge-foreground);
+  background: var(--vscode-badge-background);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.snippet-speaker.speaker-user {
+  color: var(--vscode-descriptionForeground);
+  background: transparent;
+  border-color: var(--vscode-panel-border);
+}
+
+.snippet-text {
+  vertical-align: baseline;
+}
+
 .meta {
   margin-top: 5px;
   color: var(--vscode-descriptionForeground);

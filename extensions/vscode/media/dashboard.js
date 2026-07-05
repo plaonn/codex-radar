@@ -117,6 +117,19 @@ function sessionActions(session, options = {}) {
   return actions;
 }
 
+function snippetNode(session) {
+  const text = String(session.snippetText || session.snippet || "");
+  if (!text) {
+    return null;
+  }
+  const children = [];
+  if (session.snippetSpeaker) {
+    children.push(el("span", { className: `snippet-speaker speaker-${session.snippetRole || ""}`, text: session.snippetSpeaker }));
+  }
+  children.push(el("span", { className: "snippet-text", text }));
+  return el("span", { className: "snippet" }, children);
+}
+
 function sessionNode(session, options = {}) {
   const node = el("div", {
     dataset: {
@@ -150,7 +163,9 @@ function sessionRenderSignature(session, options = {}) {
     isUnreadDone: session.isUnreadDone,
     isDoneRead: session.isDoneRead,
     title: session.title,
-    snippet: session.snippet || "",
+    snippet: session.snippetText || session.snippet || "",
+    snippetSpeaker: session.snippetSpeaker || "",
+    snippetRole: session.snippetRole || "",
     meta: session.description || session.statusText,
     showActions: Boolean(options.showActions),
     canOpen: Boolean(session.actions?.canOpen),
@@ -172,8 +187,9 @@ function updateSessionNode(node, session, options = {}) {
   node.appendChild(statusIndicator(session));
   const text = el("span");
   text.appendChild(el("span", { className: "title", text: session.title }));
-  if (session.snippet) {
-    text.appendChild(el("span", { className: "snippet", text: session.snippet }));
+  const snippet = snippetNode(session);
+  if (snippet) {
+    text.appendChild(snippet);
   }
   text.appendChild(el("span", { className: "meta", text: session.description || session.statusText }));
   if (options.showActions) {

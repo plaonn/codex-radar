@@ -14,6 +14,8 @@ const {
 const TEXT_PART_TYPES = new Set(["text", "input_text", "output_text", "markdown"]);
 const DEFAULT_PREVIEW_ENTRY_LIMIT = 120;
 const TRANSCRIPT_FILE_LIMIT = 5000;
+const DEFAULT_DISPLAY_TITLE_LENGTH = 96;
+const DEFAULT_DISPLAY_SNIPPET_LENGTH = 180;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -285,6 +287,130 @@ function dedupeAdjacentEntries(entries) {
   return deduped;
 }
 
+function stripTaggedBlock(text, tagName) {
+  return text.replace(new RegExp(`<${tagName}\\b[\\s\\S]*?<\\/${tagName}>`, "gi"), "\n");
+}
+
+function requestBodyText(text) {
+  const value = String(text || "");
+  const markdownMatch = value.match(/(?:^|\n)#{1,6}\s*My request for Codex:\s*\n?([\s\S]*)$/i);
+  if (markdownMatch) {
+    return markdownMatch[1];
+  }
+  const plainMatch = value.match(/(?:^|\n)My request for Codex:\s*\n?([\s\S]*)$/i);
+  return plainMatch ? plainMatch[1] : value;
+}
+
+function cleanTitleSourceText(text) {
+  let value = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  value = stripTaggedBlock(value, "environment_context");
+  value = stripTaggedBlock(value, "INSTRUCTIONS");
+  value = stripTaggedBlock(value, "image");
+  value = requestBodyText(value);
+  value = stripTaggedBlock(value, "environment_context");
+  value = stripTaggedBlock(value, "INSTRUCTIONS");
+  value = stripTaggedBlock(value, "image");
+  return value;
+}
+
+function titleLineFromText(text) {
+  const cleaned = cleanTitleSourceText(text);
+  for (const rawLine of cleaned.split("\n")) {
+    let line = rawLine
+      .replace(/^#{1,6}\s*/, "")
+      .replace(/^>\s?/, "")
+      .replace(/^[-*]\s+/, "")
+      .replace(/^\d+\.\s+/, "")
+      .trim();
+    if (!line) {
+      continue;
+    }
+    if (/^(selected text|files mentioned by the user|selection \d+|my request for codex):?$/i.test(line)) {
+      continue;
+    }
+    if (/^<[^>]+>$/.test(line)) {
+      continue;
+    }
+    if (/^\S+\.(?:png|jpe?g|gif|webp|svg|jsonl|txt|md|js|ts|py):?\s/.test(line)) {
+      continue;
+    }
+    return compactText(line);
+  }
+  return "";
+}
+
+function titleFromTranscriptEntries(entries) {
+  let latestUserBeforeAssistant = "";
+  let latestUser = "";
+  for (const entry of entries) {
+    if (entry.role === "user") {
+      latestUser = entry.text;
+      latestUserBeforeAssistant = entry.text;
+      continue;
+    }
+    if (entry.role === "assistant") {
+      const title = titleLineFromText(latestUserBeforeAssistant);
+      return { title, sourceText: title ? latestUserBeforeAssistant : "" };
+    }
+  }
+  const title = titleLineFromText(latestUser);
+  return { title, sourceText: title ? latestUser : "" };
+}
+
+function explicitSessionTitle(session, options = {}) {
+  const title = compactText(
+    session?.title || session?.thread_title || session?.conversation_title || session?.summary || "",
+  );
+  return title ? truncateText(redactText(title, options), options.titleLength ?? DEFAULT_DISPLAY_TITLE_LENGTH) : "";
+}
+
+function fallbackSessionTitle(session, options = {}) {
+  const status = statusText(session?.display_status || session?.status || "unknown");
+  const project = compactText(session?.project || "");
+  if (project) {
+    return truncateText(`${project} - ${status} thread`, options.titleLength ?? DEFAULT_DISPLAY_TITLE_LENGTH);
+  }
+  return `${shortSessionId(session?.session_id)} - ${status} thread`;
+}
+
+function snippetFromEntry(entry, options = {}) {
+  if (!entry || !entry.text) {
+    return { speaker: "", role: "", text: "" };
+  }
+  return {
+    speaker: entry.label || (entry.role === "assistant" ? "Codex" : "You"),
+    role: entry.role || "",
+    text: truncateText(compactText(redactText(entry.text, options)), options.snippetLength ?? DEFAULT_DISPLAY_SNIPPET_LENGTH),
+  };
+}
+
+function sessionDisplayFieldsFromEntries(session, entries, options = {}) {
+  const explicitTitle = explicitSessionTitle(session, options);
+  const transcriptTitle = explicitTitle ? { title: "", sourceText: "" } : titleFromTranscriptEntries(entries);
+  const title = explicitTitle
+    || (transcriptTitle.title
+      ? truncateText(redactText(transcriptTitle.title, options), options.titleLength ?? DEFAULT_DISPLAY_TITLE_LENGTH)
+      : "")
+    || fallbackSessionTitle(session, options);
+
+  const lastEntry = entries.length ? entries[entries.length - 1] : null;
+  const snippet = snippetFromEntry(lastEntry, options);
+  const titleSource = compactText(explicitTitle ? title : titleLineFromText(transcriptTitle.sourceText));
+  if (snippet.text && titleSource && compactText(snippet.text) === titleSource) {
+    snippet.text = "";
+    snippet.speaker = "";
+    snippet.role = "";
+  }
+
+  return {
+    title,
+    snippet: snippet.text,
+    snippetText: snippet.text,
+    snippetSpeaker: snippet.speaker,
+    snippetRole: snippet.role,
+  };
+}
+
 function codexHome(options = {}) {
   return path.resolve(options.codexHome || process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
 }
@@ -407,6 +533,13 @@ function resolveTranscriptPath(session, options = {}) {
   return resolveTranscriptPathInfo(session, options).path;
 }
 
+function transcriptPathInfoForSession(session, options = {}) {
+  if (typeof options.resolveTranscriptPathInfo === "function") {
+    return options.resolveTranscriptPathInfo(session, options);
+  }
+  return resolveTranscriptPathInfo(session, options);
+}
+
 function cachedSummaryEntries(session, options = {}) {
   const text = redactText(String(session?.last_assistant_message || ""), options)
     .replace(/\r\n/g, "\n")
@@ -432,7 +565,7 @@ function transcriptFallback(session, message, options = {}) {
 }
 
 function readTranscriptEntries(session, options = {}) {
-  const transcript = resolveTranscriptPathInfo(session, options);
+  const transcript = transcriptPathInfoForSession(session, options);
   const transcriptPath = transcript.path;
   if (!transcriptPath) {
     const missingMessage = transcript.source === "missing-explicit"
@@ -481,24 +614,28 @@ function readTranscriptEntries(session, options = {}) {
   }
 }
 
+function buildSessionDisplayFields(session, options = {}) {
+  const transcript = transcriptPathInfoForSession(session, options);
+  if (transcript.path) {
+    try {
+      const text = fs.readFileSync(transcript.path, "utf8");
+      return sessionDisplayFieldsFromEntries(session, skimTranscriptText(text, { ...options, limit: 0 }), options);
+    } catch {
+      // Fall through to cached summary fallback.
+    }
+  }
+  return sessionDisplayFieldsFromEntries(session, cachedSummaryEntries(session, options), options);
+}
+
 function sessionTitle(session, options = {}) {
-  const title = compactText(
-    session?.title || session?.thread_title || session?.conversation_title || session?.summary || "",
-  );
-  if (title) {
-    return truncateText(redactText(title, options), 140);
-  }
-  const snippet = compactText(redactText(session?.last_assistant_message || "", options));
-  if (snippet) {
-    return truncateText(`${shortSessionId(session?.session_id)} - ${snippet}`, 140);
-  }
-  return `${shortSessionId(session?.session_id)} - ${statusText(session?.display_status)} thread`;
+  return buildSessionDisplayFields(session, { ...options, titleLength: 140 }).title;
 }
 
 function buildSessionPreviewModel(session, options = {}) {
   const transcript = readTranscriptEntries(session, options);
+  const displayFields = sessionDisplayFieldsFromEntries(session, transcript.entries, { ...options, titleLength: 140 });
   return {
-    title: sessionTitle(session, options),
+    title: displayFields.title,
     project: String(session?.project || "-"),
     status: statusText(session?.display_status || session?.status || "unknown"),
     lastSeen: relativeTimeText(session?.last_seen_at, options) || String(session?.last_seen_at || ""),
@@ -513,6 +650,7 @@ function buildSessionPreviewModel(session, options = {}) {
 }
 
 module.exports = {
+  buildSessionDisplayFields,
   buildSessionPreviewModel,
   cachedSummaryEntries,
   collectConversationTexts,
@@ -525,5 +663,6 @@ module.exports = {
   readTranscriptEntries,
   resolveTranscriptPath,
   resolveTranscriptPathInfo,
+  sessionDisplayFieldsFromEntries,
   skimTranscriptText,
 };

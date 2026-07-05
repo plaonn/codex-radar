@@ -1,4 +1,7 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -83,6 +86,36 @@ test("builds a sanitized dashboard model with attention, projects, archived, and
   assert.equal(model.archived[0].sessionId, "archived-1");
   assert.equal(model.selected.sessionId, "approval-1");
   assert.equal(model.groups[0].sessions[1].snippet, "[REDACTED] finished");
+});
+
+test("adds transcript-derived title and speaker snippet fields to session cards", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-card-display-"));
+  const transcriptPath = path.join(tmp, "session.jsonl");
+  fs.writeFileSync(transcriptPath, [
+    JSON.stringify({
+      role: "user",
+      content: [{ text: "## My request for Codex:\nReview the sidebar title model" }],
+    }),
+    JSON.stringify({ role: "assistant", content: [{ text: "Reading the relevant files." }] }),
+    JSON.stringify({ role: "user", content: [{ text: "snippet은 마지막 user message로 가자" }] }),
+  ].join("\n"), "utf8");
+
+  const card = sessionCard({
+    session_id: "display-1",
+    project: "codex-radar",
+    display_status: "running",
+    last_seen_at: "2026-07-05T00:09:00+09:00",
+    transcript_path: transcriptPath,
+    last_assistant_message: "stale assistant cache",
+  }, {
+    nowMs,
+    resolveTranscriptPathInfo: () => ({ path: transcriptPath, source: "explicit" }),
+  });
+
+  assert.equal(card.title, "Review the sidebar title model");
+  assert.equal(card.snippetSpeaker, "You");
+  assert.equal(card.snippetRole, "user");
+  assert.equal(card.snippetText, "snippet은 마지막 user message로 가자");
 });
 
 test("filters project sessions by display status without changing attention count", () => {

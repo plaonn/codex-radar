@@ -102,7 +102,7 @@
 - Requirement: GUI는 host-local `codex-radar` state를 읽되 transcript/session metadata를 외부로 전송하지 않고, raw hook event log나 raw transcript는 기본 navigation에서 직접 노출하지 않아야 한다.
 - Rationale: GUI는 편의 표면일 뿐 privacy boundary를 완화하지 않아야 한다.
 - Failure prevented: GUI 통합 과정에서 transcript path, prompt, code, secret-like content가 부주의하게 표시되거나 외부로 전송되는 문제.
-- Derived specs/tests: sensitive field display rules, redacted latest cached snippet in default navigation, no raw transcript path/content in default navigation, best-effort redaction reuse.
+- Derived specs/tests: sensitive field display rules, redacted transcript-derived title/snippet in default navigation, no raw transcript path/content in default navigation, best-effort redaction reuse.
 
 #### R7d: GUI fallback continuity
 

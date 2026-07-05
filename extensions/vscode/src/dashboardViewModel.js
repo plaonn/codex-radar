@@ -8,13 +8,11 @@ const {
   relativeTimeText,
   sessionDescription,
   sessionIconId,
-  sessionSnippet,
-  sessionTitle,
   statusText,
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
 const { isArchivedByCodexThreadState } = require("./codexThreadState");
-const { resolveTranscriptPathInfo } = require("./transcriptPreview");
+const { buildSessionDisplayFields, resolveTranscriptPathInfo } = require("./transcriptPreview");
 
 function baseDisplayStatus(session) {
   return String(session.display_status || session.status || "unknown");
@@ -68,17 +66,34 @@ function sessionActionState(session, options = {}) {
   };
 }
 
+function sessionDisplayFields(session, options = {}) {
+  const cache = options.transcriptDisplayFieldCache instanceof Map ? options.transcriptDisplayFieldCache : null;
+  const key = archiveCacheKey(session);
+  if (cache && key && cache.has(key)) {
+    return cache.get(key);
+  }
+  const fields = buildSessionDisplayFields(session, options);
+  if (cache && key) {
+    cache.set(key, fields);
+  }
+  return fields;
+}
+
 function sessionCard(session, options = {}) {
   const status = baseDisplayStatus(session);
   const isArchived = isArchivedSession(session, options);
   const lifecycleSession = { ...session, display_status: status };
   const description = sessionDescription(lifecycleSession, options);
+  const displayFields = sessionDisplayFields(lifecycleSession, { ...options, snippetLength: 180 });
   return {
     key: sessionStateKey(session),
     sessionId: String(session.session_id || ""),
     shortSessionId: String(session.session_id || "").slice(0, 12) || "unknown",
-    title: sessionTitle(lifecycleSession, options),
-    snippet: sessionSnippet(session, { ...options, maxLength: 180 }),
+    title: displayFields.title,
+    snippet: displayFields.snippet,
+    snippetText: displayFields.snippetText,
+    snippetSpeaker: displayFields.snippetSpeaker,
+    snippetRole: displayFields.snippetRole,
     project: String(session.project || "-"),
     status,
     statusText: statusText(status),
@@ -128,6 +143,7 @@ function buildDashboardModel(sessions, options = {}) {
     ...options,
     archivedSessionCache: options.archivedSessionCache instanceof Map ? options.archivedSessionCache : new Map(),
     codexThreadStateCache: options.codexThreadStateCache instanceof Map ? options.codexThreadStateCache : new Map(),
+    transcriptDisplayFieldCache: options.transcriptDisplayFieldCache instanceof Map ? options.transcriptDisplayFieldCache : new Map(),
   };
   const statusFilter = normalizeStatusFilter(options.statusFilter);
   const archivedSessions = sessions.filter((session) => isArchivedSession(session, modelOptions));
@@ -185,6 +201,7 @@ module.exports = {
   findSessionByKey,
   isArchivedSession,
   sessionCard,
+  sessionDisplayFields,
   sessionIdentity,
   statusOptions,
 };

@@ -6,11 +6,13 @@ const test = require("node:test");
 
 const {
   buildSessionPreviewModel,
+  buildSessionDisplayFields,
   DEFAULT_PREVIEW_ENTRY_LIMIT,
   dedupeAdjacentEntries,
   markdownToSafeHtml,
   resolveTranscriptPathInfo,
   resolveTranscriptPath,
+  sessionDisplayFieldsFromEntries,
   skimTranscriptText,
 } = require("../src/transcriptPreview");
 
@@ -145,6 +147,63 @@ test("dedupes adjacent duplicated user and Codex transcript entries", () => {
     { role: "user", text: "same prompt" },
     { role: "assistant", text: "same prompt" },
   ]);
+});
+
+test("derives display title from user request before first Codex message and snippet from last activity", () => {
+  const text = [
+    JSON.stringify({
+      role: "user",
+      content: [{
+        text: [
+          "<environment_context><cwd>/private</cwd></environment_context>",
+          "# Selected text:",
+          "internal context",
+          "## My request for Codex:",
+          "Use transcript-derived display fields",
+          "<image path=\"/tmp/private.png\">hidden</image>",
+        ].join("\n"),
+      }],
+    }),
+    JSON.stringify({ role: "assistant", content: [{ text: "I will inspect the current model." }] }),
+    JSON.stringify({ role: "tool", content: [{ text: "raw command output" }] }),
+    JSON.stringify({ role: "user", content: [{ text: "그리고 snippet은 마지막 메시지를 보여줘" }] }),
+  ].join("\n");
+  const entries = skimTranscriptText(text, { limit: 0 });
+  const fields = sessionDisplayFieldsFromEntries({
+    session_id: "session-1",
+    project: "codex-radar",
+    display_status: "running",
+  }, entries);
+
+  assert.equal(fields.title, "Use transcript-derived display fields");
+  assert.equal(fields.snippetSpeaker, "You");
+  assert.equal(fields.snippetRole, "user");
+  assert.equal(fields.snippetText, "그리고 snippet은 마지막 메시지를 보여줘");
+});
+
+test("builds display fields from transcript path without leaking tool output", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-display-fields-"));
+  const transcriptPath = path.join(tmp, "transcript.jsonl");
+  fs.writeFileSync(transcriptPath, [
+    JSON.stringify({ role: "user", content: [{ text: "Summarize this thread" }] }),
+    JSON.stringify({ role: "assistant", content: [{ text: "Working on it" }] }),
+    JSON.stringify({ type: "tool_result", payload: { role: "tool", content: [{ type: "text", text: "hidden" }] } }),
+    JSON.stringify({ type: "event_msg", payload: { type: "agent_message", message: "token=hidden_value done" } }),
+  ].join("\n"), "utf8");
+
+  const fields = buildSessionDisplayFields({
+    session_id: "session-1",
+    project: "codex-radar",
+    display_status: "done",
+    transcript_path: transcriptPath,
+  }, {
+    resolveTranscriptPathInfo: () => ({ path: transcriptPath, source: "explicit" }),
+  });
+
+  assert.equal(fields.title, "Summarize this thread");
+  assert.equal(fields.snippetSpeaker, "Codex");
+  assert.equal(fields.snippetText, "[REDACTED] done");
+  assert.equal(JSON.stringify(fields).includes("hidden"), false);
 });
 
 test("renders markdown as safe html", () => {

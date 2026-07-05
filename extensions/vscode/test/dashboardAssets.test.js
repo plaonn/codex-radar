@@ -67,6 +67,18 @@ test("reveals sidebar row actions as hover and focus overlays", () => {
   assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*pointer-events:\s*auto;/s);
 });
 
+test("renders speaker snippets with compact text badges", () => {
+  const js = readDashboardJs();
+  const css = readDashboardCss();
+
+  assert.match(js, /function snippetNode\(session\)/);
+  assert.match(js, /snippetSpeaker/);
+  assert.match(js, /snippet-text/);
+  assert.match(css, /\.snippet-speaker\s*\{/);
+  assert.match(css, /\.snippet-speaker\.speaker-user\s*\{/);
+  assert.match(css, /\.snippet-text\s*\{/);
+});
+
 test("updates sidebar rows with keyed patching instead of full rebuilds", () => {
   const js = readDashboardJs();
 
