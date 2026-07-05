@@ -7,6 +7,7 @@ const test = require("node:test");
 const {
   buildSessionPreviewModel,
   markdownToSafeHtml,
+  resolveTranscriptPath,
   skimTranscriptText,
 } = require("../src/transcriptPreview");
 
@@ -126,6 +127,31 @@ test("builds a session preview model without exposing transcript paths", () => {
   assert.equal(JSON.stringify(model).includes(transcriptPath), false);
 });
 
+test("falls back to Codex transcript store when session cache has no transcript path", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-codex-home-"));
+  const sessionId = "019f30bd-2c6e-7000-8000-previewfallback";
+  const transcriptDir = path.join(tmp, "sessions", "2026", "07", "05");
+  fs.mkdirSync(transcriptDir, { recursive: true });
+  const transcriptPath = path.join(transcriptDir, `rollout-2026-07-05T00-00-00-${sessionId}.jsonl`);
+  fs.writeFileSync(
+    transcriptPath,
+    `${JSON.stringify({ role: "user", content: [{ text: "please summarize" }] })}\n`,
+    "utf8",
+  );
+
+  const session = {
+    session_id: sessionId,
+    display_status: "done",
+  };
+  const model = buildSessionPreviewModel(session, { codexHome: tmp });
+
+  assert.equal(resolveTranscriptPath(session, { codexHome: tmp }), transcriptPath);
+  assert.deepEqual(model.transcriptEntries.map(({ role, text }) => ({ role, text })), [
+    { role: "user", text: "please summarize" },
+  ]);
+  assert.equal(JSON.stringify(model).includes(transcriptPath), false);
+});
+
 test("uses generic transcript errors so private paths are not displayed", () => {
   const missingPath = path.join(os.tmpdir(), "codex-radar-missing-private-transcript.jsonl");
   const model = buildSessionPreviewModel({
@@ -137,4 +163,39 @@ test("uses generic transcript errors so private paths are not displayed", () => 
   assert.equal(model.transcriptEntries.length, 0);
   assert.equal(model.transcriptMessage, "Transcript file is not available on this host.");
   assert.equal(JSON.stringify(model).includes(missingPath), false);
+});
+
+test("falls back to cached assistant summary when transcript is unavailable", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-empty-codex-home-"));
+  const model = buildSessionPreviewModel({
+    session_id: "019f30bd-2c6e-7000-8000-cachefallback",
+    display_status: "done",
+    last_assistant_message: "## Cached\nsummary token=hidden_value",
+  }, {
+    codexHome: tmp,
+  });
+
+  assert.equal(model.transcriptEntries.length, 1);
+  assert.equal(model.transcriptEntries[0].label, "Codex");
+  assert.equal(model.transcriptEntries[0].text, "## Cached\nsummary [REDACTED]");
+  assert.match(model.transcriptEntries[0].html, /<h4>Cached<\/h4>/);
+  assert.equal(
+    model.transcriptMessage,
+    "Transcript file was not found on the extension host. Showing the cached latest Codex summary.",
+  );
+  assert.equal(JSON.stringify(model).includes(tmp), false);
+});
+
+test("uses a generic message when no transcript path or fallback file exists", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-empty-codex-home-"));
+  const model = buildSessionPreviewModel({
+    session_id: "019f30bd-2c6e-7000-8000-missingfallback",
+    display_status: "done",
+  }, {
+    codexHome: tmp,
+  });
+
+  assert.equal(model.transcriptEntries.length, 0);
+  assert.equal(model.transcriptMessage, "No transcript file found for this session on the extension host.");
+  assert.equal(JSON.stringify(model).includes(tmp), false);
 });

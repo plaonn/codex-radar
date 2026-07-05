@@ -457,6 +457,15 @@ select {
   gap: 14px;
 }
 
+.preview-notice {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-sideBar-background);
+}
+
 .preview-entry {
   display: flex;
   flex-direction: column;

@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.7
+
+Release candidate package for transcript preview fallback. This version is not a Marketplace publication.
+
+### Fixed
+
+- Fall back to the host-local Codex transcript store by session id when a Radar session cache item has no `transcript_path`.
+- Show the cached latest Codex summary when no transcript file can be found.
+
 ## 0.2.6
 
 Release candidate package for preview conversation cleanup. This version is not a Marketplace publication.

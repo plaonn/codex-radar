@@ -1,4 +1,6 @@
 const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 
 const {
   compactText,
@@ -10,6 +12,7 @@ const {
 } = require("./sessionViewModel");
 
 const TEXT_PART_TYPES = new Set(["text", "input_text", "output_text", "markdown"]);
+const TRANSCRIPT_FILE_LIMIT = 5000;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -260,33 +263,155 @@ function skimTranscriptText(text, options = {}) {
   return limit > 0 ? entries.slice(-limit) : entries;
 }
 
+function codexHome(options = {}) {
+  return path.resolve(options.codexHome || process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
+}
+
+function transcriptSearchRoots(options = {}) {
+  const home = codexHome(options);
+  return [path.join(home, "sessions"), path.join(home, "archived_sessions")];
+}
+
+function isSearchableSessionId(sessionId) {
+  const value = String(sessionId || "");
+  return Boolean(value && value !== "unknown" && !value.startsWith("unknown:") && !/[\\/]/.test(value));
+}
+
+function candidateTranscriptFiles(root, sessionId, options = {}) {
+  const matches = [];
+  const stack = [root];
+  let visitedFiles = 0;
+  const maxFiles = options.maxTranscriptFiles ?? TRANSCRIPT_FILE_LIMIT;
+
+  while (stack.length) {
+    const current = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+      visitedFiles += 1;
+      if (visitedFiles > maxFiles) {
+        return matches;
+      }
+      if (entry.name.endsWith(".jsonl") && entry.name.includes(sessionId)) {
+        matches.push(fullPath);
+      }
+    }
+  }
+
+  return matches;
+}
+
+function newestExistingFile(paths) {
+  let selected = "";
+  let selectedMtime = -1;
+  for (const filePath of paths) {
+    try {
+      const stat = fs.statSync(filePath);
+      if (stat.isFile() && stat.mtimeMs > selectedMtime) {
+        selected = filePath;
+        selectedMtime = stat.mtimeMs;
+      }
+    } catch {
+      // Ignore disappearing files while scanning host-local Codex state.
+    }
+  }
+  return selected;
+}
+
+function resolveTranscriptPath(session, options = {}) {
+  const explicitPath = String(session?.transcript_path || "");
+  if (explicitPath) {
+    return explicitPath;
+  }
+
+  const sessionId = String(session?.session_id || "");
+  if (!isSearchableSessionId(sessionId)) {
+    return "";
+  }
+
+  const candidates = transcriptSearchRoots(options).flatMap((root) => (
+    candidateTranscriptFiles(root, sessionId, options)
+  ));
+  return newestExistingFile(candidates);
+}
+
+function cachedSummaryEntries(session, options = {}) {
+  const text = redactText(String(session?.last_assistant_message || ""), options)
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+  if (!text) {
+    return [];
+  }
+  return [{
+    role: "assistant",
+    label: "Codex",
+    text,
+    html: markdownToSafeHtml(text),
+    source: "cache",
+  }];
+}
+
+function transcriptFallback(session, message, options = {}) {
+  return {
+    entries: cachedSummaryEntries(session, options),
+    message,
+  };
+}
+
 function readTranscriptEntries(session, options = {}) {
-  const transcriptPath = String(session?.transcript_path || "");
+  const transcriptPath = resolveTranscriptPath(session, options);
   if (!transcriptPath) {
-    return {
-      entries: [],
-      message: "No transcript path recorded for this session.",
-    };
+    return transcriptFallback(
+      session,
+      session?.last_assistant_message
+        ? "Transcript file was not found on the extension host. Showing the cached latest Codex summary."
+        : "No transcript file found for this session on the extension host.",
+      options,
+    );
   }
 
   try {
     const text = fs.readFileSync(transcriptPath, "utf8");
     const entries = skimTranscriptText(text, options);
     return {
-      entries,
-      message: entries.length ? "" : "No user/Codex messages found in the transcript preview.",
+      entries: entries.length ? entries : cachedSummaryEntries(session, options),
+      message: entries.length
+        ? ""
+        : session?.last_assistant_message
+          ? "No user/Codex messages were found in the transcript preview. Showing the cached latest Codex summary."
+          : "No user/Codex messages found in the transcript preview.",
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      return {
-        entries: [],
-        message: "Transcript file is not available on this host.",
-      };
+      return transcriptFallback(
+        session,
+        session?.last_assistant_message
+          ? "Transcript file is not available on this host. Showing the cached latest Codex summary."
+          : "Transcript file is not available on this host.",
+        options,
+      );
     }
-    return {
-      entries: [],
-      message: "Could not read transcript preview.",
-    };
+    return transcriptFallback(
+      session,
+      session?.last_assistant_message
+        ? "Could not read transcript preview. Showing the cached latest Codex summary."
+        : "Could not read transcript preview.",
+      options,
+    );
   }
 }
 
@@ -323,11 +448,13 @@ function buildSessionPreviewModel(session, options = {}) {
 
 module.exports = {
   buildSessionPreviewModel,
+  cachedSummaryEntries,
   collectConversationTexts,
   conversationEntriesFromItem,
   escapeHtml,
   findRole,
   markdownToSafeHtml,
   readTranscriptEntries,
+  resolveTranscriptPath,
   skimTranscriptText,
 };

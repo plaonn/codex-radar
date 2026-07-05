@@ -140,6 +140,9 @@ function previewDetail(label, value) {
 function previewHtml(webview, extensionUri, model) {
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
   const cspSource = webview.cspSource;
+  const notice = model.transcriptMessage
+    ? `<div class="preview-notice">${escapeHtml(model.transcriptMessage)}</div>`
+    : "";
   const entries = model.transcriptEntries.length
     ? model.transcriptEntries.map((entry) => `
       <article class="preview-entry ${escapeHtml(entry.role)}">
@@ -174,6 +177,7 @@ function previewHtml(webview, extensionUri, model) {
     </dl>
     <section class="preview-transcript">
       <h2>Transcript Preview</h2>
+      ${notice}
       <div class="preview-list">${entries}</div>
     </section>
   </main>

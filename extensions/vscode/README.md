@@ -14,7 +14,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Shows `waiting_approval`, stale active sessions, and unread `done` sessions in the sidebar and dashboard attention inbox.
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Lets the user hide sessions from Radar and restore them from the sidebar `Hidden` section or dashboard hidden list.
-- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus a redacted user/Codex message skim with messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host.
+- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus a redacted user/Codex message skim with messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
 - Separates lifecycle status, done read state, and stale freshness in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator.
@@ -62,7 +62,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.2.6.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.2.7.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
