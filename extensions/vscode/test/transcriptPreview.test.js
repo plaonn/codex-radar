@@ -46,21 +46,29 @@ test("extracts conversation messages from nested Codex transcript shapes", () =>
   const text = [
     JSON.stringify({
       type: "response_item",
-      item: {
+      payload: {
         role: "assistant",
+        type: "message",
         content: [{ type: "output_text", text: "## Done\n- wrote `code`" }],
       },
     }),
     JSON.stringify({
       type: "event_msg",
-      message: {
-        role: "user",
-        content: [{ type: "input_text", text: "show **summary**" }],
+      payload: {
+        type: "user_message",
+        message: "show **summary**",
+      },
+    }),
+    JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "agent_message",
+        message: "done from event",
       },
     }),
     JSON.stringify({
       type: "tool_result",
-      message: { role: "tool", content: [{ type: "text", text: "hidden" }] },
+      payload: { role: "tool", content: [{ type: "text", text: "hidden" }] },
     }),
   ].join("\n");
 
@@ -69,6 +77,7 @@ test("extracts conversation messages from nested Codex transcript shapes", () =>
   assert.deepEqual(entries.map(({ role, text }) => ({ role, text })), [
     { role: "assistant", text: "## Done\n- wrote `code`" },
     { role: "user", text: "show **summary**" },
+    { role: "assistant", text: "done from event" },
   ]);
   assert.match(entries[0].html, /<h4>Done<\/h4>/);
   assert.match(entries[0].html, /<code>code<\/code>/);

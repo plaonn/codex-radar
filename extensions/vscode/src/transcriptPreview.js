@@ -151,6 +151,12 @@ function findRole(item) {
   if (item.author && typeof item.author === "object" && typeof item.author.role === "string") {
     return item.author.role;
   }
+  if (item.type === "user_message") {
+    return "user";
+  }
+  if (item.type === "agent_message") {
+    return "assistant";
+  }
   return "";
 }
 
@@ -160,6 +166,7 @@ function candidateMessages(item) {
   }
   return [
     item,
+    item.payload,
     item.message,
     item.entry,
     item.item,

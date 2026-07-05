@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.8
+
+Release candidate package for Codex transcript wrapper parsing. This version is not a Marketplace publication.
+
+### Fixed
+
+- Parse Codex JSONL `payload` wrappers for `response_item` and `event_msg` entries so preview can show real user/Codex messages instead of falling back to cached summaries.
+
 ## 0.2.7
 
 Release candidate package for transcript preview fallback. This version is not a Marketplace publication.
