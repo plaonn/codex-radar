@@ -2,6 +2,20 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.2
+
+Release candidate package for sectioned sidebar Webviews plus the editor dashboard. This version is not a Marketplace publication.
+
+### Changed
+
+- Replace the restored TreeView sidebar implementation with native collapsible sidebar sections whose bodies are Webview-rendered.
+- Keep `Attention`, `Projects`, and collapsed `Hidden` as VS Code sections while moving each section's cards and actions into the Webview message boundary.
+- Keep `Codex Radar: Open Dashboard` as the wide editor-tab dashboard using the same sanitized model and actions.
+
+### Boundary
+
+- Keep row/session actions out of VS Code command contributions; Webview messages handle open, read/unread, hide, and restore without touching `sessions.json` or transcripts.
+
 ## 0.2.1
 
 Release candidate package for the hybrid sidebar and editor dashboard surface. This version is not a Marketplace publication.

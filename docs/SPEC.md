@@ -111,7 +111,7 @@ Retention:
 
 ## VS Code GUI Contract
 
-현재 GUI surface는 VS Code extension의 Codex Radar Activity Bar native sidebar sections와 editor-area Webview dashboard로 구성된다. Sidebar는 좁은 폭에서 항상 켜두는 ambient monitor이며 `Attention`, `Projects`, collapsed `Hidden` native sections를 제공한다. Webview dashboard는 `Codex Radar: Open Dashboard` command로 editor tab에 열리며 프로젝트 단위 conversation list, attention inbox, selected-session inspector, hidden-session restore surface를 넓은 화면에서 제공한다. Remote SSH 사용 시 기본 관심사는 VS Code UI client machine의 Codex state가 아니라 remote workspace extension host 안의 Codex state와 transcript다.
+현재 GUI surface는 VS Code extension의 Codex Radar Activity Bar sectioned Webview sidebar와 editor-area Webview dashboard로 구성된다. Sidebar는 좁은 폭에서 항상 켜두는 ambient monitor이며 VS Code native collapsible view section shell로 `Attention`, `Projects`, collapsed `Hidden` sections를 제공하고, 각 section body는 Webview content로 렌더링한다. Webview dashboard는 `Codex Radar: Open Dashboard` command로 editor tab에 열리며 프로젝트 단위 conversation list, attention inbox, selected-session inspector, hidden-session restore surface를 넓은 화면에서 제공한다. Remote SSH 사용 시 기본 관심사는 VS Code UI client machine의 Codex state가 아니라 remote workspace extension host 안의 Codex state와 transcript다.
 
 VS Code extension scaffold는 `extensions/vscode/`에 둔다. Python core는 stdlib-first를 유지하고, Node/runtime/package metadata는 extension subtree에 격리한다. 별도 repository 분리는 marketplace, release, review lifecycle이 실제로 갈라질 때 재검토한다.
 
@@ -132,14 +132,14 @@ GUI read contract v1:
 GUI display contract v1:
 
 - GUI는 `project` 기준으로 conversation list를 묶는다.
-- VS Code extension은 Explorer 하위 view가 아니라 dedicated Codex Radar Activity Bar container 안에 native `Attention`, `Projects`, `Hidden` sidebar sections를 제공한다.
-- Sidebar `Attention`은 `waiting_approval`, `stale`, unread `done` session을 cross-project inbox처럼 모은다.
-- Sidebar `Projects`는 project group navigation을 유지한다.
-- Sidebar `Hidden`은 사용자가 숨긴 session을 collapsed section으로 보여주고 restore action을 제공한다.
-- Webview에는 extension host가 만든 sanitized dashboard view model만 전달한다. Webview script는 `sessions.json`, transcript, hook config, server-side `config.json`을 직접 읽거나 쓰지 않는다.
+- VS Code extension은 Explorer 하위 view가 아니라 dedicated Codex Radar Activity Bar container 안에 `Attention`, `Projects`, `Hidden` Webview sidebar sections를 제공한다.
+- Sidebar `Attention` Webview는 `waiting_approval`, `stale`, unread `done` session을 cross-project inbox처럼 모은다.
+- Sidebar `Projects` Webview는 project group navigation을 유지한다.
+- Sidebar `Hidden` Webview는 사용자가 숨긴 session을 collapsed native section 안에서 보여주고 restore action을 제공한다.
+- Webview에는 extension host가 만든 sanitized dashboard view model만 전달한다. Sidebar Webview script와 editor dashboard script는 `sessions.json`, transcript, hook config, server-side `config.json`을 직접 읽거나 쓰지 않는다.
 - Editor dashboard는 `Attention`, project-grouped session list, selected-session inspector를 같은 wide surface에 보여준다.
 - Hidden session은 `Attention`과 project list에서 제외되지만 sidebar `Hidden` section 또는 dashboard hidden list에서 선택하고 restore할 수 있다.
-- Sidebar row와 dashboard card/inspector는 readable title/snippet, scan-friendly status text, read/unread state, current tool/model/relative last-seen metadata를 표시한다. 기본 snippet은 session cache의 redacted latest assistant summary를 사용하고 raw transcript file을 row마다 읽지 않는다.
+- Sidebar card와 dashboard card/inspector는 readable title/snippet, scan-friendly status text, read/unread state, current tool/model/relative last-seen metadata를 표시한다. 기본 snippet은 session cache의 redacted latest assistant summary를 사용하고 raw transcript file을 card마다 읽지 않는다.
 - GUI는 `waiting_approval`, `running`, `tool_running`, `done`, `stale`를 sidebar와 dashboard 안에서 구분한다.
 - GUI attention은 `waiting_approval`, `stale`, unread `done` session을 뜻한다. `running`과 `tool_running`은 상태로 표시하지만 attention count에는 포함하지 않는다.
 - GUI는 attention-worthy session 수를 sidebar view badge, dashboard topbar, attention pane count 같은 in-surface cue로 보여준다. 이 count는 현재 status filter와 무관하게 전체 loaded visible session 기준으로 계산한다.
@@ -148,8 +148,8 @@ GUI display contract v1:
 - GUI는 extension-local hidden state를 유지할 수 있다. hide key는 `session_id`와 `last_seen_at` 기준이다. hidden session은 `Attention`과 `Projects`에서 제외되고 `Hidden`에 표시된다. 같은 session이 새 hook event로 다른 `last_seen_at`을 갖게 되면 새 item으로 다시 표시된다. Hide/restore는 Radar UI state만 바꾸며 `sessions.json`, Codex thread, transcript file은 수정하지 않는다.
 - `stale`은 cache의 원본 `status`를 바꾸지 않는 display-only status이며, terminal MVP와 같은 stale rule을 사용한다.
 - 첫 notification surface는 VS Code extension 안의 count/highlight 같은 in-surface attention cue로 제한한다.
-- GUI는 sidebar row click과 selected-session inspector에서 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급한다. done session을 성공적으로 열면 extension-local read state를 read로 갱신할 수 있다.
-- GUI는 sidebar row action 또는 selected-session inspector action으로 read/unread를 토글할 수 있다.
+- GUI는 sidebar card action과 selected-session inspector에서 experimental `Open in Codex` action을 제공할 수 있다. 이 action은 공식 Codex VS Code extension의 `vscode://openai.chatgpt/local/<session_id>` URI를 열어 해당 local thread route로 handoff를 시도한다. 이 URI는 공식 public contract가 아니라 current integration probe로 취급한다. done session을 성공적으로 열면 extension-local read state를 read로 갱신할 수 있다.
+- GUI는 sidebar card action 또는 selected-session inspector action으로 read/unread를 토글할 수 있다.
 - 현재 VS Code GUI는 retention config/prune controls를 노출하지 않는다. server-side retention 운영은 terminal `codex-radar config`와 `codex-radar prune` workflow에 맡긴다.
 - OS notification, external notification channel, toast content template은 별도 milestone 전까지 scope 밖이다.
 

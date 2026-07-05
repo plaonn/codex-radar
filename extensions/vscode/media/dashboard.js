@@ -3,6 +3,7 @@ const vscode = acquireVsCodeApi();
 let state = {
   error: "",
   model: null,
+  surface: "dashboard",
 };
 
 function send(message) {
@@ -50,10 +51,48 @@ function selectedKey() {
   return state.model?.selected?.key || "";
 }
 
-function sessionNode(session) {
+function actionButton(label, action, session, className = "ghost") {
+  return button(label, className, (event) => {
+    event.stopPropagation();
+    send({ type: "sessionAction", action, key: session.key });
+  });
+}
+
+function sessionActions(session, options = {}) {
+  const actions = el("div", { className: options.compact ? "row-actions compact" : "row-actions" });
+  if (session.actions.canOpen) {
+    actions.appendChild(actionButton("Open", "open", session, ""));
+  }
+  if (session.actions.canMarkRead) {
+    actions.appendChild(actionButton("Read", "markRead", session, "secondary"));
+  }
+  if (session.actions.canMarkUnread) {
+    actions.appendChild(actionButton("Unread", "markUnread", session, "secondary"));
+  }
+  if (session.actions.canHide) {
+    actions.appendChild(actionButton("Hide", "hide", session));
+  }
+  if (session.actions.canRestore) {
+    actions.appendChild(actionButton("Restore", "restore", session));
+  }
+  return actions;
+}
+
+function sessionNode(session, options = {}) {
   const isActive = session.key && session.key === selectedKey();
-  const node = button("", `session${isActive ? " active" : ""}`, () => {
+  const node = el("div", {
+    className: `session${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
+  });
+  node.tabIndex = 0;
+  node.setAttribute("role", "button");
+  node.addEventListener("click", () => {
     send({ type: "selectSession", key: session.key });
+  });
+  node.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      send({ type: "selectSession", key: session.key });
+    }
   });
   node.appendChild(el("span", { className: `status-dot status-${session.status}` }));
   const text = el("span");
@@ -62,18 +101,21 @@ function sessionNode(session) {
     text.appendChild(el("span", { className: "snippet", text: session.snippet }));
   }
   text.appendChild(el("span", { className: "meta", text: session.description || session.statusText }));
+  if (options.showActions) {
+    text.appendChild(sessionActions(session, { compact: true }));
+  }
   node.appendChild(text);
   return node;
 }
 
-function sessionList(sessions, emptyText) {
+function sessionList(sessions, emptyText, options = {}) {
   const list = el("div", { className: "list" });
   if (!sessions.length) {
     list.appendChild(el("div", { className: "empty", text: emptyText }));
     return list;
   }
   for (const session of sessions) {
-    list.appendChild(sessionNode(session));
+    list.appendChild(sessionNode(session, options));
   }
   return list;
 }
@@ -218,6 +260,84 @@ function topbar(model) {
   ]);
 }
 
+function sidebarTopbar(model, title, countText) {
+  return el("header", { className: "topbar compact" }, [
+    el("div", { className: "brand" }, [
+      el("strong", { text: title }),
+      el("span", { text: countText }),
+    ]),
+    el("div", { className: "toolbar" }, [
+      button("Dashboard", "secondary", () => send({ type: "openDashboard" })),
+    ]),
+  ]);
+}
+
+function sidebarAttention(model) {
+  const root = el("div", { className: "app sidebar" });
+  root.appendChild(sidebarTopbar(model, "Attention", String(model.counts.attention)));
+  root.appendChild(sessionList(model.attention, "No attention sessions", { showActions: true }));
+  return root;
+}
+
+function sidebarProjects(model) {
+  const root = el("div", { className: "app sidebar" });
+  const select = el("select");
+  for (const option of model.statusOptions) {
+    const child = el("option", { text: option.label });
+    child.value = option.value;
+    child.selected = option.isSelected;
+    select.appendChild(child);
+  }
+  select.addEventListener("change", () => {
+    send({ type: "setStatusFilter", value: select.value });
+  });
+  root.appendChild(el("header", { className: "topbar compact" }, [
+    el("div", { className: "brand" }, [
+      el("strong", { text: "Projects" }),
+      el("span", { text: `${model.counts.filtered}/${model.counts.visible}` }),
+    ]),
+    el("div", { className: "toolbar" }, [
+      select,
+      button("Dashboard", "secondary", () => send({ type: "openDashboard" })),
+    ]),
+  ]));
+  const body = el("div", { className: "list" });
+  if (!model.groups.length) {
+    body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
+  }
+  for (const group of model.groups) {
+    const project = el("section", { className: "project" });
+    project.appendChild(el("div", { className: "project-header" }, [
+      el("span", { text: group.project }),
+      el("span", { text: group.attention ? `${group.attention} attention / ${group.total}` : String(group.total) }),
+    ]));
+    for (const session of group.sessions) {
+      project.appendChild(sessionNode(session, { showActions: true }));
+    }
+    body.appendChild(project);
+  }
+  root.appendChild(body);
+  return root;
+}
+
+function sidebarHidden(model) {
+  const root = el("div", { className: "app sidebar" });
+  root.appendChild(sidebarTopbar(model, "Hidden", String(model.counts.hidden)));
+  root.appendChild(sessionList(model.hidden, "No hidden sessions", { showActions: true }));
+  return root;
+}
+
+function dashboardView(model) {
+  const root = el("div", { className: "app" });
+  root.appendChild(topbar(model));
+  root.appendChild(el("div", { className: "layout" }, [
+    attentionPane(model),
+    projectsPane(model),
+    inspectorPane(model),
+  ]));
+  return root;
+}
+
 function render() {
   const app = document.getElementById("app");
   clear(app);
@@ -229,14 +349,15 @@ function render() {
     return;
   }
 
-  const root = el("div", { className: "app" });
-  root.appendChild(topbar(state.model));
-  root.appendChild(el("div", { className: "layout" }, [
-    attentionPane(state.model),
-    projectsPane(state.model),
-    inspectorPane(state.model),
-  ]));
-  app.appendChild(root);
+  if (state.surface === "attention") {
+    app.appendChild(sidebarAttention(state.model));
+  } else if (state.surface === "projects") {
+    app.appendChild(sidebarProjects(state.model));
+  } else if (state.surface === "hidden") {
+    app.appendChild(sidebarHidden(state.model));
+  } else {
+    app.appendChild(dashboardView(state.model));
+  }
 }
 
 window.addEventListener("message", (event) => {
@@ -244,6 +365,7 @@ window.addEventListener("message", (event) => {
     state = {
       error: event.data.error || "",
       model: event.data.model || null,
+      surface: event.data.surface || "dashboard",
     };
     render();
   }

@@ -80,6 +80,22 @@ select {
   background: var(--vscode-editor-background);
 }
 
+.topbar.compact {
+  align-items: stretch;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.topbar.compact .toolbar {
+  align-items: stretch;
+}
+
+.topbar.compact select,
+.topbar.compact button {
+  min-width: 0;
+  width: 100%;
+}
+
 .brand {
   display: flex;
   align-items: baseline;
@@ -100,6 +116,10 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.sidebar {
+  min-height: 100vh;
 }
 
 .layout {
@@ -180,6 +200,7 @@ select {
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius);
+  cursor: pointer;
   text-align: left;
 }
 
@@ -192,6 +213,16 @@ select {
 .session.active {
   background: var(--vscode-list-activeSelectionBackground);
   color: var(--vscode-list-activeSelectionForeground);
+}
+
+.session:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.session.actionable {
+  background: var(--vscode-editor-background);
+  border-color: var(--vscode-panel-border);
 }
 
 .status-dot {
@@ -300,6 +331,18 @@ select {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.row-actions.compact button {
+  min-height: 24px;
+  padding: 2px 7px;
 }
 
 .empty,
