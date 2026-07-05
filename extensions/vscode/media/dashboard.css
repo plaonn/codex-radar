@@ -117,15 +117,15 @@ select {
 }
 
 .sidebar .list {
-  gap: 0;
-  padding: 0;
+  gap: 2px;
+  padding: 4px 6px 8px;
 }
 
 .sidebar .session {
-  grid-template-columns: 12px minmax(0, 1fr);
-  gap: 4px;
-  padding: 5px 3px 5px 2px;
-  border-radius: 0;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px;
+  border-radius: 4px;
 }
 
 .sidebar .session.actionable {
@@ -210,8 +210,8 @@ select {
 }
 
 .sidebar .project {
-  margin: 0;
-  padding: 0 0 8px;
+  margin: 4px 0 10px;
+  padding: 4px 0 6px;
   border-top: 1px solid var(--vscode-panel-border);
 }
 
@@ -244,8 +244,8 @@ select {
 
 .sidebar .project-header {
   min-height: 24px;
-  padding: 4px 3px 4px 0;
-  border-radius: 0;
+  padding: 4px 6px;
+  border-radius: 4px;
 }
 
 .sidebar .project:not(.collapsed) .project-header {
@@ -254,10 +254,10 @@ select {
 }
 
 .sidebar .project .session {
-  width: calc(100% - 10px);
-  margin-left: 10px;
+  width: calc(100% - 8px);
+  margin-left: 8px;
   border-left: 1px solid color-mix(in srgb, var(--vscode-panel-border) 82%, transparent);
-  padding-left: 5px;
+  padding-left: 7px;
 }
 
 .sidebar .project.collapsed .session {
@@ -545,7 +545,7 @@ select {
 }
 
 .preview-header {
-  padding: 10px 8px 10px;
+  padding: 16px 16px 12px;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
@@ -556,8 +556,8 @@ select {
 }
 
 .preview h1 {
-  margin: 0 0 5px;
-  font-size: 18px;
+  margin: 0 0 7px;
+  font-size: 20px;
   line-height: 1.35;
 }
 
@@ -575,7 +575,7 @@ select {
   width: 100%;
   max-width: 1120px;
   margin: 0;
-  padding: 8px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
@@ -583,7 +583,7 @@ select {
   width: 100%;
   max-width: 1120px;
   margin: 0;
-  padding: 10px 8px 24px;
+  padding: 14px 16px 24px;
 }
 
 .preview-list {

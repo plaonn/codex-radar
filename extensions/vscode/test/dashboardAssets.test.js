@@ -44,11 +44,11 @@ test("supports session-specific context menu and project folding", () => {
 test("keeps sidebar spacing compact and project groups visually separated", () => {
   const css = readDashboardCss();
 
-  assert.match(css, /\.sidebar \.list\s*\{[^}]*padding:\s*0;/s);
-  assert.match(css, /\.sidebar \.session\s*\{[^}]*padding:\s*5px 3px 5px 2px;/s);
+  assert.match(css, /\.sidebar \.list\s*\{[^}]*padding:\s*4px 6px 8px;/s);
+  assert.match(css, /\.sidebar \.session\s*\{[^}]*padding:\s*6px;/s);
   assert.match(css, /\.sidebar \.session\.actionable\s*\{[^}]*border-color:\s*transparent;/s);
   assert.match(css, /\.sidebar \.project\s*\{[^}]*border-top:\s*1px solid var\(--vscode-panel-border\);/s);
-  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*10px;/s);
+  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*8px;/s);
   assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*border-left:/s);
 });
 
@@ -56,10 +56,10 @@ test("keeps preview content aligned with narrower editor gutters", () => {
   const css = readDashboardCss();
   const js = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
 
-  assert.match(css, /\.preview-header\s*\{[^}]*padding:\s*10px 8px 10px;/s);
+  assert.match(css, /\.preview-header\s*\{[^}]*padding:\s*16px 16px 12px;/s);
   assert.match(css, /\.preview-title-block\s*\{[^}]*max-width:\s*1120px;/s);
   assert.match(css, /\.preview-title-block\s*\{[^}]*margin:\s*0;/s);
-  assert.match(css, /\.preview-transcript\s*\{[^}]*padding:\s*10px 8px 24px;/s);
+  assert.match(css, /\.preview-transcript\s*\{[^}]*padding:\s*14px 16px 24px;/s);
   assert.doesNotMatch(css, /\.preview-summary/);
   assert.doesNotMatch(js, /preview-summary/);
 });

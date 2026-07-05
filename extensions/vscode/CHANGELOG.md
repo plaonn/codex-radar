@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.6
+
+Release candidate package for balanced VS Code-style sidebar and preview gutters. This version is not a Marketplace publication.
+
+### Changed
+
+- Replace zero-gutter sidebar spacing with compact 4/6/8px spacing aligned to VS Code-style list density.
+- Keep project grouping visible with a shallow project-session indent while restoring enough row padding for scanability.
+- Keep preview content left-aligned, but restore a moderate 16px editor gutter instead of the over-tight 8px layout.
+
 ## 0.3.5
 
 Release candidate package for stronger sidebar and preview layout correction. This version is not a Marketplace publication.
