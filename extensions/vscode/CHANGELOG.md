@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.7
+
+Release candidate package for messenger-style preview scrolling. This version is not a Marketplace publication.
+
+### Changed
+
+- Restructure the preview tab into a fixed header and a transcript-only scroll body.
+- Move session metadata into the preview header so transcript messages remain the primary body content.
+- Scroll the transcript body to the latest message when the preview first opens.
+
 ## 0.3.6
 
 Release candidate package for balanced VS Code-style sidebar and preview gutters. This version is not a Marketplace publication.

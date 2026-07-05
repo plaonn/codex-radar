@@ -63,3 +63,14 @@ test("keeps preview content aligned with narrower editor gutters", () => {
   assert.doesNotMatch(css, /\.preview-summary/);
   assert.doesNotMatch(js, /preview-summary/);
 });
+
+test("uses a fixed preview header and scrollable transcript body", () => {
+  const css = readDashboardCss();
+  const js = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+
+  assert.match(css, /\.preview\s*\{[^}]*height:\s*100vh;[^}]*overflow:\s*hidden;/s);
+  assert.match(css, /\.preview-header\s*\{[^}]*flex:\s*0 0 auto;/s);
+  assert.match(css, /\.preview-body\s*\{[^}]*overflow-y:\s*auto;/s);
+  assert.match(js, /<section class="preview-body" aria-label="Transcript preview">/);
+  assert.match(js, /previewBody\.scrollTop = previewBody\.scrollHeight;/);
+});

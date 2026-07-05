@@ -131,6 +131,7 @@ function previewDetail(label, value) {
 }
 
 function previewHtml(webview, extensionUri, model) {
+  const nonce = webviewNonce();
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "media", "dashboard.css"));
   const cspSource = webview.cspSource;
   const notice = model.transcriptMessage
@@ -148,7 +149,7 @@ function previewHtml(webview, extensionUri, model) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource};">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource}; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="${cssUri}">
   <title>Codex Radar Preview</title>
@@ -160,19 +161,28 @@ function previewHtml(webview, extensionUri, model) {
         <h1>${escapeHtml(model.title)}</h1>
         <div class="preview-meta">${escapeHtml(model.project)} | ${escapeHtml(model.status)} | ${escapeHtml(model.shortSessionId)}</div>
       </div>
+      <dl class="details preview-details">
+        ${previewDetail("Last seen", model.lastSeen)}
+        ${previewDetail("Last event", model.lastEvent)}
+        ${previewDetail("Model", model.model)}
+        ${previewDetail("Tool", model.currentTool)}
+      </dl>
     </header>
-    <dl class="details preview-details">
-      ${previewDetail("Last seen", model.lastSeen)}
-      ${previewDetail("Last event", model.lastEvent)}
-      ${previewDetail("Model", model.model)}
-      ${previewDetail("Tool", model.currentTool)}
-    </dl>
-    <section class="preview-transcript">
-      <h2>Transcript Preview</h2>
-      ${notice}
-      <div class="preview-list">${entries}</div>
+    <section class="preview-body" aria-label="Transcript preview">
+      <div class="preview-transcript">
+        ${notice}
+        <div class="preview-list">${entries}</div>
+      </div>
     </section>
   </main>
+  <script nonce="${nonce}">
+    const previewBody = document.querySelector(".preview-body");
+    if (previewBody) {
+      requestAnimationFrame(() => {
+        previewBody.scrollTop = previewBody.scrollHeight;
+      });
+    }
+  </script>
 </body>
 </html>`;
 }
