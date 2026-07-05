@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.1.11");
+  assert.equal(manifest.version, "0.1.12");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -92,7 +92,7 @@ test("contributes status filter as a temporary view title action", () => {
   );
 });
 
-test("contributes retention config and prune actions", () => {
+test("contributes retention config and prune commands without project title icons", () => {
   const manifest = readManifest();
   const configureCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.configureRetention",
@@ -100,23 +100,16 @@ test("contributes retention config and prune actions", () => {
   const pruneCommand = manifest.contributes.commands.find(
     (command) => command.command === "codexRadar.pruneNow",
   );
-  const configureMenu = manifest.contributes.menus["view/title"].find(
-    (item) => item.command === "codexRadar.configureRetention",
-  );
-  const pruneMenu = manifest.contributes.menus["view/title"].find(
-    (item) => item.command === "codexRadar.pruneNow",
-  );
+  const viewTitleCommands = manifest.contributes.menus["view/title"].map((item) => item.command);
   const properties = manifest.contributes.configuration.properties;
 
   assert.equal(configureCommand.icon, "$(settings-gear)");
   assert.equal(pruneCommand.icon, "$(trash)");
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.configureRetention"), true);
   assert.equal(manifest.activationEvents.includes("onCommand:codexRadar.pruneNow"), true);
-  assert.equal(configureMenu.when, "view == codexRadar.projectList");
-  assert.equal(pruneMenu.when, "view == codexRadar.projectList");
-  assert.equal(configureMenu.group, "navigation@3");
-  assert.equal(pruneMenu.group, "navigation@4");
-  assert.equal(properties["codexRadar.cliPath"].default, "codex-radar");
+  assert.equal(viewTitleCommands.includes("codexRadar.configureRetention"), false);
+  assert.equal(viewTitleCommands.includes("codexRadar.pruneNow"), false);
+  assert.equal(properties["codexRadar.cliPath"].default, "");
   assert.equal(properties["codexRadar.pythonPath"].default, "python3");
 });
 

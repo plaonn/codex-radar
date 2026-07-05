@@ -98,6 +98,14 @@ test("uses configured cliPath before source checkout fallback", () => {
   });
 });
 
+test("resolves configured codex-radar command through the login shell", () => {
+  const invocation = configuredCliInvocation(fakeVscode({ cliPath: "codex-radar" }));
+
+  assert.equal(invocation.command, DEFAULT_CLI_PATH);
+  assert.equal(invocation.options.shellLookup, true);
+  assert.equal(invocation.label, DEFAULT_CLI_PATH);
+});
+
 test("falls back to codex-radar command when no source checkout is open", () => {
   const invocation = configuredCliInvocation(fakeVscode());
 

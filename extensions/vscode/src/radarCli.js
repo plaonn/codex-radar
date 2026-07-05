@@ -52,11 +52,12 @@ function sourceRootCliInvocation(sourceRoot, pythonPath = DEFAULT_PYTHON_PATH) {
 function configuredCliInvocation(vscode) {
   const configured = vscode.workspace.getConfiguration("codexRadar").get("cliPath", "");
   if (typeof configured === "string" && configured.trim()) {
+    const command = configured.trim();
     return {
-      command: configured.trim(),
+      command,
       argsPrefix: [],
-      options: {},
-      label: configured.trim(),
+      options: command === DEFAULT_CLI_PATH ? { shellLookup: true } : {},
+      label: command,
     };
   }
 

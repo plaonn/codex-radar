@@ -87,7 +87,7 @@ VS Code extension은 아직 Marketplace에 publish하지 않는다. 현재 relea
 ```bash
 npm --prefix extensions/vscode test
 npm --prefix extensions/vscode run package
-code --install-extension extensions/vscode/codex-radar-vscode-0.1.11.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.1.12.vsix --force
 ```
 
 Remote SSH smoke test, privacy boundary, version policy, release checklist는 [extensions/vscode/README.md](extensions/vscode/README.md)에 둔다. 변경 이력은 [extensions/vscode/CHANGELOG.md](extensions/vscode/CHANGELOG.md)에 둔다. 생성된 `.vsix`는 gitignored artifact이며 repository에 commit하지 않는다.

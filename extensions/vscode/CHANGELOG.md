@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.1.12
+
+Release candidate package for retention command CLI resolution. This version is not a Marketplace publication.
+
+### Fixed
+
+- Treat `codexRadar.cliPath` as an override, with an empty default that uses source checkout or remote login shell resolution.
+- Resolve an explicitly configured `codex-radar` command through the login shell before reporting `spawn codex-radar ENOENT`.
+- Keep global retention and prune commands out of the Projects title actions so they are not mistaken for project-level controls.
+
 ## 0.1.11
 
 Release candidate package for Hidden row icon polish. This version is not a Marketplace publication.

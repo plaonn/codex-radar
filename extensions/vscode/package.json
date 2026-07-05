@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -103,8 +103,8 @@
         },
         "codexRadar.cliPath": {
           "type": "string",
-          "default": "codex-radar",
-          "description": "codex-radar CLI executable path used for config and prune commands."
+          "default": "",
+          "description": "Override codex-radar CLI executable path used for config and prune commands. Empty uses a source checkout when available, otherwise codex-radar resolved through the remote login shell."
         },
         "codexRadar.pythonPath": {
           "type": "string",
@@ -150,16 +150,6 @@
           "command": "codexRadar.refresh",
           "when": "view == codexRadar.projectList",
           "group": "navigation@2"
-        },
-        {
-          "command": "codexRadar.configureRetention",
-          "when": "view == codexRadar.projectList",
-          "group": "navigation@3"
-        },
-        {
-          "command": "codexRadar.pruneNow",
-          "when": "view == codexRadar.projectList",
-          "group": "navigation@4"
         }
       ],
       "view/item/context": [
