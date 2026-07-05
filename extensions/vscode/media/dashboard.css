@@ -247,20 +247,20 @@ select {
   background: var(--vscode-descriptionForeground);
 }
 
-.status-waiting_approval {
+.status-dot.status-waiting_approval {
   background: var(--vscode-charts-yellow);
 }
 
-.status-done {
+.status-dot.status-done {
   background: var(--vscode-charts-blue);
 }
 
-.status-done.unread {
+.status-dot.status-done.unread {
   background: var(--vscode-charts-blue);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-charts-blue) 22%, transparent);
 }
 
-.status-done.read {
+.status-dot.status-done.read {
   background: transparent;
   border: 1px solid var(--vscode-descriptionForeground);
 }

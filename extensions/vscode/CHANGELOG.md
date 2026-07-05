@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.2.4
+
+Release candidate package for a sidebar status indicator CSS fix. This version is not a Marketplace publication.
+
+### Fixed
+
+- Scope done and waiting-approval status colors to the dot indicator so session cards do not get a full blue/yellow background from row-level status classes.
+
 ## 0.2.3
 
 Release candidate package for sidebar/dashboard status visual cleanup. This version is not a Marketplace publication.
