@@ -161,7 +161,6 @@ function previewHtml(webview, extensionUri, model) {
         <div class="preview-meta">${escapeHtml(model.project)} | ${escapeHtml(model.status)} | ${escapeHtml(model.shortSessionId)}</div>
       </div>
     </header>
-    ${model.summary ? `<section class="preview-summary">${escapeHtml(model.summary)}</section>` : ""}
     <dl class="details preview-details">
       ${previewDetail("Last seen", model.lastSeen)}
       ${previewDetail("Last event", model.lastEvent)}

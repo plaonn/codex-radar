@@ -8,12 +8,22 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+}
+
+body {
   color: var(--vscode-foreground);
   background: var(--vscode-sideBar-background);
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
+}
+
+#app {
+  margin: 0;
+  padding: 0;
 }
 
 button,
@@ -107,14 +117,30 @@ select {
 }
 
 .sidebar .list {
-  gap: 3px;
-  padding: 4px 2px 6px;
+  gap: 0;
+  padding: 0;
 }
 
 .sidebar .session {
-  grid-template-columns: 14px minmax(0, 1fr);
-  gap: 5px;
-  padding: 6px 5px;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 4px;
+  padding: 5px 3px 5px 2px;
+  border-radius: 0;
+}
+
+.sidebar .session.actionable {
+  background: transparent;
+  border-color: transparent;
+}
+
+.sidebar .session:hover {
+  background: var(--vscode-list-hoverBackground);
+  border-color: transparent;
+}
+
+.sidebar .session.active {
+  background: var(--vscode-list-activeSelectionBackground);
+  border-color: transparent;
 }
 
 .sidebar .status-dot {
@@ -184,8 +210,8 @@ select {
 }
 
 .sidebar .project {
-  margin: 2px 0 10px;
-  padding-top: 5px;
+  margin: 0;
+  padding: 0 0 8px;
   border-top: 1px solid var(--vscode-panel-border);
 }
 
@@ -195,8 +221,7 @@ select {
 }
 
 .sidebar .project:not(.collapsed) {
-  padding-left: 4px;
-  border-left: 1px solid color-mix(in srgb, var(--vscode-panel-border) 72%, transparent);
+  border-left: 0;
 }
 
 .project-header {
@@ -219,18 +244,20 @@ select {
 
 .sidebar .project-header {
   min-height: 24px;
-  padding: 4px 4px 4px 0;
-  border-radius: 4px;
+  padding: 4px 3px 4px 0;
+  border-radius: 0;
 }
 
 .sidebar .project:not(.collapsed) .project-header {
-  margin-left: -4px;
-  padding-left: 4px;
+  margin-left: 0;
+  padding-left: 0;
 }
 
 .sidebar .project .session {
-  width: calc(100% - 6px);
-  margin-left: 6px;
+  width: calc(100% - 10px);
+  margin-left: 10px;
+  border-left: 1px solid color-mix(in srgb, var(--vscode-panel-border) 82%, transparent);
+  padding-left: 5px;
 }
 
 .sidebar .project.collapsed .session {
@@ -518,18 +545,19 @@ select {
 }
 
 .preview-header {
-  padding: 14px 12px 12px;
+  padding: 10px 8px 10px;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .preview-title-block {
-  width: min(100%, 980px);
-  margin: 0 auto;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0;
 }
 
 .preview h1 {
-  margin: 0 0 7px;
-  font-size: 20px;
+  margin: 0 0 5px;
+  font-size: 18px;
   line-height: 1.35;
 }
 
@@ -543,25 +571,19 @@ select {
   color: var(--vscode-descriptionForeground);
 }
 
-.preview-summary {
-  width: min(100%, 980px);
-  margin: 0 auto;
-  padding: 12px 12px 0;
-  color: var(--vscode-descriptionForeground);
-  line-height: 1.5;
-}
-
 .preview-details {
-  width: min(100%, 980px);
-  margin: 0 auto;
-  padding: 12px;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0;
+  padding: 8px;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .preview-transcript {
-  width: min(100%, 980px);
-  margin: 0 auto;
-  padding: 14px 12px 24px;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0;
+  padding: 10px 8px 24px;
 }
 
 .preview-list {

@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.5
+
+Release candidate package for stronger sidebar and preview layout correction. This version is not a Marketplace publication.
+
+### Changed
+
+- Remove sidebar card-style row chrome so narrow sidebar lists use the full available width.
+- Make project grouping clearer with compact project headers and a shallow session indent/rail under each project.
+- Left-align preview content in the editor tab, reduce preview gutters further, and remove the duplicate cached summary block above transcript messages.
+
 ## 0.3.4
 
 Release candidate package for sidebar and preview visual spacing cleanup. This version is not a Marketplace publication.
