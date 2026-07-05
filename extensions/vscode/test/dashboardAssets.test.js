@@ -67,6 +67,20 @@ test("reveals sidebar row actions as hover and focus overlays", () => {
   assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*pointer-events:\s*auto;/s);
 });
 
+test("updates sidebar rows with keyed patching instead of full rebuilds", () => {
+  const js = readDashboardJs();
+
+  assert.match(js, /function sessionDomKey\(session\)/);
+  assert.match(js, /node\.dataset\.sessionKey = sessionDomKey\(session\);/);
+  assert.match(js, /function patchSessionList\(container, sessions, emptyText, options = \{\}\)/);
+  assert.match(js, /const existing = new Map\(\);[\s\S]*existing\.set\(child\.dataset\.sessionKey, child\);/);
+  assert.match(js, /if \(current !== node\) \{[\s\S]*container\.insertBefore\(node, current\);[\s\S]*\}/);
+  assert.match(js, /function renderSidebar\(app, model, surface\)/);
+  assert.match(js, /if \(state\.error \|\| !state\.model\) \{[\s\S]*return;[\s\S]*\}/);
+  assert.match(js, /if \(isSidebarSurface\(state\.surface\)\) \{[\s\S]*renderSidebar\(app, state\.model, state\.surface\);[\s\S]*return;/);
+  assert.doesNotMatch(js, /app\.appendChild\(sidebar(?:Attention|Projects|Archived)\(/);
+});
+
 test("keeps preview content aligned with narrower editor gutters", () => {
   const css = readDashboardCss();
   const js = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");

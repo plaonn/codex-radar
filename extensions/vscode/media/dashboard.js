@@ -58,6 +58,10 @@ function selectedKey() {
   return state.model?.selected?.key || "";
 }
 
+function sessionDomKey(session) {
+  return String(session.key || session.sessionId || session.shortSessionId || "");
+}
+
 function actionButton(label, action, session, className = "ghost") {
   return button(label, className, (event) => {
     event.stopPropagation();
@@ -92,6 +96,13 @@ function showSessionContextMenu(event, session) {
   contextMenuNode = menu;
 }
 
+function sessionClassName(session, options = {}) {
+  const isActive = session.key && session.key === selectedKey();
+  const readClass = session.isUnreadDone ? " unread" : session.isDoneRead ? " read" : "";
+  const archivedClass = session.isArchived ? " archived" : "";
+  return `session status-${session.status}${readClass}${archivedClass}${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`;
+}
+
 function sessionActions(session, options = {}) {
   const actions = el("div", { className: options.compact ? "row-actions compact" : "row-actions" });
   if (session.actions.canOpen) {
@@ -107,11 +118,7 @@ function sessionActions(session, options = {}) {
 }
 
 function sessionNode(session, options = {}) {
-  const isActive = session.key && session.key === selectedKey();
-  const readClass = session.isUnreadDone ? " unread" : session.isDoneRead ? " read" : "";
-  const archivedClass = session.isArchived ? " archived" : "";
   const node = el("div", {
-    className: `session status-${session.status}${readClass}${archivedClass}${isActive ? " active" : ""}${options.showActions ? " actionable" : ""}`,
     dataset: {
       vscodeContext: JSON.stringify({ preventDefaultContextMenuItems: true }),
     },
@@ -119,17 +126,49 @@ function sessionNode(session, options = {}) {
   node.tabIndex = 0;
   node.setAttribute("role", "button");
   node.addEventListener("click", () => {
-    send({ type: "selectSession", key: session.key });
+    send({ type: "selectSession", key: node.dataset.sessionKey || "" });
   });
   node.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      send({ type: "selectSession", key: session.key });
+      send({ type: "selectSession", key: node.dataset.sessionKey || "" });
     }
   });
   node.addEventListener("contextmenu", (event) => {
-    showSessionContextMenu(event, session);
+    showSessionContextMenu(event, node.codexRadarSession || {});
   });
+  updateSessionNode(node, session, options);
+  return node;
+}
+
+function sessionRenderSignature(session, options = {}) {
+  return JSON.stringify({
+    key: sessionDomKey(session),
+    className: sessionClassName(session, options),
+    status: session.status,
+    statusText: session.statusText,
+    isUnreadDone: session.isUnreadDone,
+    isDoneRead: session.isDoneRead,
+    title: session.title,
+    snippet: session.snippet || "",
+    meta: session.description || session.statusText,
+    showActions: Boolean(options.showActions),
+    canOpen: Boolean(session.actions?.canOpen),
+    canMarkRead: Boolean(session.actions?.canMarkRead),
+    canMarkUnread: Boolean(session.actions?.canMarkUnread),
+  });
+}
+
+function updateSessionNode(node, session, options = {}) {
+  const signature = sessionRenderSignature(session, options);
+  node.codexRadarSession = session;
+  node.dataset.sessionKey = sessionDomKey(session);
+  if (node.dataset.renderSignature === signature) {
+    return node;
+  }
+  node.dataset.renderSignature = signature;
+  node.className = sessionClassName(session, options);
+  clear(node);
   node.appendChild(statusIndicator(session));
   const text = el("span");
   text.appendChild(el("span", { className: "title", text: session.title }));
@@ -165,6 +204,43 @@ function sessionList(sessions, emptyText, options = {}) {
     list.appendChild(sessionNode(session, options));
   }
   return list;
+}
+
+function patchSessionList(container, sessions, emptyText, options = {}) {
+  const existing = new Map();
+  for (const child of Array.from(container.children)) {
+    if (child.classList.contains("session") && child.dataset.sessionKey) {
+      existing.set(child.dataset.sessionKey, child);
+    }
+  }
+
+  if (!sessions.length) {
+    if (container.children.length !== 1 || !container.firstElementChild?.classList.contains("empty")) {
+      clear(container);
+      container.appendChild(el("div", { className: "empty", text: emptyText }));
+    } else {
+      container.firstElementChild.textContent = emptyText;
+    }
+    return;
+  }
+
+  const wanted = new Set();
+  sessions.forEach((session, index) => {
+    const key = sessionDomKey(session);
+    wanted.add(key);
+    const node = existing.get(key) || sessionNode(session, options);
+    updateSessionNode(node, session, options);
+    const current = container.children[index] || null;
+    if (current !== node) {
+      container.insertBefore(node, current);
+    }
+  });
+
+  for (const child of Array.from(container.children)) {
+    if (!child.classList.contains("session") || !wanted.has(child.dataset.sessionKey)) {
+      child.remove();
+    }
+  }
 }
 
 function projectStorageKey(group) {
@@ -341,33 +417,145 @@ function topbar(model) {
   ]);
 }
 
-function sidebarAttention(model) {
-  const root = el("div", { className: "app sidebar" });
-  root.appendChild(sessionList(model.attention, "No attention sessions", { showActions: true }));
-  return root;
+function isSidebarSurface(surface) {
+  return surface === "attention" || surface === "projects" || surface === "archived";
 }
 
-function sidebarProjects(model) {
-  const root = el("div", { className: "app sidebar" });
-  const body = el("div", { className: "list" });
-  if (!model.groups.length) {
-    body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
+function sidebarRoot(app, surface) {
+  if (app.dataset.renderMode !== "sidebar" || app.dataset.surface !== surface) {
+    clear(app);
+    app.dataset.renderMode = "sidebar";
+    app.dataset.surface = surface;
+    app.appendChild(el("div", { className: "app sidebar" }));
   }
-  for (const group of model.groups) {
-    body.appendChild(projectGroupNode(group, {
+  return app.firstElementChild;
+}
+
+function sidebarListRoot(root) {
+  let list = root.firstElementChild;
+  if (!list || !list.classList.contains("list")) {
+    clear(root);
+    list = el("div", { className: "list" });
+    root.appendChild(list);
+  }
+  return list;
+}
+
+function projectHeaderNode(project) {
+  let header = project.firstElementChild;
+  if (!header || !header.classList.contains("project-header")) {
+    clear(project);
+    header = el("button", { className: "project-header collapsible" }, [
+      el("span", { className: "chevron" }),
+      el("span", { className: "project-name" }),
+      el("span", { className: "project-count" }),
+    ]);
+    header.addEventListener("click", () => {
+      const key = project.dataset.projectKey || "-";
+      collapsedProjects = {
+        ...collapsedProjects,
+        [key]: !project.classList.contains("collapsed"),
+      };
+      persistUiState();
+      render();
+    });
+    project.appendChild(header);
+  }
+  return header;
+}
+
+function updateProjectHeader(project, group, collapsed) {
+  const header = projectHeaderNode(project);
+  const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
+  header.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  header.querySelector(".chevron").textContent = collapsed ? ">" : "v";
+  header.querySelector(".project-name").textContent = group.project;
+  header.querySelector(".project-count").textContent = label;
+}
+
+function projectSessionsNode(project) {
+  let sessions = project.querySelector(".project-sessions");
+  if (!sessions) {
+    sessions = el("div", { className: "project-sessions" });
+    project.appendChild(sessions);
+  }
+  return sessions;
+}
+
+function sidebarProjectNode(group) {
+  const project = el("section", {
+    className: "project",
+    dataset: { projectKey: projectStorageKey(group) },
+  });
+  projectHeaderNode(project);
+  project.appendChild(el("div", { className: "project-sessions" }));
+  return project;
+}
+
+function updateSidebarProjectNode(project, group, options = {}) {
+  const collapsed = options.collapsible ? isProjectCollapsed(group, options) : false;
+  project.dataset.projectKey = projectStorageKey(group);
+  project.className = `project${collapsed ? " collapsed" : ""}`;
+  updateProjectHeader(project, group, collapsed);
+  const sessions = projectSessionsNode(project);
+  if (collapsed) {
+    clear(sessions);
+  } else {
+    patchSessionList(sessions, group.sessions, "", { showActions: options.showActions });
+  }
+}
+
+function patchProjectGroups(container, groups, emptyText, options = {}) {
+  const existing = new Map();
+  for (const child of Array.from(container.children)) {
+    if (child.classList.contains("project") && child.dataset.projectKey) {
+      existing.set(child.dataset.projectKey, child);
+    }
+  }
+
+  if (!groups.length) {
+    if (container.children.length !== 1 || !container.firstElementChild?.classList.contains("empty")) {
+      clear(container);
+      container.appendChild(el("div", { className: "empty", text: emptyText }));
+    } else {
+      container.firstElementChild.textContent = emptyText;
+    }
+    return;
+  }
+
+  const wanted = new Set();
+  groups.forEach((group, index) => {
+    const key = projectStorageKey(group);
+    wanted.add(key);
+    const project = existing.get(key) || sidebarProjectNode(group);
+    updateSidebarProjectNode(project, group, options);
+    const current = container.children[index] || null;
+    if (current !== project) {
+      container.insertBefore(project, current);
+    }
+  });
+
+  for (const child of Array.from(container.children)) {
+    if (!child.classList.contains("project") || !wanted.has(child.dataset.projectKey)) {
+      child.remove();
+    }
+  }
+}
+
+function renderSidebar(app, model, surface) {
+  const root = sidebarRoot(app, surface);
+  const list = sidebarListRoot(root);
+  if (surface === "attention") {
+    patchSessionList(list, model.attention, "No attention sessions", { showActions: true });
+  } else if (surface === "archived") {
+    patchSessionList(list, model.archived, "No archived sessions", { showActions: true });
+  } else {
+    patchProjectGroups(list, model.groups, model.emptyState || "No sessions match this filter", {
       collapsible: true,
       defaultCollapseQuiet: true,
       showActions: true,
-    }));
+    });
   }
-  root.appendChild(body);
-  return root;
-}
-
-function sidebarArchived(model) {
-  const root = el("div", { className: "app sidebar" });
-  root.appendChild(sessionList(model.archived, "No archived sessions", { showActions: true }));
-  return root;
 }
 
 function dashboardView(model) {
@@ -383,24 +571,28 @@ function dashboardView(model) {
 
 function render() {
   const app = document.getElementById("app");
-  clear(app);
-  if (state.error) {
-    app.appendChild(el("div", { className: "error", text: state.error }));
-  }
-  if (!state.model) {
-    app.appendChild(el("div", { className: "empty", text: "Loading Codex Radar sessions" }));
+  if (state.error || !state.model) {
+    clear(app);
+    app.dataset.renderMode = "full";
+    app.dataset.surface = state.surface || "";
+    if (state.error) {
+      app.appendChild(el("div", { className: "error", text: state.error }));
+    }
+    if (!state.model) {
+      app.appendChild(el("div", { className: "empty", text: "Loading Codex Radar sessions" }));
+    }
     return;
   }
 
-  if (state.surface === "attention") {
-    app.appendChild(sidebarAttention(state.model));
-  } else if (state.surface === "projects") {
-    app.appendChild(sidebarProjects(state.model));
-  } else if (state.surface === "archived") {
-    app.appendChild(sidebarArchived(state.model));
-  } else {
-    app.appendChild(dashboardView(state.model));
+  if (isSidebarSurface(state.surface)) {
+    renderSidebar(app, state.model, state.surface);
+    return;
   }
+
+  clear(app);
+  app.dataset.renderMode = "full";
+  app.dataset.surface = state.surface || "";
+  app.appendChild(dashboardView(state.model));
 }
 
 window.addEventListener("message", (event) => {
