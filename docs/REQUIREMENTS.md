@@ -112,6 +112,17 @@
 - Failure prevented: GUI 구현 중 terminal workflow를 잃어 실제 thread visibility가 퇴보하는 문제.
 - Derived specs/tests: terminal MVP remains supported while GUI integration is experimental.
 
+### R8: host-local Codex usage visibility
+
+- Status: confirmed direction, experimental rollout-log adapter active
+- Requirement: VS Code extension host에서 접근 가능한 host-local Codex session rollout state를 read-only로 관찰해, 해당 VS Code window가 붙어 있는 실행 환경의 Codex rate-limit 사용률과 reset 시각을 빠르게 볼 수 있어야 한다.
+- Rationale: 원격 또는 로컬 개발 환경에서 Codex를 여러 thread/작업에 쓰는 경우, 사용량 한계에 가까운지 모르면 긴 작업이나 병렬 작업을 시작했다가 중단/지연될 수 있다.
+- Failure prevented: extension host의 Codex 사용량 상태를 모른 채 새 Codex 작업을 시작하는 문제.
+- Assumptions: Codex가 같은 extension host의 `CODEX_HOME` 또는 `~/.codex` 아래 `sessions/rollout-*.jsonl`에 `token_count`/`rate_limits` event를 남긴다. 이 rollout JSONL shape는 공식 stable API가 아니므로 experimental adapter로 취급한다.
+- Non-goals: local UI client machine의 별도 Codex state 읽기, `auth.json` 읽기, 서버 요청, 공식 Codex config/hook 수정, raw rollout line 저장.
+- Derived specs/tests: `codex-radar usage --json`, host-local VS Code status bar usage snapshot, null/unavailable fallback, broken JSONL skip, latest `token_count` selection, raw path/content exclusion.
+- Revisit when: Codex가 공식 local usage API/export/status endpoint를 제공하거나 rollout schema가 사라질 때.
+
 ## Rationale
 
 VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.

@@ -376,6 +376,49 @@ class CliTests(unittest.TestCase):
                 main(["--state-dir", str(state_dir), "config", "get", "retention_days"])
             self.assertEqual("14\n", out.getvalue())
 
+    def test_usage_json_reads_codex_home_without_creating_radar_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "missing-state"
+            codex_home = Path(tmp) / "codex-home"
+            rollout = codex_home / "sessions" / "2026" / "07" / "06" / "rollout-usage.jsonl"
+            rollout.parent.mkdir(parents=True)
+            rollout.write_text(
+                json.dumps(
+                    {
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "info": {"last_token_usage": {"total_tokens": 7}},
+                            "rate_limits": {
+                                "primary": {"used_percent": 10, "window_minutes": 300},
+                                "secondary": {"used_percent": 20, "window_minutes": 10080},
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(
+                    [
+                        "--state-dir",
+                        str(state_dir),
+                        "usage",
+                        "--json",
+                        "--codex-home",
+                        str(codex_home),
+                    ]
+                )
+
+            payload = json.loads(out.getvalue())
+            self.assertEqual(True, payload["available"])
+            self.assertEqual(10.0, payload["primary"]["used_percent"])
+            self.assertEqual({"total_tokens": 7}, payload["last_token_usage"])
+            self.assertFalse(state_dir.exists())
+
     def test_prune_reports_and_removes_old_sessions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
@@ -421,6 +464,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("group-project", output)
         self.assertIn("include-existing", output)
         self.assertIn("retention-days", output)
+        self.assertIn("codex-home", output)
 
 
 if __name__ == "__main__":

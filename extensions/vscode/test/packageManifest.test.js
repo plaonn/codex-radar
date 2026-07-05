@@ -89,6 +89,7 @@ test("contributes only global commands for refresh, filtering, and editor dashbo
 test("activates on section Webviews and dashboard command", () => {
   const manifest = readManifest();
 
+  assert.equal(manifest.activationEvents.includes("onStartupFinished"), true);
   assert.equal(manifest.activationEvents.includes("onView:codexRadar.attentionList"), true);
   assert.equal(manifest.activationEvents.includes("onView:codexRadar.projectList"), true);
   assert.equal(manifest.activationEvents.includes("onView:codexRadar.archivedList"), true);

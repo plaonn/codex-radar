@@ -13,6 +13,12 @@ const {
   sessionCacheWatchTarget,
 } = require("./sessionWatcher");
 const {
+  defaultCodexHome,
+  loadUsageSnapshot,
+  usageStatusText,
+  usageStatusTooltip,
+} = require("./usageSource");
+const {
   READ_DONE_KEYS_KEY,
   decorateSessions,
   isDoneSession,
@@ -526,9 +532,66 @@ class SessionCacheWatcherManager {
   }
 }
 
+class UsageStatusBar {
+  constructor() {
+    this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    this.interval = null;
+    this.watcher = null;
+    this.reset();
+  }
+
+  reset() {
+    this.disposeWatcher();
+    this.refresh();
+    this.interval = setInterval(() => this.refresh(), 5 * 60 * 1000);
+    const sessionsDir = path.join(defaultCodexHome(), "sessions");
+    this.watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(path.resolve(sessionsDir), "**/rollout-*.jsonl"),
+    );
+    const refreshHandlers = registerRefreshHandlers(this.watcher, () => this.refresh());
+    this.watcherRefreshHandlers = refreshHandlers;
+  }
+
+  refresh() {
+    let snapshot;
+    try {
+      snapshot = loadUsageSnapshot();
+    } catch (error) {
+      snapshot = {
+        available: false,
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+    this.item.text = usageStatusText(snapshot);
+    this.item.tooltip = usageStatusTooltip(snapshot);
+    this.item.show();
+  }
+
+  disposeWatcher() {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
+    if (this.watcherRefreshHandlers) {
+      this.watcherRefreshHandlers.dispose();
+      this.watcherRefreshHandlers = null;
+    }
+    if (this.watcher) {
+      this.watcher.dispose();
+      this.watcher = null;
+    }
+  }
+
+  dispose() {
+    this.disposeWatcher();
+    this.item.dispose();
+  }
+}
+
 function activate(context) {
   const controller = new RadarWebviewController(context);
   const watcherManager = new SessionCacheWatcherManager(() => controller.refresh());
+  const usageStatusBar = new UsageStatusBar();
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("codexRadar.attentionList", {
@@ -550,6 +613,7 @@ function activate(context) {
       }
     }),
     watcherManager,
+    usageStatusBar,
   );
 }
 

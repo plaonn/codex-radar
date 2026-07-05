@@ -18,6 +18,7 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 - `codex-radar watch`: foreground watcher를 실행해 새 `done` session을 기본으로 terminal bell과 최소 metadata line으로 알린다. `--status`를 반복 지정해 `waiting_approval` 같은 다른 display status도 볼 수 있다.
 - `codex-radar path`: active state directory를 출력한다. 이 command는 directory를 생성하지 않는 no-write discovery surface다.
 - `codex-radar doctor`: 짧은 로컬 진단을 출력한다.
+- `codex-radar usage`: host-local Codex rollout JSONL에서 최신 `token_count` usage snapshot을 read-only로 읽는다. `--json`은 VS Code와 automation이 사용하기 쉬운 JSON contract를 출력한다.
 - `codex-radar config get [key]`: server-side `codex-radar` config를 출력한다. 현재 config key는 `retention_days`다.
 - `codex-radar config set retention_days <days>`: server-side retention 기간을 일 단위로 저장한다. `0`은 pruning 비활성화를 뜻한다.
 - `codex-radar prune`: `retention_days` 기준으로 오래된 session을 `sessions.json`에서 제거하고 legacy `events.jsonl`이 있으면 제거한다. `--dry-run`은 실제 변경 없이 제거 후보를 출력한다.
@@ -55,6 +56,31 @@ state directory 구성:
 Legacy state:
 
 - 과거 버전이 만든 `events.jsonl`은 더 이상 기본 기록하지 않는다. hook update와 `codex-radar prune`은 legacy `events.jsonl`이 있으면 제거한다.
+
+## Usage Snapshot
+
+`codex-radar usage`는 experimental host-local Codex usage adapter다. VS Code Remote SSH, Dev Container, WSL, local window 모두에서 실행 중인 VS Code extension host 기준 `CODEX_HOME` 또는 `~/.codex`를 사용한다. Remote SSH window에서는 remote host의 Codex state를 읽고, local VS Code window에서는 local host의 Codex state를 읽는다.
+
+Input:
+
+- 기본 Codex home: `$CODEX_HOME` 또는 `~/.codex`.
+- scan 대상: `<codex-home>/sessions/**/rollout-*.jsonl` 중 mtime 기준 최신 파일 일부.
+- 추출 대상: 최신 `payload.type == "token_count"` event의 `info`와 `rate_limits`.
+
+Output:
+
+- `available`: usable `rate_limits` snapshot이 있으면 `true`.
+- `source`: `codex-session-rollout`.
+- `primary` / `secondary`: `used_percent`, computed `remaining_percent`, `window_minutes`, `resets_at`, `resets_at_iso`.
+- `plan_type`, `context_window`, `last_token_usage`, `total_token_usage`: rollout event가 제공하는 요약 값.
+- `reason`: unavailable일 때 `token_count_unavailable` 또는 `rate_limits_unavailable`.
+
+Privacy and stability boundary:
+
+- 이 adapter는 Codex의 공식 stable usage API가 아니라 host-local rollout JSONL의 current observed shape를 읽는 experimental adapter다.
+- `auth.json`을 읽지 않고, 서버 요청을 보내지 않고, Codex config/hook/session을 수정하지 않는다.
+- raw rollout line, raw transcript content, private rollout file path는 output model이나 Radar state에 저장하지 않는다.
+- `rate_limits`가 없거나 schema가 바뀌면 정상적인 unavailable snapshot으로 처리한다.
 
 ## Data Model
 
@@ -150,6 +176,7 @@ GUI display contract v1:
 - GUI에서 `unknown`은 colored `!` indicator로 표시한다.
 - GUI attention은 `waiting_approval`과 unread `done` session을 뜻한다. `running`과 `tool_running`, read `done`은 상태로 표시하지만 attention count에는 포함하지 않는다.
 - GUI는 attention-worthy session 수를 sidebar view badge, dashboard topbar, attention pane count 같은 in-surface cue로 보여준다. 이 count는 현재 status filter와 무관하게 전체 loaded visible session 기준으로 계산한다.
+- GUI는 host-local Codex usage snapshot을 VS Code status bar에 표시할 수 있다. 표시 대상은 primary usage percent이며 secondary usage, reset time, plan, latest token summary는 tooltip에 둘 수 있다. Usage unavailable 상태는 오류로 띄우지 않고 muted status item으로 표시한다.
 - GUI는 lifecycle status 기준으로 project session list를 좁히는 read-only status filter를 제공한다. `attention` filter는 attention state 기준으로 좁힌다. Sidebar에서는 native section title의 filter button을 entrypoint로 쓰고 Webview body 안에 별도 filter control이나 duplicate section title을 배치하지 않는다. Editor dashboard에서는 넓은 surface의 topbar select를 filter entrypoint로 둔다. 현재 구현은 view-local temporary filter로 두며, session cache나 extension settings를 수정하지 않는다.
 - GUI는 done session에 extension-local read/unread state를 유지할 수 있다. read key는 `session_id`와 done `last_seen_at` 기준이며, 같은 session이 다시 done 상태로 갱신되면 새 unread item으로 취급한다. Done row/card와 inspector action은 unread/read 상태를 구분해야 하며, read/unread action은 hide/show를 암시하는 eye icon이나 wording을 쓰지 않는다.
 - GUI는 Codex archived session을 `Archived`로 표시한다. Archived 판정은 `sessions.json`의 transcript path가 host-local Codex archived store 아래에 있거나, cached transcript path가 없어도 session id/file name matching으로 `~/.codex/archived_sessions` 또는 `CODEX_HOME/archived_sessions`에서 transcript file이 발견되는 경우다. 보조 판정으로 host-local Codex `state_5.sqlite`의 archived thread state를 read-only로 참고하되, `threads.id`가 `session_id`와 직접 일치하는 archived thread만 archived로 취급한다. `cwd`와 시간 범위만으로 transcript-less side session을 archived parent에 추정 연결하지 않는다. Archived session은 사용자가 이미 Codex에서 archive한 session으로 취급하며, GUI는 `Open in Codex` action을 비활성화한다.
@@ -163,6 +190,7 @@ GUI display contract v1:
 GUI privacy/action boundary v1:
 
 - 첫 GUI milestone은 Codex/codex-radar runtime state에 대해 read-only dashboard다. Extension-local read/unread UI state는 허용하지만, `sessions.json`, transcript, Codex thread, hook config, server-side `config.json`은 수정하지 않는다.
+- GUI usage status bar는 Codex rollout JSONL을 read-only로 읽을 수 있지만 `auth.json`을 읽거나 서버 요청을 보내지 않는다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
 - 현재 VS Code GUI는 Python core CLI를 실행하지 않는다. retention config/prune GUI는 clearer surface가 생길 때 별도 requirement로 재도입한다.

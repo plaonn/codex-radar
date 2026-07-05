@@ -11,6 +11,7 @@ COMMANDS = (
     "watch",
     "path",
     "doctor",
+    "usage",
     "config",
     "prune",
     "completion",
@@ -20,6 +21,7 @@ SESSION_FILTER_OPTIONS = ("--project", "--status", "--model", "--since")
 SESSION_TEXT_OPTIONS = ("--group-project",)
 WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-existing", "--quiet-start")
 PRUNE_OPTIONS = ("--retention-days", "--dry-run")
+USAGE_OPTIONS = ("--codex-home", "--file-limit")
 
 
 def bash_completion() -> str:
@@ -33,6 +35,7 @@ def bash_completion() -> str:
             *SESSION_TEXT_OPTIONS,
             *WATCH_OPTIONS,
             *PRUNE_OPTIONS,
+            *USAGE_OPTIONS,
             "get",
             "set",
             "retention_days",
@@ -75,6 +78,9 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set' -a 'retention_days'",
         "complete -c codex-radar -n '__fish_seen_subcommand_from prune' -l retention-days -r",
         "complete -c codex-radar -n '__fish_seen_subcommand_from prune' -l dry-run",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l json",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l codex-home -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l file-limit -r",
     ]
     return "\n".join(lines) + "\n"
 

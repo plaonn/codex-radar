@@ -25,6 +25,7 @@ from .store import (
 )
 from .transcript import format_skim, skim_transcript
 from .tui import run_tui
+from .usage import default_codex_home, format_usage_snapshot, usage_snapshot
 from .watch import run_watch
 
 _SINCE_DURATION = re.compile(r"^(?P<amount>\d+)(?P<unit>[smhd])$")
@@ -37,6 +38,10 @@ _SINCE_UNITS = {
 
 
 def _state_dir_arg(value: Optional[str]) -> Optional[Path]:
+    return Path(value).expanduser() if value else None
+
+
+def _codex_home_arg(value: Optional[str]) -> Optional[Path]:
     return Path(value).expanduser() if value else None
 
 
@@ -234,6 +239,18 @@ def cmd_completion(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_usage(args: argparse.Namespace) -> int:
+    snapshot = usage_snapshot(
+        _codex_home_arg(args.codex_home),
+        file_limit=args.file_limit,
+    )
+    if args.json:
+        print(json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True))
+    else:
+        print(format_usage_snapshot(snapshot))
+    return 0
+
+
 def cmd_config(args: argparse.Namespace) -> int:
     state_dir = _state_dir_arg(args.state_dir)
     if args.config_command == "get":
@@ -316,6 +333,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Print a short local diagnostic")
     doctor.set_defaults(func=cmd_doctor)
+
+    usage = subparsers.add_parser("usage", help="Read host-local Codex usage from rollout logs")
+    usage.add_argument("--json", action="store_true", help="Print JSON")
+    usage.add_argument(
+        "--codex-home",
+        help=f"Override Codex home. Empty uses CODEX_HOME or {default_codex_home()}",
+    )
+    usage.add_argument(
+        "--file-limit",
+        type=int,
+        default=30,
+        help="Maximum recent rollout files to scan. Default: 30",
+    )
+    usage.set_defaults(func=cmd_usage)
 
     config = subparsers.add_parser("config", help="Read or update codex-radar config")
     config_subparsers = config.add_subparsers(dest="config_command", required=True)
