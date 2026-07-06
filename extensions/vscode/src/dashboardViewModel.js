@@ -13,8 +13,9 @@ const {
   statusText,
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
-const { isArchivedByCodexThreadState } = require("./codexThreadState");
+const { hasCodexThreadState, isArchivedByCodexThreadState } = require("./codexThreadState");
 const {
+  catalogEntryForSession,
   isArchivedByCodexThreadCatalog,
   sessionWithCatalogTitle,
 } = require("./codexThreadCatalog");
@@ -52,6 +53,26 @@ function isArchivedSession(session, options = {}) {
     cache.set(key, isArchived);
   }
   return isArchived;
+}
+
+function canTrustMissingCatalogEntry(catalog) {
+  return catalog?.entries instanceof Map && !catalog.error;
+}
+
+function isUnresolvableDoneSession(session, options = {}) {
+  if (!isDoneSession(session) || isArchivedSession(session, options)) {
+    return false;
+  }
+  if (transcriptPathInfo(session, options).path) {
+    return false;
+  }
+  if (!canTrustMissingCatalogEntry(options.codexThreadCatalog)) {
+    return false;
+  }
+  if (catalogEntryForSession(session, options.codexThreadCatalog)) {
+    return false;
+  }
+  return !hasCodexThreadState(session, options);
 }
 
 function statusOptions(currentStatusFilter = "") {
@@ -235,14 +256,17 @@ function buildDashboardModel(sessions, options = {}) {
   };
   const statusFilter = normalizeStatusFilter(options.statusFilter);
   const archivedSessions = sessions.filter((session) => isArchivedSession(session, modelOptions));
-  const activeSessions = sessions.filter((session) => !isArchivedSession(session, modelOptions));
+  const activeSessions = sessions.filter((session) => (
+    !isArchivedSession(session, modelOptions) && !isUnresolvableDoneSession(session, modelOptions)
+  ));
   const filteredSessions = filterSessionsByStatus(activeSessions, statusFilter);
   const attentionSessions = activeSessions.filter((session) => session.is_attention);
   const runningSessions = activeSessions.filter((session) => {
     const status = baseDisplayStatus(session);
     return status === "running" || status === "tool_running";
   });
-  const allCards = cardsForSessions(sessions, modelOptions);
+  const selectableSessions = activeSessions.concat(archivedSessions);
+  const allCards = cardsForSessions(selectableSessions, modelOptions);
   const selectedKey = options.selectedKey && indexCards(allCards).has(options.selectedKey)
     ? options.selectedKey
     : "";
@@ -254,10 +278,10 @@ function buildDashboardModel(sessions, options = {}) {
     selectedSession = byKey.get(selectedKey) || null;
   }
   if (!selectedSession && selectedIdentity) {
-    selectedSession = sessions.find((session) => sessionIdentity(session) === selectedIdentity) || null;
+    selectedSession = selectableSessions.find((session) => sessionIdentity(session) === selectedIdentity) || null;
   }
   if (!selectedSession) {
-    selectedSession = attentionSessions[0] || filteredSessions[0] || archivedSessions[0] || sessions[0] || null;
+    selectedSession = attentionSessions[0] || filteredSessions[0] || archivedSessions[0] || selectableSessions[0] || null;
   }
 
   return {
@@ -294,6 +318,7 @@ module.exports = {
   buildDashboardModel,
   findSessionByKey,
   isArchivedSession,
+  isUnresolvableDoneSession,
   sidebarProjectGroups,
   sessionCard,
   sessionDisplayFields,

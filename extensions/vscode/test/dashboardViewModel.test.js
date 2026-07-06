@@ -9,10 +9,11 @@ const {
   buildDashboardModel,
   findSessionByKey,
   isArchivedSession,
+  isUnresolvableDoneSession,
   sessionCard,
   statusOptions,
 } = require("../src/dashboardViewModel");
-const { catalogFromThreadLists } = require("../src/codexThreadCatalog");
+const { catalogFromThreadLists, emptyCodexThreadCatalog } = require("../src/codexThreadCatalog");
 const { decorateSessions, markDoneRead } = require("../src/readState");
 
 const nowMs = Date.parse("2026-07-05T00:10:00+09:00");
@@ -66,6 +67,14 @@ function archivedThreads() {
       createdAt: Date.parse("2026-07-04T14:16:04Z") / 1000,
       updatedAt: Date.parse("2026-07-04T19:18:03Z") / 1000,
     }],
+  };
+}
+
+function codexThreads(ids) {
+  return {
+    ids: new Set(ids),
+    archivedIds: new Set(),
+    rows: Array.from(ids, (id) => ({ id })),
   };
 }
 
@@ -180,6 +189,83 @@ test("filters project sessions by display status without changing attention coun
   assert.equal(model.counts.filtered, 1);
   assert.equal(model.counts.attention, 2);
   assert.deepEqual(model.groups.map((group) => group.project), ["project-a"]);
+});
+
+test("hides unresolvable done sessions from active dashboard navigation", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "orphan-done",
+      project: "project-a",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:09:00+09:00",
+    },
+    {
+      session_id: "active-done",
+      project: "project-a",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:08:00+09:00",
+    },
+  ], new Set(), new Set());
+  const catalog = catalogFromThreadLists({
+    active: [{ id: "active-done", cwd: "" }],
+    archived: [],
+  });
+  const model = buildDashboardModel(sessions, {
+    codexThreadCatalog: catalog,
+    resolveCodexThreads: () => codexThreads(["active-done"]),
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+    selectedIdentity: "orphan-done",
+  });
+
+  assert.equal(isUnresolvableDoneSession(sessions[0], {
+    codexThreadCatalog: catalog,
+    resolveCodexThreads: () => codexThreads(["active-done"]),
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  }), true);
+  assert.equal(model.counts.total, 2);
+  assert.equal(model.counts.visible, 1);
+  assert.equal(model.counts.attention, 1);
+  assert.deepEqual(model.attention.map((card) => card.sessionId), ["active-done"]);
+  assert.deepEqual(model.groups[0].sessions.map((card) => card.sessionId), ["active-done"]);
+  assert.equal(model.selected.sessionId, "active-done");
+});
+
+test("keeps unresolvable done sessions visible when Codex catalog lookup is uncertain", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "done-unknown-catalog",
+      project: "project-a",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:09:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    codexThreadCatalog: emptyCodexThreadCatalog("thread/list unavailable"),
+    resolveCodexThreads: () => codexThreads([]),
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.equal(model.counts.visible, 1);
+  assert.equal(model.attention[0].sessionId, "done-unknown-catalog");
+});
+
+test("keeps done sessions visible when Codex thread state still knows the id", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "state-known-done",
+      project: "project-a",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:09:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    codexThreadCatalog: catalogFromThreadLists({ active: [], archived: [] }),
+    resolveCodexThreads: () => codexThreads(["state-known-done"]),
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.equal(model.counts.visible, 1);
+  assert.equal(model.attention[0].sessionId, "state-known-done");
 });
 
 test("pins current workspace projects only in sidebar project groups", () => {
