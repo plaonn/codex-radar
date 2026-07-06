@@ -77,7 +77,7 @@
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Derived specs/tests: planned GUI read contract v1, project-grouped Webview sidebar sections, in-surface attention cues, editor Webview dashboard, editor session preview, extension-local read/unread state, source-cache-bounded derived UI state, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, optional app-server thread title/archive catalog, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
+- Derived specs/tests: planned GUI read contract v1, project-grouped Webview sidebar sections, in-surface attention cues, editor Webview dashboard, editor session preview, extension-local read/unread state, 원천 세션 캐시 기준으로 제한되는 파생 UI 상태, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, optional app-server thread title/archive catalog, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
 - Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
 
 #### R7a: GUI project navigation
@@ -94,7 +94,7 @@
 - Requirement: GUI는 `waiting_approval`, `running`, `tool_running`, `done`, `unknown` 같은 thread 상태를 navigation 안에서 구분하고, attention badge는 `waiting_approval`과 unread `done`처럼 사용자 확인이 필요한 상태를 표현해야 한다. Codex archived session은 active navigation에서 분리되어야 한다.
 - Rationale: 사용자는 VS Code workflow 안에서 어떤 thread가 주의가 필요한지 확인해야 하지만, OS/external notification은 content template과 redaction policy 없이는 scope가 커진다.
 - Failure prevented: thread 상태를 놓치거나, 초기 GUI milestone이 OS/external notification 설계로 과도하게 확장되는 문제.
-- Derived specs/tests: GUI notification rules, in-surface cue only, Radar-native status bar attention/running counts, extension-local read/unread toggle, read-state pruning for sessions no longer present in the source cache, Webview sidebar attention badge, Webview attention counts, archived section routing, no OS/external notification before explicit opt-in milestone.
+- Derived specs/tests: GUI notification rules, in-surface cue only, Radar-native status bar attention/running counts, extension-local read/unread toggle, 원천 세션 캐시에 더 이상 없는 session의 read state 정리, Webview sidebar attention badge, Webview attention counts, archived section routing, no OS/external notification before explicit opt-in milestone.
 
 #### R7c: GUI privacy boundary
 
