@@ -28,6 +28,11 @@ const {
   readStateToValue,
 } = require("./readState");
 const { buildDashboardModel, findSessionByKey, isArchivedSession } = require("./dashboardViewModel");
+const {
+  emptyCodexThreadCatalog,
+  loadCodexThreadCatalog,
+  sessionWithCatalogTitle,
+} = require("./codexThreadCatalog");
 const { buildSessionPreviewModel } = require("./transcriptPreview");
 
 function configuredStateDir() {
@@ -176,7 +181,7 @@ async function chooseStatusFilter(controller) {
     placeHolder: "Filter Codex Radar project sessions by status",
   });
   if (selected) {
-    controller.setStatusFilter(selected.value);
+    await controller.setStatusFilter(selected.value);
   }
 }
 
@@ -229,7 +234,7 @@ class RadarWebviewController {
     this.selectedKey = "";
     this.selectedSessionIdentity = "";
     this.sessions = [];
-    this.model = null;
+    this.model = buildDashboardModel([]);
     this.lastError = "";
     this.sidebarViews = new Map();
     this.panel = null;
@@ -237,14 +242,30 @@ class RadarWebviewController {
     this.previewSessionKey = "";
     this.previewReady = false;
     this.pendingPreviewState = null;
+    this.codexThreadCatalog = emptyCodexThreadCatalog();
+    this.refreshSerial = 0;
     this.refresh();
   }
 
-  refresh(options = {}) {
+  async loadCodexThreadCatalog(sessions) {
+    const cwds = sessions.map((session) => session.cwd).filter(Boolean);
+    return loadCodexThreadCatalog({ cwds });
+  }
+
+  async refresh(options = {}) {
+    const refreshSerial = this.refreshSerial + 1;
+    this.refreshSerial = refreshSerial;
     try {
-      this.sessions = loadDecoratedSessions(this.context.globalState);
-      this.model = buildDashboardModel(this.sessions, {
+      const sessions = loadDecoratedSessions(this.context.globalState);
+      const codexThreadCatalog = await this.loadCodexThreadCatalog(sessions);
+      if (refreshSerial !== this.refreshSerial) {
+        return;
+      }
+      this.sessions = sessions;
+      this.codexThreadCatalog = codexThreadCatalog;
+      this.model = buildDashboardModel(sessions, {
         homeDir: process.env.HOME || "",
+        codexThreadCatalog,
         selectedKey: this.selectedKey,
         selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
@@ -253,7 +274,11 @@ class RadarWebviewController {
       this.selectedSessionIdentity = previewSessionIdentity(this.model.selected);
       this.lastError = "";
     } catch (error) {
+      if (refreshSerial !== this.refreshSerial) {
+        return;
+      }
       this.sessions = [];
+      this.codexThreadCatalog = emptyCodexThreadCatalog();
       this.model = buildDashboardModel([], {
         selectedKey: this.selectedKey,
         selectedIdentity: this.selectedSessionIdentity,
@@ -329,7 +354,7 @@ class RadarWebviewController {
 
   setStatusFilter(statusFilter) {
     this.statusFilter = normalizeStatusFilter(statusFilter);
-    this.refresh();
+    return this.refresh();
   }
 
   sessionForKey(key) {
@@ -348,7 +373,8 @@ class RadarWebviewController {
     if (!session) {
       return;
     }
-    const sessionIdentity = previewSessionIdentity(session);
+    const displaySession = sessionWithCatalogTitle(session, this.codexThreadCatalog);
+    const sessionIdentity = previewSessionIdentity(displaySession);
     if (!this.previewPanel) {
       this.previewPanel = vscode.window.createWebviewPanel(
         "codexRadar.preview",
@@ -372,7 +398,7 @@ class RadarWebviewController {
       this.previewPanel.reveal(vscode.ViewColumn.Active);
     }
     const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
-    const model = buildSessionPreviewModel(session, { homeDir: process.env.HOME || "" });
+    const model = buildSessionPreviewModel(displaySession, { homeDir: process.env.HOME || "" });
     this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
     this.pendingPreviewState = {
       type: "previewState",
@@ -424,7 +450,7 @@ class RadarWebviewController {
     const session = this.sessionForKey(key);
     if (!session) {
       await vscode.window.showWarningMessage("Codex Radar session is no longer available.");
-      this.refresh();
+      await this.refresh();
       return;
     }
 
@@ -441,7 +467,7 @@ class RadarWebviewController {
 
     this.selectedKey = key;
     this.selectedSessionIdentity = previewSessionIdentity(session);
-    this.refresh();
+    await this.refresh();
   }
 
   async copySessionId(sessionId) {
@@ -458,7 +484,7 @@ class RadarWebviewController {
       return;
     }
     if (message.type === "ready" || message.type === "refresh") {
-      this.refresh();
+      await this.refresh();
       return;
     }
     if (message.type === "openDashboard") {
@@ -466,7 +492,7 @@ class RadarWebviewController {
       return;
     }
     if (message.type === "setStatusFilter") {
-      this.setStatusFilter(message.value);
+      await this.setStatusFilter(message.value);
       return;
     }
     if (message.type === "selectSession") {
@@ -475,7 +501,7 @@ class RadarWebviewController {
       const requestedIdentity = previewSessionIdentity(requestedSession);
       this.selectedKey = requestedKey;
       this.selectedSessionIdentity = requestedIdentity;
-      this.refresh({ updatePreview: false });
+      await this.refresh({ updatePreview: false });
       if (surface !== "dashboard") {
         this.openPreview(
           this.sessionForPreviewIdentity(requestedIdentity) || this.sessionForKey(requestedKey) || requestedSession,

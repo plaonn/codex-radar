@@ -12,6 +12,7 @@ const {
   sessionCard,
   statusOptions,
 } = require("../src/dashboardViewModel");
+const { catalogFromThreadLists } = require("../src/codexThreadCatalog");
 const { decorateSessions, markDoneRead } = require("../src/readState");
 
 const nowMs = Date.parse("2026-07-05T00:10:00+09:00");
@@ -120,6 +121,51 @@ test("adds transcript-derived title and speaker snippet fields to session cards"
   assert.equal(card.snippetSpeaker, "You");
   assert.equal(card.snippetRole, "user");
   assert.equal(card.snippetText, "snippet은 마지막 user message로 가자");
+});
+
+test("uses app-server catalog title and archived ids without changing lifecycle status", () => {
+  const catalog = catalogFromThreadLists({
+    active: [{
+      id: "display-1",
+      title: "Official app-server title",
+      cwd: "/repo",
+      status: "notLoaded",
+    }],
+    archived: [{
+      id: "archived-by-catalog",
+      title: "Archived app-server title",
+      cwd: "/repo",
+      status: "notLoaded",
+    }],
+  });
+
+  const card = sessionCard({
+    session_id: "display-1",
+    cwd: "/repo",
+    project: "codex-radar",
+    display_status: "running",
+    last_seen_at: "2026-07-05T00:09:00+09:00",
+    last_assistant_message: "cached snippet",
+  }, {
+    codexThreadCatalog: catalog,
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+  const archivedCard = sessionCard({
+    session_id: "archived-by-catalog",
+    cwd: "/repo",
+    project: "codex-radar",
+    display_status: "done",
+    last_seen_at: "2026-07-05T00:08:00+09:00",
+  }, {
+    codexThreadCatalog: catalog,
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.equal(card.title, "Official app-server title");
+  assert.equal(card.status, "running");
+  assert.equal(archivedCard.title, "Archived app-server title");
+  assert.equal(archivedCard.isArchived, true);
+  assert.equal(archivedCard.status, "done");
 });
 
 test("filters project sessions by display status without changing attention count", () => {

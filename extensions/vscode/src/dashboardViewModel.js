@@ -12,6 +12,10 @@ const {
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
 const { isArchivedByCodexThreadState } = require("./codexThreadState");
+const {
+  isArchivedByCodexThreadCatalog,
+  sessionWithCatalogTitle,
+} = require("./codexThreadCatalog");
 const { buildSessionDisplayFields, resolveTranscriptPathInfo } = require("./transcriptPreview");
 
 function baseDisplayStatus(session) {
@@ -40,6 +44,7 @@ function isArchivedSession(session, options = {}) {
     return cache.get(key);
   }
   const isArchived = transcriptPathInfo(session, options).source === "archived"
+    || isArchivedByCodexThreadCatalog(session, options.codexThreadCatalog)
     || isArchivedByCodexThreadState(session, options);
   if (cache && key) {
     cache.set(key, isArchived);
@@ -84,7 +89,7 @@ function sessionDisplayFields(session, options = {}) {
 function sessionCard(session, options = {}) {
   const status = baseDisplayStatus(session);
   const isArchived = isArchivedSession(session, options);
-  const lifecycleSession = { ...session, display_status: status };
+  const lifecycleSession = sessionWithCatalogTitle({ ...session, display_status: status }, options.codexThreadCatalog);
   const description = sessionDescription(lifecycleSession, options);
   const displayFields = sessionDisplayFields(lifecycleSession, { ...options, snippetLength: 180 });
   return {

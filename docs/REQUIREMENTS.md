@@ -77,7 +77,7 @@
 - Rationale: 최종 사용 표면은 remote VS Code workflow 안에 자연스럽게 들어가야 하며, terminal MVP는 fallback이다.
 - Failure prevented: terminal watcher를 계속 켜두어야만 thread 상태를 알 수 있는 운영 부담.
 - Assumptions: GUI 통합은 local state와 privacy boundary를 유지하는 방식으로 설계할 수 있다.
-- Derived specs/tests: planned GUI read contract v1, project-grouped Webview sidebar sections, in-surface attention cues, editor Webview dashboard, editor session preview, extension-local read/unread state, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
+- Derived specs/tests: planned GUI read contract v1, project-grouped Webview sidebar sections, in-surface attention cues, editor Webview dashboard, editor session preview, extension-local read/unread state, read-only cache-change refresh, GUI status filter, dashboard without retention/prune controls, first milestone action boundary, extension surface boundary, optional app-server thread title/archive catalog, `extensions/vscode` scaffold and SessionSource/dashboard view model tests.
 - Revisit when: GUI read contract가 복잡해지거나, computed field/redaction/display policy가 늘어나거나, VS Code extension implementation milestone을 시작할 때.
 
 #### R7a: GUI project navigation
@@ -102,7 +102,7 @@
 - Requirement: GUI는 host-local `codex-radar` state를 읽되 transcript/session metadata를 외부로 전송하지 않고, raw hook event log나 raw transcript는 기본 navigation에서 직접 노출하지 않아야 한다.
 - Rationale: GUI는 편의 표면일 뿐 privacy boundary를 완화하지 않아야 한다.
 - Failure prevented: GUI 통합 과정에서 transcript path, prompt, code, secret-like content가 부주의하게 표시되거나 외부로 전송되는 문제.
-- Derived specs/tests: sensitive field display rules, redacted transcript-derived title/snippet in default navigation, no raw transcript path/content in default navigation, best-effort redaction reuse.
+- Derived specs/tests: sensitive field display rules, redacted transcript-derived title/snippet in default navigation, app-server thread title exact-id enrichment, no raw transcript path/content in default navigation, best-effort redaction reuse.
 
 #### R7d: GUI fallback continuity
 

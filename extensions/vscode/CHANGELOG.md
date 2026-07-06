@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.20
+
+Release candidate package for app-server-backed thread titles. This version is not a Marketplace publication.
+
+### Added
+
+- Use host-local `codex app-server thread/list` as an optional read-only catalog for exact session title and archived-session enrichment.
+- Preserve Radar lifecycle status and attention counts instead of using app-server loading statuses such as `notLoaded`.
+
 ## 0.3.19
 
 Release candidate package for local reset-time usage details. This version is not a Marketplace publication.
