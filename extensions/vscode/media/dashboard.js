@@ -279,6 +279,9 @@ function isProjectCollapsed(group, options = {}) {
   if (group.sessions.some((session) => session.key && session.key === selectedKey())) {
     return false;
   }
+  if (group.isCurrentWorkspace) {
+    return false;
+  }
   return Boolean(options.defaultCollapseQuiet && group.attention === 0);
 }
 
@@ -290,11 +293,16 @@ function projectGroupNode(group, options = {}) {
   if (options.collapsible) {
     headerChildren.push(el("span", { className: "chevron", text: collapsed ? ">" : "v" }));
   }
-  headerChildren.push(el("span", { className: "project-name", text: group.project }));
-  headerChildren.push(el("span", { className: "project-count", text: label }));
+  if (group.isCurrentWorkspace) {
+    headerChildren.push(el("span", { className: "workspace-label", text: "Current Workspace" }));
+  }
+  headerChildren.push(el("span", { className: "project-main" }, [
+    el("span", { className: "project-name", text: group.project }),
+    el("span", { className: "project-count", text: label }),
+  ]));
 
   const header = el(options.collapsible ? "button" : "div", {
-    className: options.collapsible ? "project-header collapsible" : "project-header",
+    className: `${options.collapsible ? "project-header collapsible" : "project-header"}${group.isCurrentWorkspace ? " current-workspace" : ""}`,
   }, headerChildren);
   if (options.collapsible) {
     header.setAttribute("aria-expanded", collapsed ? "false" : "true");
@@ -468,8 +476,10 @@ function projectHeaderNode(project) {
     clear(project);
     header = el("button", { className: "project-header collapsible" }, [
       el("span", { className: "chevron" }),
-      el("span", { className: "project-name" }),
-      el("span", { className: "project-count" }),
+      el("span", { className: "project-main" }, [
+        el("span", { className: "project-name" }),
+        el("span", { className: "project-count" }),
+      ]),
     ]);
     header.addEventListener("click", () => {
       const key = project.dataset.projectKey || "-";
@@ -488,8 +498,17 @@ function projectHeaderNode(project) {
 function updateProjectHeader(project, group, collapsed) {
   const header = projectHeaderNode(project);
   const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
+  header.className = `project-header collapsible${group.isCurrentWorkspace ? " current-workspace" : ""}`;
   header.setAttribute("aria-expanded", collapsed ? "false" : "true");
   header.querySelector(".chevron").textContent = collapsed ? ">" : "v";
+  let workspaceLabel = header.querySelector(".workspace-label");
+  if (group.isCurrentWorkspace && !workspaceLabel) {
+    workspaceLabel = el("span", { className: "workspace-label", text: "Current Workspace" });
+    const projectMain = header.querySelector(".project-main");
+    header.insertBefore(workspaceLabel, projectMain);
+  } else if (!group.isCurrentWorkspace && workspaceLabel) {
+    workspaceLabel.remove();
+  }
   header.querySelector(".project-name").textContent = group.project;
   header.querySelector(".project-count").textContent = label;
 }
@@ -571,7 +590,7 @@ function renderSidebar(app, model, surface) {
   } else if (surface === "archived") {
     patchSessionList(list, model.archived, "No archived sessions", { showActions: true });
   } else {
-    patchProjectGroups(list, model.groups, model.emptyState || "No sessions match this filter", {
+    patchProjectGroups(list, model.sidebarGroups || model.groups, model.emptyState || "No sessions match this filter", {
       collapsible: true,
       defaultCollapseQuiet: true,
       showActions: true,

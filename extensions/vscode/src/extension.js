@@ -81,6 +81,10 @@ function loadDecoratedSessions(globalState, stateDir = configuredStateDir()) {
   return decorateSessions(loadSessionCache(stateDir), readKeys(globalState));
 }
 
+function currentWorkspaceFolders() {
+  return (vscode.workspace.workspaceFolders || []).map((folder) => folder.uri.fsPath).filter(Boolean);
+}
+
 function sessionFromTarget(target) {
   const session = target && target.session ? target.session : target;
   if (!session || typeof session !== "object") {
@@ -330,6 +334,7 @@ class RadarWebviewController {
         selectedKey: this.selectedKey,
         selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
+        workspaceFolders: currentWorkspaceFolders(),
       });
       this.selectedKey = this.model.selected?.key || "";
       this.selectedSessionIdentity = previewSessionIdentity(this.model.selected);
@@ -344,6 +349,7 @@ class RadarWebviewController {
         selectedKey: this.selectedKey,
         selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
+        workspaceFolders: currentWorkspaceFolders(),
       });
       this.lastError = error instanceof Error ? error.message : String(error);
     }
@@ -744,6 +750,7 @@ function activate(context) {
         controller.refresh();
       }
     }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => controller.refresh()),
     watcherManager,
     radarStatusBar,
     usageStatusBar,

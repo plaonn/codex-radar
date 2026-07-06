@@ -161,7 +161,7 @@ GUI display contract v1:
 - GUI는 `project` 기준으로 conversation list를 묶는다.
 - VS Code extension은 Explorer 하위 view가 아니라 dedicated Codex Radar Activity Bar container 안에 `Attention`, `Projects`, `Archived` Webview sidebar sections를 제공한다.
 - Sidebar `Attention` Webview는 `waiting_approval`과 unread `done` session을 cross-project inbox처럼 모은다.
-- Sidebar `Projects` Webview는 project group navigation을 유지하고, project header를 fold/unfold 가능한 navigation row로 표시한다. Status filter가 없을 때 attention이 없는 quiet project는 기본 collapsed 상태로 시작할 수 있고, filter가 켜져 있으면 matching session을 바로 확인할 수 있도록 project groups는 펼쳐진다.
+- Sidebar `Projects` Webview는 project group navigation을 유지하고, project header를 fold/unfold 가능한 navigation row로 표시한다. VS Code workspace folder와 `session.cwd`가 같거나 하위 path인 current workspace project group은 sidebar `Projects` 최상단에 고정하고, 여러 workspace folder가 match되면 workspace folder 순서대로 고정한다. `session.cwd`가 없으면 workspace folder basename과 project name 일치를 fallback으로 사용할 수 있다. Current workspace project group은 기본 expanded 상태를 유지하고 header 안에 `Current Workspace` label을 2단으로 표시한다. 나머지 project group은 기존처럼 최신 session 순서를 따른다. Status filter가 없을 때 attention이 없는 quiet project는 기본 collapsed 상태로 시작할 수 있고, filter가 켜져 있으면 matching session을 바로 확인할 수 있도록 project groups는 펼쳐진다.
 - Sidebar `Archived` Webview는 host-local Codex archived transcript store로 resolve되는 session을 collapsed native section 안에서 보여준다.
 - Webview에는 extension host가 만든 sanitized dashboard view model만 전달한다. Sidebar Webview script와 editor dashboard script는 `sessions.json`, transcript, hook config, server-side `config.json`을 직접 읽거나 쓰지 않는다.
 - Editor dashboard는 `Attention`, project-grouped session list, selected-session inspector를 같은 wide surface에 보여준다.

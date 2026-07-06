@@ -15,6 +15,10 @@ function readPreviewJs() {
   return fs.readFileSync(path.join(__dirname, "..", "media", "preview.js"), "utf8");
 }
 
+function readExtensionJs() {
+  return fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+}
+
 test("scopes status colors to status indicators instead of session rows", () => {
   const css = readDashboardCss();
 
@@ -43,6 +47,19 @@ test("supports session-specific context menu and project folding", () => {
   assert.match(js, /collapsedProjects/);
   assert.match(css, /\.context-menu\s*\{/);
   assert.match(css, /\.project-header\.collapsible/);
+});
+
+test("renders current workspace project groups as pinned sidebar headers", () => {
+  const js = readDashboardJs();
+  const css = readDashboardCss();
+  const extension = readExtensionJs();
+
+  assert.match(js, /model\.sidebarGroups \|\| model\.groups/);
+  assert.match(js, /group\.isCurrentWorkspace/);
+  assert.match(js, /Current Workspace/);
+  assert.match(extension, /onDidChangeWorkspaceFolders\(\(\) => controller\.refresh\(\)\)/);
+  assert.match(css, /\.sidebar \.project-header\.current-workspace\s*\{/);
+  assert.match(css, /\.workspace-label\s*\{/);
 });
 
 test("keeps sidebar spacing compact and project groups visually separated", () => {

@@ -182,6 +182,59 @@ test("filters project sessions by display status without changing attention coun
   assert.deepEqual(model.groups.map((group) => group.project), ["project-a"]);
 });
 
+test("pins current workspace projects only in sidebar project groups", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "other-latest",
+      cwd: "/work/other",
+      project: "other",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:12:00+09:00",
+    },
+    {
+      session_id: "current-older",
+      cwd: "/work/codex-radar",
+      project: "codex-radar",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:01:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    workspaceFolders: ["/work/codex-radar"],
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.deepEqual(model.groups.map((group) => group.project), ["other", "codex-radar"]);
+  assert.deepEqual(model.sidebarGroups.map((group) => group.project), ["codex-radar", "other"]);
+  assert.equal(model.sidebarGroups[0].isCurrentWorkspace, true);
+  assert.equal(model.sidebarGroups[1].isCurrentWorkspace, false);
+});
+
+test("orders multiple current workspace projects by workspace folder order", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "second-newer",
+      cwd: "/work/second",
+      project: "second",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:12:00+09:00",
+    },
+    {
+      session_id: "first-older",
+      cwd: "/work/first/subdir",
+      project: "first",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:01:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    workspaceFolders: ["/work/first", "/work/second"],
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.deepEqual(model.sidebarGroups.map((group) => group.project), ["first", "second"]);
+});
+
 test("counts running and tool-running active sessions separately from attention", () => {
   const sessions = decorateSessions([
     { session_id: "running", project: "project-a", display_status: "running" },

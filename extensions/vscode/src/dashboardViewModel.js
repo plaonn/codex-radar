@@ -1,3 +1,5 @@
+const path = require("node:path");
+
 const {
   STATUS_FILTER_VALUES,
   filterSessionsByStatus,
@@ -145,6 +147,85 @@ function projectGroups(sessions, options = {}) {
   });
 }
 
+function normalizedFsPath(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+  return path.resolve(text);
+}
+
+function workspaceFolders(options = {}) {
+  return (options.workspaceFolders || [])
+    .map((folder) => {
+      if (typeof folder === "string") {
+        return normalizedFsPath(folder);
+      }
+      return normalizedFsPath(folder?.uri?.fsPath || folder?.fsPath || folder?.path || "");
+    })
+    .filter(Boolean);
+}
+
+function isSameOrChildPath(candidate, parent) {
+  const target = normalizedFsPath(candidate);
+  const root = normalizedFsPath(parent);
+  if (!target || !root) {
+    return false;
+  }
+  if (target === root) {
+    return true;
+  }
+  const relative = path.relative(root, target);
+  return Boolean(relative && !relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function sessionWorkspaceIndex(session, folders) {
+  for (let index = 0; index < folders.length; index += 1) {
+    if (isSameOrChildPath(session.cwd, folders[index])) {
+      return index;
+    }
+  }
+  if (!session.cwd) {
+    const project = String(session.project || "");
+    const fallbackIndex = folders.findIndex((folder) => path.basename(folder) === project);
+    if (fallbackIndex >= 0) {
+      return fallbackIndex;
+    }
+  }
+  return -1;
+}
+
+function sidebarProjectGroups(sessions, options = {}) {
+  const folders = workspaceFolders(options);
+  const groups = projectGroups(sessions, options).map((group, originalIndex) => {
+    const matchingIndexes = group.sessions
+      .map((session) => sessionWorkspaceIndex(session, folders))
+      .filter((index) => index >= 0);
+    const workspaceIndex = matchingIndexes.length ? Math.min(...matchingIndexes) : -1;
+    return {
+      ...group,
+      isCurrentWorkspace: workspaceIndex >= 0,
+      workspaceIndex,
+      originalIndex,
+    };
+  });
+
+  return groups
+    .sort((left, right) => {
+      if (left.isCurrentWorkspace && right.isCurrentWorkspace) {
+        return left.workspaceIndex - right.workspaceIndex || left.originalIndex - right.originalIndex;
+      }
+      if (left.isCurrentWorkspace) {
+        return -1;
+      }
+      if (right.isCurrentWorkspace) {
+        return 1;
+      }
+      return left.originalIndex - right.originalIndex;
+    })
+    .map(({ originalIndex, workspaceIndex, ...group }) => group);
+}
+
 function buildDashboardModel(sessions, options = {}) {
   const modelOptions = {
     ...options,
@@ -193,6 +274,7 @@ function buildDashboardModel(sessions, options = {}) {
     },
     attention: cardsForSessions(attentionSessions, { ...modelOptions, showProject: true }),
     groups: projectGroups(filteredSessions, modelOptions),
+    sidebarGroups: sidebarProjectGroups(filteredSessions, modelOptions),
     archived: cardsForSessions(archivedSessions, { ...modelOptions, showProject: true }),
     selected: selectedSession ? sessionCard(selectedSession, modelOptions) : null,
     emptyState: sessions.length === 0 ? "No sessions indexed" : "",
@@ -212,6 +294,7 @@ module.exports = {
   buildDashboardModel,
   findSessionByKey,
   isArchivedSession,
+  sidebarProjectGroups,
   sessionCard,
   sessionDisplayFields,
   sessionIdentity,
