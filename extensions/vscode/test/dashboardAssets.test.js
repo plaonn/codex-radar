@@ -45,8 +45,12 @@ test("supports session-specific context menu and project folding", () => {
   assert.match(js, /Copy Session ID/);
   assert.match(js, /preventDefaultContextMenuItems/);
   assert.match(js, /collapsedProjects/);
+  assert.match(js, /chevron \$\{collapsed \? "collapsed" : "expanded"\}/);
   assert.match(css, /\.context-menu\s*\{/);
   assert.match(css, /\.project-header\.collapsible/);
+  assert.match(css, /\.chevron::before\s*\{/);
+  assert.match(css, /\.chevron\.collapsed::before\s*\{[^}]*rotate\(-45deg\)/s);
+  assert.match(css, /\.chevron\.expanded::before\s*\{[^}]*rotate\(45deg\)/s);
 });
 
 test("renders current workspace project groups as pinned sidebar headers", () => {

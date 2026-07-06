@@ -301,9 +301,31 @@ select {
 }
 
 .chevron {
+  position: relative;
   flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
   color: var(--vscode-descriptionForeground);
-  text-align: center;
+}
+
+.chevron::before {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: "";
+  transform-origin: 50% 50%;
+}
+
+.chevron.collapsed::before {
+  transform: rotate(-45deg);
+}
+
+.chevron.expanded::before {
+  transform: rotate(45deg);
 }
 
 .project-header.current-workspace .chevron {

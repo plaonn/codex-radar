@@ -291,7 +291,7 @@ function projectGroupNode(group, options = {}) {
   const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
   const headerChildren = [];
   if (options.collapsible) {
-    headerChildren.push(el("span", { className: "chevron", text: collapsed ? ">" : "v" }));
+    headerChildren.push(el("span", { className: `chevron ${collapsed ? "collapsed" : "expanded"}` }));
   }
   if (group.isCurrentWorkspace) {
     headerChildren.push(el("span", { className: "workspace-label", text: "Current Workspace" }));
@@ -500,7 +500,7 @@ function updateProjectHeader(project, group, collapsed) {
   const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
   header.className = `project-header collapsible${group.isCurrentWorkspace ? " current-workspace" : ""}`;
   header.setAttribute("aria-expanded", collapsed ? "false" : "true");
-  header.querySelector(".chevron").textContent = collapsed ? ">" : "v";
+  header.querySelector(".chevron").className = `chevron ${collapsed ? "collapsed" : "expanded"}`;
   let workspaceLabel = header.querySelector(".workspace-label");
   if (group.isCurrentWorkspace && !workspaceLabel) {
     workspaceLabel = el("span", { className: "workspace-label", text: "Current Workspace" });
