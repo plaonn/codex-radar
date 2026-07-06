@@ -130,8 +130,9 @@ test("builds hover-compatible tooltip detail from usage snapshot", () => {
     context_window: 258400,
   });
 
-  assert.match(tooltip, /5h remaining: 3%/);
-  assert.match(tooltip, /7d remaining: 85%/);
+  assert.match(tooltip, /5h: 3% \(reset: 2026-07-05 21:00:08 UTC\)/);
+  assert.match(tooltip, /7d: 85% \(reset: 2026-07-12 16:00:08 UTC\)/);
   assert.match(tooltip, /Plan: prolite/);
-  assert.match(tooltip, /Last turn tokens: 145501/);
+  assert.equal(tooltip.includes("Last turn tokens"), false);
+  assert.equal(tooltip.includes("Context window"), false);
 });

@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.18
+
+Release candidate package for compact usage detail text. This version is not a Marketplace publication.
+
+### Changed
+
+- Compress usage detail text to 5h remaining, 7d remaining, reset time, and plan.
+- Use UTC ISO-like reset timestamps instead of locale-dependent strings.
+
 ## 0.3.17
 
 Release candidate package for click-to-read usage detail. This version is not a Marketplace publication.

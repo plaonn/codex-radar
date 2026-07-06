@@ -184,7 +184,7 @@ function formatReset(value) {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  return date.toLocaleString();
+  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
 }
 
 function usageStatusTooltip(snapshot) {
@@ -193,27 +193,15 @@ function usageStatusTooltip(snapshot) {
   }
   const lines = [];
   if (snapshot.primary) {
-    lines.push(`5h remaining: ${Math.round(snapshot.primary.remaining_percent)}%`);
-    lines.push(`5h used: ${Math.round(snapshot.primary.used_percent)}%`);
-    if (snapshot.primary.resets_at_iso) {
-      lines.push(`5h reset: ${formatReset(snapshot.primary.resets_at_iso)}`);
-    }
+    const reset = snapshot.primary.resets_at_iso ? ` (reset: ${formatReset(snapshot.primary.resets_at_iso)})` : "";
+    lines.push(`5h: ${Math.round(snapshot.primary.remaining_percent)}%${reset}`);
   }
   if (snapshot.secondary) {
-    lines.push(`7d remaining: ${Math.round(snapshot.secondary.remaining_percent)}%`);
-    lines.push(`7d used: ${Math.round(snapshot.secondary.used_percent)}%`);
-    if (snapshot.secondary.resets_at_iso) {
-      lines.push(`7d reset: ${formatReset(snapshot.secondary.resets_at_iso)}`);
-    }
+    const reset = snapshot.secondary.resets_at_iso ? ` (reset: ${formatReset(snapshot.secondary.resets_at_iso)})` : "";
+    lines.push(`7d: ${Math.round(snapshot.secondary.remaining_percent)}%${reset}`);
   }
   if (snapshot.plan_type) {
     lines.push(`Plan: ${snapshot.plan_type}`);
-  }
-  if (snapshot.last_token_usage && Number.isFinite(Number(snapshot.last_token_usage.total_tokens))) {
-    lines.push(`Last turn tokens: ${snapshot.last_token_usage.total_tokens}`);
-  }
-  if (snapshot.context_window) {
-    lines.push(`Context window: ${snapshot.context_window}`);
   }
   return lines.join("\n");
 }
