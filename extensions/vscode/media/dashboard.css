@@ -221,6 +221,15 @@ select {
   padding-top: 0;
 }
 
+.sidebar .project.collapsed {
+  margin: 2px 0 4px;
+  padding: 4px 0 2px;
+}
+
+.sidebar .project.collapsed:first-child {
+  padding-top: 0;
+}
+
 .sidebar .project:not(.collapsed) {
   border-left: 0;
 }
@@ -263,16 +272,13 @@ select {
   justify-content: stretch;
   row-gap: 1px;
   min-height: 38px;
+  padding-left: 4px;
   border-left: 2px solid var(--vscode-focusBorder);
   background: var(--vscode-list-inactiveSelectionBackground);
 }
 
 .sidebar .project:not(.collapsed) .project-header {
   margin-left: 0;
-}
-
-.sidebar .project:not(.collapsed) .project-header.current-workspace {
-  padding-left: 4px;
 }
 
 .sidebar .project-sessions {
