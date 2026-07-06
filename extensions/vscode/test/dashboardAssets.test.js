@@ -73,7 +73,7 @@ test("keeps sidebar spacing compact and project groups visually separated", () =
   assert.match(css, /\.sidebar \.session\s*\{[^}]*padding:\s*6px;/s);
   assert.match(css, /\.sidebar \.session\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.sidebar \.session\.actionable\s*\{[^}]*border-color:\s*transparent;/s);
-  assert.match(css, /\.sidebar \.project\s*\{[^}]*margin:\s*4px 0 6px;/s);
+  assert.match(css, /\.sidebar \.project\s*\{[^}]*margin:\s*1px 0;/s);
   assert.match(css, /\.sidebar \.project\s*\{[^}]*padding:\s*0;/s);
   assert.doesNotMatch(css, /\.sidebar \.project\s*\{[^}]*border-top:/s);
   assert.doesNotMatch(css, /\.sidebar \.project\.collapsed\s*\{/);
