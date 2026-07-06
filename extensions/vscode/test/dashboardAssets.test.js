@@ -82,8 +82,9 @@ test("keeps sidebar spacing compact and project groups visually separated", () =
   assert.match(css, /\.sidebar \.project-header\.current-workspace\s*\{[^}]*padding-left:\s*4px;/s);
   assert.match(css, /\.sidebar \.project-header\.current-workspace\s*\{[^}]*border-left:\s*2px solid var\(--vscode-focusBorder\);/s);
   assert.match(css, /\.sidebar \.project-sessions\s*\{[^}]*margin-top:\s*2px;/s);
-  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*12px;/s);
-  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*border-left:/s);
+  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*width:\s*calc\(100% - 6px\);/s);
+  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*6px;/s);
+  assert.doesNotMatch(css, /\.sidebar \.project \.session\s*\{[^}]*border-left:/s);
 });
 
 test("reveals sidebar row actions as hover and focus overlays", () => {

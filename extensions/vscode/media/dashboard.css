@@ -275,10 +275,8 @@ select {
 }
 
 .sidebar .project .session {
-  width: calc(100% - 12px);
-  margin-left: 12px;
-  border-left: 1px solid color-mix(in srgb, var(--vscode-panel-border) 82%, transparent);
-  padding-left: 8px;
+  width: calc(100% - 6px);
+  margin-left: 6px;
 }
 
 .sidebar .project.collapsed .session {
