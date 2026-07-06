@@ -123,6 +123,16 @@
 - Derived specs/tests: `codex-radar usage --json`, host-local VS Code status bar usage snapshot, null/unavailable fallback, broken JSONL skip, latest `token_count` selection, raw path/content exclusion.
 - Revisit when: Codex가 공식 local usage API/export/status endpoint를 제공하거나 rollout schema가 사라질 때.
 
+### R9: foreground mobile cockpit over SSH
+
+- Status: proposed direction
+- Requirement: 장기 모바일 surface는 별도 remote HTTP server를 먼저 열기보다 Android app이 SSH 연결 위에서 host-local `codex-radar` machine-readable protocol을 실행해 프로젝트별 thread list, 상태, bounded transcript preview, foreground attention event를 받아볼 수 있어야 한다.
+- Rationale: 모바일에서의 주요 문제는 공식 ChatGPT app의 project/thread switching depth와 멀티태스킹 제약이다. 사용자가 앱을 열고 여러 프로젝트의 Codex thread를 집중적으로 전환하는 상황에서는 SSH trust boundary와 host-local sanitized model을 재사용하는 편이 server auth, port exposure, push infrastructure보다 단순하다.
+- Failure prevented: 모바일 UX를 위해 별도 server/auth/push stack을 먼저 설계하면서 scope가 커지거나, 반대로 CLI/TUI를 사람용 terminal UI로만 키워 Android/PWA가 재사용할 안정된 contract가 없는 문제.
+- Assumptions: 초기 모바일 앱은 foreground-first tool이다. 앱이 닫혔거나 SSH/RPC 연결이 끊긴 동안의 notification delivery는 보장하지 않으며, 장기 push notification은 공식 ChatGPT/Codex app 또는 별도 milestone의 역할로 둔다.
+- Derived specs/tests: future `codex-radar rpc` or equivalent JSON/JSONL protocol, shared mobile/gui state builder, strict stdout protocol with diagnostics on stderr, bounded/redacted preview output, foreground in-app attention events, no remote HTTP listener by default.
+- Revisit when: Android app, mobile web/PWA, background notification, multi-host dashboard, or remote write actions become active milestones.
+
 ## Rationale
 
 VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.
