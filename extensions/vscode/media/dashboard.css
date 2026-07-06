@@ -211,8 +211,8 @@ select {
 }
 
 .sidebar .project {
-  margin: 4px 0 10px;
-  padding: 4px 0 6px;
+  margin: 6px 0 12px;
+  padding: 6px 0 7px;
   border-top: 1px solid var(--vscode-panel-border);
 }
 
@@ -254,11 +254,15 @@ select {
   padding-left: 0;
 }
 
+.sidebar .project-sessions {
+  margin-top: 2px;
+}
+
 .sidebar .project .session {
-  width: calc(100% - 8px);
-  margin-left: 8px;
+  width: calc(100% - 12px);
+  margin-left: 12px;
   border-left: 1px solid color-mix(in srgb, var(--vscode-panel-border) 82%, transparent);
-  padding-left: 7px;
+  padding-left: 8px;
 }
 
 .sidebar .project.collapsed .session {
@@ -616,9 +620,22 @@ select {
 }
 
 .preview-title-block {
+  min-width: 0;
   width: 100%;
   max-width: 1120px;
   margin: 0;
+}
+
+.preview-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  max-width: 1120px;
+}
+
+.preview-open {
+  flex: 0 0 auto;
 }
 
 .preview h1 {
@@ -655,6 +672,7 @@ select {
   max-width: 1120px;
   margin: 0;
   padding: 14px 16px 24px;
+  overflow-x: hidden;
 }
 
 .preview-list {
@@ -676,7 +694,9 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 82%;
+  width: fit-content;
+  max-width: min(78%, 78ch);
+  min-width: 0;
 }
 
 .preview-entry.user {
@@ -697,12 +717,14 @@ select {
 
 .preview-bubble {
   min-width: 0;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--vscode-panel-border);
   border-radius: 8px;
   background: var(--vscode-sideBar-background);
   line-height: 1.45;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .preview-entry.user .preview-bubble {
@@ -746,6 +768,7 @@ select {
 }
 
 .preview-bubble pre {
+  max-width: 100%;
   overflow-x: auto;
   padding: 9px;
   border-radius: 5px;
@@ -772,5 +795,14 @@ select {
 
   .preview-entry {
     max-width: 100%;
+  }
+
+  .preview-title-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .preview-open {
+    align-self: flex-start;
   }
 }

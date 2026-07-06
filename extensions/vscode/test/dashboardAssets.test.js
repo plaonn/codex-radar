@@ -53,7 +53,8 @@ test("keeps sidebar spacing compact and project groups visually separated", () =
   assert.match(css, /\.sidebar \.session\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.sidebar \.session\.actionable\s*\{[^}]*border-color:\s*transparent;/s);
   assert.match(css, /\.sidebar \.project\s*\{[^}]*border-top:\s*1px solid var\(--vscode-panel-border\);/s);
-  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*8px;/s);
+  assert.match(css, /\.sidebar \.project-sessions\s*\{[^}]*margin-top:\s*2px;/s);
+  assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*12px;/s);
   assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*border-left:/s);
 });
 
@@ -67,6 +68,14 @@ test("reveals sidebar row actions as hover and focus overlays", () => {
   assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*opacity:\s*1;/s);
   assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*visibility:\s*visible;/s);
   assert.match(css, /\.sidebar \.session:hover \.row-actions\.compact,\s*\.sidebar \.session:focus-within \.row-actions\.compact\s*\{[^}]*transition-delay:\s*0s;/s);
+});
+
+test("opens eligible sidebar sessions in Codex on double-click", () => {
+  const js = readDashboardJs();
+
+  assert.match(js, /addEventListener\("dblclick"/);
+  assert.match(js, /codexRadarSession\?\.actions\?\.canOpen/);
+  assert.match(js, /type:\s*"sessionAction", action:\s*"open"/);
 });
 
 test("renders speaker snippets with compact text badges", () => {
@@ -107,6 +116,18 @@ test("keeps preview content aligned with narrower editor gutters", () => {
   assert.doesNotMatch(js, /preview-summary/);
 });
 
+test("constrains preview bubbles and wraps long content", () => {
+  const css = readDashboardCss();
+
+  assert.match(css, /\.preview-entry\s*\{[^}]*width:\s*fit-content;/s);
+  assert.match(css, /\.preview-entry\s*\{[^}]*max-width:\s*min\(78%, 78ch\);/s);
+  assert.match(css, /\.preview-bubble\s*\{[^}]*max-width:\s*100%;/s);
+  assert.match(css, /\.preview-bubble\s*\{[^}]*overflow-wrap:\s*anywhere;/s);
+  assert.match(css, /\.preview-bubble\s*\{[^}]*word-break:\s*break-word;/s);
+  assert.match(css, /\.preview-bubble pre\s*\{[^}]*max-width:\s*100%;/s);
+  assert.match(css, /\.preview-transcript\s*\{[^}]*overflow-x:\s*hidden;/s);
+});
+
 test("uses a fixed preview header and scrollable transcript body", () => {
   const css = readDashboardCss();
   const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
@@ -116,6 +137,7 @@ test("uses a fixed preview header and scrollable transcript body", () => {
   assert.match(css, /\.preview-header\s*\{[^}]*flex:\s*0 0 auto;/s);
   assert.match(css, /\.preview-body\s*\{[^}]*overflow-y:\s*auto;/s);
   assert.match(extension, /<section class="preview-body" aria-label="Transcript preview">/);
+  assert.match(extension, /id="preview-open"/);
   assert.match(extension, /media", "preview\.js"/);
   assert.match(extension, /enableScripts:\s*true/);
   assert.doesNotMatch(extension, /webview\.html = previewHtml\(this\.previewPanel\.webview, this\.context\.extensionUri, model/);
@@ -125,6 +147,29 @@ test("uses a fixed preview header and scrollable transcript body", () => {
   assert.match(preview, /message\.initialScrollToBottom \|\| isNewSession \|\| isNearBottom\(\)/);
   assert.match(preview, /addEventListener\("scroll", saveScroll/);
   assert.match(preview, /vscode\.postMessage\(\{ type:\s*"previewReady" \}\)/);
+});
+
+test("wires preview Open in Codex action through the preview Webview", () => {
+  const preview = readPreviewJs();
+  const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+
+  assert.match(preview, /function renderOpenAction\(message\)/);
+  assert.match(preview, /button\.disabled = !canOpen;/);
+  assert.match(preview, /type:\s*"sessionAction", action:\s*"open", key:\s*message\.key/);
+  assert.match(extension, /actions:\s*card\.actions/);
+  assert.match(extension, /key:\s*card\.key/);
+  assert.match(extension, /handlePreviewMessage\(message\)/);
+  assert.match(extension, /await this\.handleSessionAction\(String\(message\.key \|\| ""\), String\(message\.action \|\| ""\)\);/);
+});
+
+test("adds a Radar-native status bar item for attention and running counts", () => {
+  const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+
+  assert.match(extension, /class RadarStatusBar/);
+  assert.match(extension, /radarStatusText\(model\)/);
+  assert.match(extension, /\$\(radar\).*attention.*running.*visible/s);
+  assert.match(extension, /onModelChange:\s*\(model\) => radarStatusBar\.refresh\(model\)/);
+  assert.match(extension, /item\.command = "codexRadar\.openDashboard"/);
 });
 
 test("keeps preview ownership independent from dashboard selection fallback", () => {

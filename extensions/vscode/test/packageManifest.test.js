@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.3.20");
+  assert.equal(manifest.version, "0.3.21");
 });
 
 test("declares release metadata and workspace extension host scope", () => {

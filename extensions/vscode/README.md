@@ -15,18 +15,18 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Routes host-local Codex archived sessions to the sidebar `Archived` section and dashboard archived list.
 - Also uses Codex local thread state as a direct archived-thread fallback when the Codex thread id matches the Radar session id.
-- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus the latest 120 redacted user/Codex messages with messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
+- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus the latest 120 redacted user/Codex messages with bounded messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
 - Separates lifecycle status, done read state, and archived state in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator plus muted row treatment.
 - Shows `unknown` with a colored `!` indicator.
 - Prefixes rows/cards with a short session id when no readable thread title is available in `sessions.json`.
-- Shows the total unfiltered attention count in the sidebar view badge and dashboard top bar. Attention means `waiting_approval` or unread `done`.
+- Shows the total unfiltered attention count in the sidebar view badge, dashboard top bar, and Radar status bar item. Attention means `waiting_approval` or unread `done`; the Radar status bar item also shows running and visible session counts.
 - Distinguishes unread/read done sessions in sidebar cards and the dashboard selected-session inspector.
 - Filters the sidebar project section or dashboard project list by display status with a temporary view-local filter.
 - Includes an `attention` filter for only attention-worthy sessions.
 - Provides a manual refresh command in the view title.
-- Opens a sidebar card or dashboard-selected session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a host-local rollout/transcript file can be resolved for that session.
+- Opens a sidebar card, double-clicked sidebar row, preview header action, or dashboard-selected session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a host-local rollout/transcript file can be resolved for that session.
 - Provides actions to mark done sessions read/unread. Archived sessions cannot be opened through the official Codex handoff.
 
 ## Boundaries
@@ -63,7 +63,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.14.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.21.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -83,15 +83,17 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 5. Confirm sidebar bodies start directly with their lists, without duplicate `Attention`, `Projects`, or `Archived` headers inside the Webview body.
 6. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
 7. Use the `Projects` section title filter button and confirm it changes only the `Projects` section, not the attention badge.
-8. In the `Projects` section, confirm project headers are visually prominent and can fold/unfold their sessions. Quiet projects should start collapsed when no status filter is active.
+8. In the `Projects` section, confirm project headers are visually prominent, session rows are indented under projects, and quiet projects can fold/unfold their sessions. Quiet projects should start collapsed when no status filter is active.
 9. Right-click a session item and confirm the context menu shows `Copy Session ID` instead of edit actions.
 10. Use `Codex Radar: Open Dashboard` from the Command Palette.
 11. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
 12. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator with muted row treatment, and `unknown` uses a colored `!` indicator.
 13. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
 14. Confirm archived Codex sessions appear in `Archived`, are excluded from `Attention` and `Projects`, and have `Open in Codex` disabled.
-15. Try `Open in Codex (Experimental)` only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
-16. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
+15. Confirm the Radar status bar item shows attention, running, and visible session counts, and opens the dashboard when clicked.
+16. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, and an `Open in Codex` button for eligible sessions.
+17. Try `Open in Codex (Experimental)` from a sidebar action, sidebar row double-click, preview header action, or dashboard inspector only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
+18. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 

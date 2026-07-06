@@ -95,6 +95,21 @@ function renderDetails(model) {
   }
 }
 
+function renderOpenAction(message) {
+  const button = byId("preview-open");
+  if (!button) {
+    return;
+  }
+  const canOpen = Boolean(message.actions?.canOpen);
+  button.disabled = !canOpen;
+  button.title = canOpen ? "Open this session in Codex" : "This session cannot be opened in Codex";
+  button.onclick = () => {
+    if (canOpen) {
+      vscode.postMessage({ type: "sessionAction", action: "open", key: message.key || "" });
+    }
+  };
+}
+
 function renderTranscript(model) {
   const transcript = byId("preview-transcript");
   if (!transcript) {
@@ -134,6 +149,7 @@ function renderPreview(message) {
   activeSessionIdentity = sessionIdentity;
   setText("preview-title", model.title || "");
   setText("preview-meta", [model.project, model.status, model.shortSessionId].filter(Boolean).join(" | "));
+  renderOpenAction(message);
   renderDetails(model);
   renderTranscript(model);
 

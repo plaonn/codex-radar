@@ -82,6 +82,7 @@ test("builds a sanitized dashboard model with attention, projects, archived, and
     visible: 2,
     filtered: 2,
     attention: 1,
+    running: 0,
     archived: 1,
   });
   assert.equal(model.attention[0].sessionId, "approval-1");
@@ -179,6 +180,20 @@ test("filters project sessions by display status without changing attention coun
   assert.equal(model.counts.filtered, 1);
   assert.equal(model.counts.attention, 2);
   assert.deepEqual(model.groups.map((group) => group.project), ["project-a"]);
+});
+
+test("counts running and tool-running active sessions separately from attention", () => {
+  const sessions = decorateSessions([
+    { session_id: "running", project: "project-a", display_status: "running" },
+    { session_id: "tool", project: "project-a", display_status: "tool_running" },
+    { session_id: "done", project: "project-a", display_status: "done" },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    resolveTranscriptPathInfo: emptyArchiveResolver,
+  });
+
+  assert.equal(model.counts.running, 2);
+  assert.equal(model.counts.attention, 1);
 });
 
 test("keeps selection on the same session identity when the row key changes", () => {

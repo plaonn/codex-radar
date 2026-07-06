@@ -27,7 +27,12 @@ const {
   readStateFromValue,
   readStateToValue,
 } = require("./readState");
-const { buildDashboardModel, findSessionByKey, isArchivedSession } = require("./dashboardViewModel");
+const {
+  buildDashboardModel,
+  findSessionByKey,
+  isArchivedSession,
+  sessionCard,
+} = require("./dashboardViewModel");
 const {
   emptyCodexThreadCatalog,
   loadCodexThreadCatalog,
@@ -78,7 +83,7 @@ function officialCodexThreadUri(session) {
   return vscode.Uri.parse(uri);
 }
 
-async function openOfficialCodexThread(target) {
+async function openOfficialCodexThread(target, options = {}) {
   const session = sessionFromTarget(target);
   if (!session) {
     await vscode.window.showWarningMessage("Select a Codex Radar session to open in Codex.");
@@ -90,8 +95,16 @@ async function openOfficialCodexThread(target) {
     await vscode.window.showWarningMessage("Codex session id is not available for this session.");
     return false;
   }
-  if (isArchivedSession(session, { homeDir: process.env.HOME || "" })) {
+  const actionState = sessionCard(session, {
+    homeDir: process.env.HOME || "",
+    codexThreadCatalog: options.codexThreadCatalog,
+  }).actions;
+  if (isArchivedSession(session, { homeDir: process.env.HOME || "", codexThreadCatalog: options.codexThreadCatalog })) {
     await vscode.window.showWarningMessage("Archived Codex sessions cannot be opened in the Codex extension.");
+    return false;
+  }
+  if (!actionState.canOpen) {
+    await vscode.window.showWarningMessage("This Codex session is not available to open in the Codex extension.");
     return false;
   }
 
@@ -149,9 +162,12 @@ function previewHtml(webview, extensionUri) {
 <body>
   <main class="preview">
     <header class="preview-header">
-      <div class="preview-title-block">
-        <h1 id="preview-title"></h1>
-        <div id="preview-meta" class="preview-meta"></div>
+      <div class="preview-title-row">
+        <div class="preview-title-block">
+          <h1 id="preview-title"></h1>
+          <div id="preview-meta" class="preview-meta"></div>
+        </div>
+        <button id="preview-open" class="preview-open" type="button">Open in Codex</button>
       </div>
       <dl id="preview-details" class="details preview-details"></dl>
     </header>
@@ -227,9 +243,31 @@ function viewBadge(model, surface) {
   return undefined;
 }
 
+function radarStatusText(model) {
+  const counts = model?.counts || {};
+  const attention = counts.attention || 0;
+  const running = counts.running || 0;
+  const visible = counts.visible || 0;
+  if (!visible) {
+    return "$(radar) Radar 0";
+  }
+  return `$(radar) ${attention} attention · ${running} running · ${visible} visible`;
+}
+
+function radarStatusTooltip(model) {
+  const counts = model?.counts || {};
+  return [
+    `Attention: ${counts.attention || 0}`,
+    `Running: ${counts.running || 0}`,
+    `Visible sessions: ${counts.visible || 0}`,
+    `Archived sessions: ${counts.archived || 0}`,
+  ].join("\n");
+}
+
 class RadarWebviewController {
-  constructor(context) {
+  constructor(context, options = {}) {
     this.context = context;
+    this.onModelChange = typeof options.onModelChange === "function" ? options.onModelChange : null;
     this.statusFilter = "";
     this.selectedKey = "";
     this.selectedSessionIdentity = "";
@@ -287,6 +325,9 @@ class RadarWebviewController {
       this.lastError = error instanceof Error ? error.message : String(error);
     }
     this.postState(options);
+    if (this.onModelChange) {
+      this.onModelChange(this.model);
+    }
   }
 
   resolveSidebarView(surface, webviewView) {
@@ -398,11 +439,17 @@ class RadarWebviewController {
       this.previewPanel.reveal(vscode.ViewColumn.Active);
     }
     const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
+    const card = sessionCard(displaySession, {
+      homeDir: process.env.HOME || "",
+      codexThreadCatalog: this.codexThreadCatalog,
+    });
     const model = buildSessionPreviewModel(displaySession, { homeDir: process.env.HOME || "" });
     this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
     this.pendingPreviewState = {
       type: "previewState",
       model,
+      actions: card.actions,
+      key: card.key,
       initialScrollToBottom: shouldScrollToBottom,
       sessionIdentity,
     };
@@ -410,7 +457,7 @@ class RadarWebviewController {
     this.postPreviewState();
   }
 
-  handlePreviewMessage(message) {
+  async handlePreviewMessage(message) {
     if (!message || typeof message !== "object") {
       return;
     }
@@ -418,6 +465,9 @@ class RadarWebviewController {
       this.previewReady = true;
       this.postPreviewState();
       return;
+    }
+    if (message.type === "sessionAction") {
+      await this.handleSessionAction(String(message.key || ""), String(message.action || ""));
     }
   }
 
@@ -455,7 +505,7 @@ class RadarWebviewController {
     }
 
     if (action === "open") {
-      const opened = await openOfficialCodexThread(session);
+      const opened = await openOfficialCodexThread(session, { codexThreadCatalog: this.codexThreadCatalog });
       if (opened && isDoneSession(session)) {
         await this.markSessionRead(session);
       }
@@ -625,8 +675,29 @@ class UsageStatusBar {
   }
 }
 
+class RadarStatusBar {
+  constructor() {
+    this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
+    this.item.command = "codexRadar.openDashboard";
+    this.refresh(buildDashboardModel([]));
+  }
+
+  refresh(model) {
+    this.item.text = radarStatusText(model);
+    this.item.tooltip = radarStatusTooltip(model);
+    this.item.show();
+  }
+
+  dispose() {
+    this.item.dispose();
+  }
+}
+
 function activate(context) {
-  const controller = new RadarWebviewController(context);
+  const radarStatusBar = new RadarStatusBar();
+  const controller = new RadarWebviewController(context, {
+    onModelChange: (model) => radarStatusBar.refresh(model),
+  });
   const watcherManager = new SessionCacheWatcherManager(() => controller.refresh());
   const usageStatusBar = new UsageStatusBar();
 
@@ -651,6 +722,7 @@ function activate(context) {
       }
     }),
     watcherManager,
+    radarStatusBar,
     usageStatusBar,
   );
 }
@@ -667,5 +739,7 @@ module.exports = {
   officialCodexThreadUri,
   openOfficialCodexThread,
   previewHtml,
+  radarStatusText,
+  radarStatusTooltip,
   statusFilterItems,
 };

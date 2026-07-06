@@ -157,6 +157,10 @@ function buildDashboardModel(sessions, options = {}) {
   const activeSessions = sessions.filter((session) => !isArchivedSession(session, modelOptions));
   const filteredSessions = filterSessionsByStatus(activeSessions, statusFilter);
   const attentionSessions = activeSessions.filter((session) => session.is_attention);
+  const runningSessions = activeSessions.filter((session) => {
+    const status = baseDisplayStatus(session);
+    return status === "running" || status === "tool_running";
+  });
   const allCards = cardsForSessions(sessions, modelOptions);
   const selectedKey = options.selectedKey && indexCards(allCards).has(options.selectedKey)
     ? options.selectedKey
@@ -184,6 +188,7 @@ function buildDashboardModel(sessions, options = {}) {
       visible: activeSessions.length,
       filtered: filteredSessions.length,
       attention: attentionSessions.length,
+      running: runningSessions.length,
       archived: archivedSessions.length,
     },
     attention: cardsForSessions(attentionSessions, { ...modelOptions, showProject: true }),

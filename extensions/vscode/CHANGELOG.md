@@ -2,6 +2,21 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.21
+
+Release candidate package for remaining dashboard usability tasks. This version is not a Marketplace publication.
+
+### Added
+
+- Add a Radar-native status bar item for attention, running, and visible session counts.
+- Open eligible sessions in Codex by double-clicking sidebar rows.
+- Add an `Open in Codex` action to the preview header.
+
+### Changed
+
+- Tighten sidebar project hierarchy spacing for more native project grouping.
+- Constrain preview transcript bubble width and wrapping so long content cannot overflow the editor viewport.
+
 ## 0.3.20
 
 Release candidate package for app-server-backed thread titles. This version is not a Marketplace publication.

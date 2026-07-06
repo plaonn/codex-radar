@@ -141,6 +141,11 @@ function sessionNode(session, options = {}) {
   node.addEventListener("click", () => {
     send({ type: "selectSession", key: node.dataset.sessionKey || "" });
   });
+  node.addEventListener("dblclick", () => {
+    if (node.codexRadarSession?.actions?.canOpen) {
+      send({ type: "sessionAction", action: "open", key: node.dataset.sessionKey || "" });
+    }
+  });
   node.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
