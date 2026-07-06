@@ -246,6 +246,12 @@ select {
 .sidebar .project-header {
   min-height: 24px;
   padding: 4px 6px;
+  background: var(
+    --vscode-sideBarSectionHeader-background,
+    color-mix(in srgb, var(--vscode-panel-border) 24%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--vscode-panel-border) 62%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--vscode-panel-border) 82%, transparent);
   border-radius: 4px;
 }
 
@@ -263,7 +269,6 @@ select {
 
 .sidebar .project:not(.collapsed) .project-header {
   margin-left: 0;
-  padding-left: 0;
 }
 
 .sidebar .project:not(.collapsed) .project-header.current-workspace {

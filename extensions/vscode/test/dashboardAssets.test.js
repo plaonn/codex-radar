@@ -70,6 +70,9 @@ test("keeps sidebar spacing compact and project groups visually separated", () =
   assert.match(css, /\.sidebar \.session\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.sidebar \.session\.actionable\s*\{[^}]*border-color:\s*transparent;/s);
   assert.match(css, /\.sidebar \.project\s*\{[^}]*border-top:\s*1px solid var\(--vscode-panel-border\);/s);
+  assert.match(css, /\.sidebar \.project-header\s*\{[^}]*--vscode-sideBarSectionHeader-background/s);
+  assert.match(css, /\.sidebar \.project-header\s*\{[^}]*border-left:\s*2px solid color-mix/s);
+  assert.match(css, /\.sidebar \.project-header\.current-workspace\s*\{[^}]*border-left:\s*2px solid var\(--vscode-focusBorder\);/s);
   assert.match(css, /\.sidebar \.project-sessions\s*\{[^}]*margin-top:\s*2px;/s);
   assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*margin-left:\s*12px;/s);
   assert.match(css, /\.sidebar \.project \.session\s*\{[^}]*border-left:/s);
