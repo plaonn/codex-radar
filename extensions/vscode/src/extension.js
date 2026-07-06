@@ -24,6 +24,7 @@ const {
   isDoneSession,
   markDoneRead,
   markDoneUnread,
+  pruneReadDoneKeys,
   readStateFromValue,
   readStateToValue,
 } = require("./readState");
@@ -54,6 +55,26 @@ function readKeys(globalState) {
 
 async function updateReadKeys(globalState, keys) {
   await globalState.update(READ_DONE_KEYS_KEY, readStateToValue(keys));
+}
+
+function sameReadKeys(left, right) {
+  if (left.size !== right.size) {
+    return false;
+  }
+  return Array.from(left).every((key) => right.has(key));
+}
+
+async function prunedReadKeys(globalState, sessions) {
+  const current = readKeys(globalState);
+  const pruned = pruneReadDoneKeys(current, sessions);
+  if (!sameReadKeys(current, pruned)) {
+    try {
+      await updateReadKeys(globalState, pruned);
+    } catch {
+      // Keep the dashboard usable even if VS Code cannot persist Memento cleanup.
+    }
+  }
+  return pruned;
 }
 
 function loadDecoratedSessions(globalState, stateDir = configuredStateDir()) {
@@ -294,7 +315,9 @@ class RadarWebviewController {
     const refreshSerial = this.refreshSerial + 1;
     this.refreshSerial = refreshSerial;
     try {
-      const sessions = loadDecoratedSessions(this.context.globalState);
+      const loadedSessions = loadSessionCache(configuredStateDir());
+      const readKeysForSessions = await prunedReadKeys(this.context.globalState, loadedSessions);
+      const sessions = decorateSessions(loadedSessions, readKeysForSessions);
       const codexThreadCatalog = await this.loadCodexThreadCatalog(sessions);
       if (refreshSerial !== this.refreshSerial) {
         return;

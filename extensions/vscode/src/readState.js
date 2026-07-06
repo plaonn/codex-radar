@@ -77,6 +77,16 @@ function decorateSessions(sessions, readKeys) {
   return sessions.map((session) => decorateSession(session, readKeys));
 }
 
+function pruneReadDoneKeys(readKeys, sessions) {
+  const validKeys = new Set(
+    sessions
+      .filter((session) => isDoneSession(session))
+      .map((session) => readDoneSessionKey(session))
+      .filter(Boolean),
+  );
+  return new Set(Array.from(readKeys).filter((key) => validKeys.has(key)));
+}
+
 module.exports = {
   READ_DONE_KEYS_KEY,
   decorateSession,
@@ -88,6 +98,7 @@ module.exports = {
   markDoneRead,
   markDoneUnread,
   readDoneSessionKey,
+  pruneReadDoneKeys,
   readStateFromValue,
   readStateToValue,
   sessionStateKey,

@@ -7,6 +7,7 @@ const {
   isUnreadDone,
   markDoneRead,
   markDoneUnread,
+  pruneReadDoneKeys,
   readDoneSessionKey,
   readStateFromValue,
   readStateToValue,
@@ -35,6 +36,30 @@ test("marks done sessions read and unread", () => {
 test("loads persisted read state defensively", () => {
   assert.deepEqual(readStateToValue(readStateFromValue(["b", "", 1, "a"])), ["a", "b"]);
   assert.deepEqual(readStateToValue(readStateFromValue({})), []);
+});
+
+test("prunes read state to done sessions still in the cache", () => {
+  const currentDone = doneSession;
+  const staleDone = {
+    session_id: "old-session",
+    display_status: "done",
+    last_seen_at: "2026-06-01T00:00:00+09:00",
+  };
+  const running = {
+    session_id: "running-session",
+    display_status: "running",
+    last_seen_at: "2026-07-05T00:02:00+09:00",
+  };
+  const readKeys = new Set([
+    readDoneSessionKey(currentDone),
+    readDoneSessionKey(staleDone),
+    readDoneSessionKey(running),
+  ]);
+
+  assert.deepEqual(
+    readStateToValue(pruneReadDoneKeys(readKeys, [currentDone, running])),
+    [readDoneSessionKey(currentDone)],
+  );
 });
 
 test("counts only unread done and waiting approval as attention", () => {
