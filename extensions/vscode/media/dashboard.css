@@ -211,22 +211,11 @@ select {
 }
 
 .sidebar .project {
-  margin: 6px 0 12px;
-  padding: 6px 0 7px;
-  border-top: 1px solid var(--vscode-panel-border);
+  margin: 4px 0 6px;
+  padding: 0;
 }
 
 .sidebar .project:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.sidebar .project.collapsed {
-  margin: 2px 0 4px;
-  padding: 4px 0 2px;
-}
-
-.sidebar .project.collapsed:first-child {
   padding-top: 0;
 }
 

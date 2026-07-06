@@ -73,9 +73,10 @@ test("keeps sidebar spacing compact and project groups visually separated", () =
   assert.match(css, /\.sidebar \.session\s*\{[^}]*padding:\s*6px;/s);
   assert.match(css, /\.sidebar \.session\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.sidebar \.session\.actionable\s*\{[^}]*border-color:\s*transparent;/s);
-  assert.match(css, /\.sidebar \.project\s*\{[^}]*border-top:\s*1px solid var\(--vscode-panel-border\);/s);
-  assert.match(css, /\.sidebar \.project\.collapsed\s*\{[^}]*margin:\s*2px 0 4px;/s);
-  assert.match(css, /\.sidebar \.project\.collapsed\s*\{[^}]*padding:\s*4px 0 2px;/s);
+  assert.match(css, /\.sidebar \.project\s*\{[^}]*margin:\s*4px 0 6px;/s);
+  assert.match(css, /\.sidebar \.project\s*\{[^}]*padding:\s*0;/s);
+  assert.doesNotMatch(css, /\.sidebar \.project\s*\{[^}]*border-top:/s);
+  assert.doesNotMatch(css, /\.sidebar \.project\.collapsed\s*\{/);
   assert.match(css, /\.sidebar \.project-header\s*\{[^}]*--vscode-sideBarSectionHeader-background/s);
   assert.match(css, /\.sidebar \.project-header\s*\{[^}]*border-left:\s*2px solid color-mix/s);
   assert.match(css, /\.sidebar \.project-header\.current-workspace\s*\{[^}]*padding-left:\s*4px;/s);
