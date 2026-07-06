@@ -6,6 +6,8 @@ const test = require("node:test");
 
 const {
   defaultCodexHome,
+  formatDurationUntil,
+  formatReset,
   loadUsageSnapshot,
   usageStatusText,
   usageStatusTooltip,
@@ -128,11 +130,27 @@ test("builds hover-compatible tooltip detail from usage snapshot", () => {
     },
     last_token_usage: { total_tokens: 145501 },
     context_window: 258400,
-  });
+  }, { nowMs: Date.parse("2026-07-05T16:49:08.000Z") });
 
-  assert.match(tooltip, /5h: 3% \(reset: 2026-07-05 21:00:08 UTC\)/);
-  assert.match(tooltip, /7d: 85% \(reset: 2026-07-12 16:00:08 UTC\)/);
+  assert.match(tooltip, /5h: 3% remaining/);
+  assert.match(tooltip, / - reset: 4h 11m left \(/);
+  assert.match(tooltip, /7d: 85% remaining/);
   assert.match(tooltip, /Plan: prolite/);
   assert.equal(tooltip.includes("Last turn tokens"), false);
   assert.equal(tooltip.includes("Context window"), false);
+});
+
+test("formats reset timestamps in extension host local time", () => {
+  assert.match(formatReset("2026-07-05T21:00:08.000Z"), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+});
+
+test("formats reset time remaining compactly", () => {
+  assert.equal(
+    formatDurationUntil("2026-07-05T21:00:08.000Z", Date.parse("2026-07-05T16:49:08.000Z")),
+    "4h 11m left",
+  );
+  assert.equal(
+    formatDurationUntil("2026-07-12T16:00:08.000Z", Date.parse("2026-07-05T16:49:08.000Z")),
+    "6d 23h 11m left",
+  );
 });

@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.19
+
+Release candidate package for local reset-time usage details. This version is not a Marketplace publication.
+
+### Changed
+
+- Show reset times in extension-host local time.
+- Include compact reset countdowns in usage hover and click detail text.
+
 ## 0.3.18
 
 Release candidate package for compact usage detail text. This version is not a Marketplace publication.

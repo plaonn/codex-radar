@@ -176,6 +176,10 @@ function usageStatusText(snapshot) {
   return `${icon} ${Math.round(primaryRemaining)}% · ${secondaryText}`;
 }
 
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
 function formatReset(value) {
   if (!value) {
     return "";
@@ -184,21 +188,68 @@ function formatReset(value) {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  return [
+    date.getFullYear(),
+    "-",
+    pad2(date.getMonth() + 1),
+    "-",
+    pad2(date.getDate()),
+    " ",
+    pad2(date.getHours()),
+    ":",
+    pad2(date.getMinutes()),
+    ":",
+    pad2(date.getSeconds()),
+  ].join("");
 }
 
-function usageStatusTooltip(snapshot) {
+function formatDurationUntil(value, nowMs = Date.now()) {
+  if (!value) {
+    return "";
+  }
+  const resetMs = new Date(value).getTime();
+  if (!Number.isFinite(resetMs)) {
+    return "";
+  }
+  const totalMinutes = Math.max(0, Math.ceil((resetMs - nowMs) / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days) {
+    parts.push(`${days}d`);
+  }
+  if (hours || days) {
+    parts.push(`${hours}h`);
+  }
+  parts.push(`${minutes}m`);
+  return `${parts.join(" ")} left`;
+}
+
+function resetLine(label, window, nowMs) {
+  if (!window) {
+    return [];
+  }
+  const lines = [`${label}: ${Math.round(window.remaining_percent)}% remaining`];
+  if (window.resets_at_iso) {
+    const left = formatDurationUntil(window.resets_at_iso, nowMs);
+    const reset = formatReset(window.resets_at_iso);
+    lines.push(` - reset: ${left} (${reset})`);
+  }
+  return lines;
+}
+
+function usageStatusTooltip(snapshot, options = {}) {
   if (!snapshot || !snapshot.available) {
     return `Codex usage remaining unavailable: ${snapshot?.reason || "unknown"}`;
   }
-  const lines = [];
+  const nowMs = options.nowMs ?? Date.now();
+  let lines = [];
   if (snapshot.primary) {
-    const reset = snapshot.primary.resets_at_iso ? ` (reset: ${formatReset(snapshot.primary.resets_at_iso)})` : "";
-    lines.push(`5h: ${Math.round(snapshot.primary.remaining_percent)}%${reset}`);
+    lines = lines.concat(resetLine("5h", snapshot.primary, nowMs));
   }
   if (snapshot.secondary) {
-    const reset = snapshot.secondary.resets_at_iso ? ` (reset: ${formatReset(snapshot.secondary.resets_at_iso)})` : "";
-    lines.push(`7d: ${Math.round(snapshot.secondary.remaining_percent)}%${reset}`);
+    lines = lines.concat(resetLine("7d", snapshot.secondary, nowMs));
   }
   if (snapshot.plan_type) {
     lines.push(`Plan: ${snapshot.plan_type}`);
@@ -208,6 +259,8 @@ function usageStatusTooltip(snapshot) {
 
 module.exports = {
   defaultCodexHome,
+  formatDurationUntil,
+  formatReset,
   loadUsageSnapshot,
   recentRolloutFiles,
   usageStatusText,
