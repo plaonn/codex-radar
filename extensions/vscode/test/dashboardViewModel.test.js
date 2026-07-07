@@ -384,7 +384,7 @@ test("finds sessions by timestamp state key", () => {
 test("labels dashboard status options", () => {
   assert.deepEqual(statusOptions("attention").slice(0, 3), [
     { label: "All", value: "", isSelected: false },
-    { label: "Attention", value: "attention", isSelected: true },
+    { label: "Needs review", value: "attention", isSelected: true },
     { label: "Active", value: "active", isSelected: false },
   ]);
 });

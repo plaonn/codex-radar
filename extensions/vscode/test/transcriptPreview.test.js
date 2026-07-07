@@ -266,7 +266,7 @@ test("builds a session preview model without exposing transcript paths", () => {
   });
 
   assert.equal(model.project, "project-a");
-  assert.equal(model.status, "Done");
+  assert.equal(model.status, "Reply ready");
   assert.equal(model.lastSeen, "10m ago");
   assert.equal(model.transcriptEntries[0].text, "[REDACTED] done");
   assert.equal(model.transcriptEntries[0].label, "Codex");

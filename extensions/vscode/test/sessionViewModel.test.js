@@ -84,18 +84,18 @@ test("builds human-readable title and redacted snippet from session cache", () =
     sessionTitle({ ...session, thread_title: "  Release\nreadiness  " }),
     "Release readiness",
   );
-  assert.equal(sessionTitle({ display_status: "running" }), "unknown - Running thread");
+  assert.equal(sessionTitle({ display_status: "running" }), "Session unknown");
 });
 
-test("makes done read state visible in row descriptions", () => {
+test("makes reply read state visible in row descriptions", () => {
   const base = {
     display_status: "done",
     last_seen_at: "2026-07-04T00:00:00+00:00",
   };
   const now = { nowMs: Date.parse("2026-07-04T00:07:00+00:00") };
 
-  assert.equal(sessionDescription({ ...base, is_unread_done: true }, now), "Unread done | 7m ago");
-  assert.equal(sessionDescription({ ...base, is_done_read: true }, now), "Read done | 7m ago");
+  assert.equal(sessionDescription({ ...base, is_unread_done: true }, now), "Unread reply | 7m ago");
+  assert.equal(sessionDescription({ ...base, is_done_read: true }, now), "Read reply | 7m ago");
 });
 
 test("uses distinct row icons for unread and read done sessions", () => {
@@ -124,7 +124,7 @@ test("summarizes project attention in group labels", () => {
   ];
 
   assert.equal(attentionCount(sessions), 2);
-  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 2 attention / 4");
+  assert.equal(projectLabel("codex-radar", sessions), "codex-radar - 2 need review / 4");
   assert.equal(projectLabel("idle-project", [{ display_status: "done" }]), "idle-project (1)");
 });
 
@@ -139,11 +139,11 @@ test("builds an attention badge from decorated attention state only", () => {
 
   assert.deepEqual(attentionBadge(sessions), {
     value: 2,
-    tooltip: "2 attention sessions",
+    tooltip: "2 sessions need review",
   });
   assert.equal(attentionBadge([{ display_status: "done", is_attention: false }]), undefined);
   assert.deepEqual(attentionBadge([{ display_status: "done", is_attention: true }]), {
     value: 1,
-    tooltip: "1 attention session",
+    tooltip: "1 session need review",
   });
 });

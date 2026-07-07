@@ -196,7 +196,7 @@ test("adds a Radar-native status bar item for attention and running counts", () 
 
   assert.match(extension, /class RadarStatusBar/);
   assert.match(extension, /radarStatusText\(model\)/);
-  assert.match(extension, /\$\(radar\).*attention.*running.*visible/s);
+  assert.match(extension, /\$\(radar\).*review.*running.*active/s);
   assert.match(extension, /onModelChange:\s*\(model\) => radarStatusBar\.refresh\(model\)/);
   assert.match(extension, /item\.command = "codexRadar\.openDashboard"/);
 });

@@ -288,7 +288,7 @@ function isProjectCollapsed(group, options = {}) {
 function projectGroupNode(group, options = {}) {
   const collapsed = options.collapsible ? isProjectCollapsed(group, options) : false;
   const project = el("section", { className: `project${collapsed ? " collapsed" : ""}` });
-  const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
+  const label = group.attention ? `${group.attention} review / ${group.total}` : String(group.total);
   const headerChildren = [];
   if (options.collapsible) {
     headerChildren.push(el("span", { className: `chevron ${collapsed ? "collapsed" : "expanded"}` }));
@@ -330,7 +330,7 @@ function attentionPane(model) {
     el("span", { className: "pane-title", text: "Attention" }),
     el("span", { className: "count", text: String(model.counts.attention) }),
   ]));
-  pane.appendChild(sessionList(model.attention, "No attention sessions"));
+  pane.appendChild(sessionList(model.attention, "No sessions need review"));
   if (model.archived.length) {
     pane.appendChild(el("div", { className: "section-divider" }, [
       el("span", { className: "pane-title", text: "Archived" }),
@@ -385,7 +385,7 @@ function inspectorPane(model) {
   }
   body.appendChild(el("div", { className: "tag-row" }, [
     el("span", { className: "tag", text: session.statusText }),
-    session.isAttention ? el("span", { className: "tag", text: "Attention" }) : null,
+    session.isAttention ? el("span", { className: "tag", text: "Needs review" }) : null,
     session.isArchived ? el("span", { className: "tag", text: "Archived" }) : null,
     session.isUnreadDone ? el("span", { className: "tag", text: "Unread" }) : null,
   ]));
@@ -437,7 +437,7 @@ function topbar(model) {
   return el("header", { className: "topbar" }, [
     el("div", { className: "brand" }, [
       el("strong", { text: "Codex Radar" }),
-      el("span", { text: `${model.counts.attention} attention / ${model.counts.visible} visible` }),
+      el("span", { text: `${model.counts.attention} review / ${model.counts.visible} active` }),
     ]),
     el("div", { className: "toolbar" }, [
       select,
@@ -497,7 +497,7 @@ function projectHeaderNode(project) {
 
 function updateProjectHeader(project, group, collapsed) {
   const header = projectHeaderNode(project);
-  const label = group.attention ? `${group.attention} attention / ${group.total}` : String(group.total);
+  const label = group.attention ? `${group.attention} review / ${group.total}` : String(group.total);
   header.className = `project-header collapsible${group.isCurrentWorkspace ? " current-workspace" : ""}`;
   header.setAttribute("aria-expanded", collapsed ? "false" : "true");
   header.querySelector(".chevron").className = `chevron ${collapsed ? "collapsed" : "expanded"}`;
@@ -586,7 +586,7 @@ function renderSidebar(app, model, surface) {
   const root = sidebarRoot(app, surface);
   const list = sidebarListRoot(root);
   if (surface === "attention") {
-    patchSessionList(list, model.attention, "No attention sessions", { showActions: true });
+    patchSessionList(list, model.attention, "No sessions need review", { showActions: true });
   } else if (surface === "archived") {
     patchSessionList(list, model.archived, "No archived sessions", { showActions: true });
   } else {

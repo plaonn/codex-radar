@@ -64,7 +64,7 @@ function isUnresolvableDoneSession(session, options = {}) {
 function statusOptions(currentStatusFilter = "") {
   const current = normalizeStatusFilter(currentStatusFilter) || "all";
   return STATUS_FILTER_VALUES.map((status) => ({
-    label: status === "all" ? "All" : status === "attention" ? "Attention" : statusText(status),
+    label: status === "all" ? "All" : status === "attention" ? "Needs review" : statusText(status),
     value: normalizeStatusFilter(status),
     isSelected: status === current,
   }));

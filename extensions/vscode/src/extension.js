@@ -40,6 +40,7 @@ const {
   sessionWithCatalogTitle,
 } = require("./codexThreadCatalog");
 const { buildSessionPreviewModel } = require("./transcriptPreview");
+const { statusText } = require("./sessionViewModel");
 
 function configuredStateDir() {
   const configured = vscode.workspace.getConfiguration("codexRadar").get("stateDir", "");
@@ -210,7 +211,7 @@ function statusFilterItems(currentStatusFilter = "") {
   return STATUS_FILTER_VALUES.map((status) => {
     const value = normalizeStatusFilter(status);
     return {
-      label: status === "all" ? "All statuses" : status === "attention" ? "Attention" : status,
+      label: status === "all" ? "All statuses" : status === "attention" ? "Needs review" : statusText(status),
       description: status === current ? "current" : "",
       value,
     };
@@ -233,7 +234,7 @@ function attentionBadge(model) {
   }
   return {
     value: count,
-    tooltip: `${count} attention session${count === 1 ? "" : "s"}`,
+    tooltip: `${count} session${count === 1 ? "" : "s"} need review`,
   };
 }
 
@@ -251,8 +252,8 @@ function viewBadge(model, surface) {
     return {
       value: filtered,
       tooltip: filtered === visible
-        ? `${filtered} visible session${filtered === 1 ? "" : "s"}`
-        : `${filtered} of ${visible} visible sessions match the current filter`,
+        ? `${filtered} active session${filtered === 1 ? "" : "s"}`
+        : `${filtered} of ${visible} active sessions match the current filter`,
     };
   }
   if (surface === "archived") {
@@ -276,7 +277,7 @@ function radarStatusText(model) {
   if (!visible) {
     return "$(radar) Radar 0";
   }
-  return `$(radar) ${attention} attention · ${running} running · ${visible} visible`;
+  return `$(radar) ${attention} review · ${running} running · ${visible} active`;
 }
 
 function radarStatusTooltip(model) {
@@ -284,7 +285,7 @@ function radarStatusTooltip(model) {
   return [
     `Attention: ${counts.attention || 0}`,
     `Running: ${counts.running || 0}`,
-    `Visible sessions: ${counts.visible || 0}`,
+    `Active sessions: ${counts.visible || 0}`,
     `Archived sessions: ${counts.archived || 0}`,
   ].join("\n");
 }

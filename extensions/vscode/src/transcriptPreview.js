@@ -374,12 +374,12 @@ function explicitSessionTitle(session, options = {}) {
 }
 
 function fallbackSessionTitle(session, options = {}) {
-  const status = statusText(session?.display_status || session?.status || "unknown");
   const project = compactText(session?.project || "");
+  const shortId = shortSessionId(session?.session_id);
   if (project) {
-    return truncateText(`${project} - ${status} thread`, options.titleLength ?? DEFAULT_DISPLAY_TITLE_LENGTH);
+    return truncateText(`${project} - ${shortId}`, options.titleLength ?? DEFAULT_DISPLAY_TITLE_LENGTH);
   }
-  return `${shortSessionId(session?.session_id)} - ${status} thread`;
+  return `Session ${shortId}`;
 }
 
 function snippetFromEntry(entry, options = {}) {

@@ -1,6 +1,6 @@
 const STATUS_TEXT = new Map([
   ["active", "Active"],
-  ["done", "Done"],
+  ["done", "Reply ready"],
   ["running", "Running"],
   ["tool_running", "Tool running"],
   ["unknown", "Unknown"],
@@ -67,7 +67,7 @@ function sessionTitle(session, options = {}) {
     return truncateText(`${shortId} - ${snippet}`, options.maxLength ?? 96);
   }
 
-  return `${shortId} - ${statusText(session.display_status)} thread`;
+  return `Session ${shortId}`;
 }
 
 function sessionLabel(session) {
@@ -125,9 +125,9 @@ function sessionDescription(session, options = {}) {
   }
   const status = statusText(session.display_status);
   if (session.is_unread_done) {
-    parts.push("Unread done");
+    parts.push("Unread reply");
   } else if (String(session.display_status || "") === "done") {
-    parts.push("Read done");
+    parts.push("Read reply");
   } else if (status) {
     parts.push(status);
   }
@@ -168,7 +168,7 @@ function attentionBadge(sessions) {
   }
   return {
     value: attention,
-    tooltip: `${attention} attention session${attention === 1 ? "" : "s"}`,
+    tooltip: `${attention} session${attention === 1 ? "" : "s"} need review`,
   };
 }
 
@@ -176,7 +176,7 @@ function projectLabel(project, sessions) {
   const attention = attentionCount(sessions);
   const total = sessions.length;
   if (attention > 0) {
-    return `${project} - ${attention} attention / ${total}`;
+    return `${project} - ${attention} need review / ${total}`;
   }
   return `${project} (${total})`;
 }
