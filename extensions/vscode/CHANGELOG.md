@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.22
+
+Release candidate package for sidebar project navigation and unresolvable done-session cleanup. This version is not a Marketplace publication.
+
+### Changed
+
+- Pin the current VS Code workspace project at the top of the sidebar Projects section.
+- Tighten project header styling, chevrons, collapsed spacing, and session indentation.
+- Hide done sessions from active navigation when their transcript cannot be resolved.
+
 ## 0.3.21
 
 Release candidate package for remaining dashboard usability tasks. This version is not a Marketplace publication.
