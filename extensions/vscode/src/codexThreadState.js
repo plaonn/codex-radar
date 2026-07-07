@@ -17,7 +17,7 @@ function stateDbCandidates(options = {}) {
   ].filter(Boolean);
 }
 
-function readThreadRows(options = {}) {
+function readArchivedThreadRows(options = {}) {
   const dbPath = stateDbCandidates(options).find((candidate) => fs.existsSync(candidate));
   if (!dbPath) {
     return [];
@@ -32,7 +32,7 @@ function readThreadRows(options = {}) {
         "-separator",
         "\t",
         dbPath,
-        "select id, cwd, created_at, updated_at, archived from threads;",
+        "select id, cwd, created_at, updated_at from threads where archived = 1;",
       ],
       { encoding: "utf8", timeout: options.sqliteTimeoutMs ?? 1000 },
     );
@@ -43,35 +43,29 @@ function readThreadRows(options = {}) {
   return output.split(/\r?\n/)
     .filter(Boolean)
     .map((line) => {
-      const [id, cwd, createdAt, updatedAt, archived] = line.split("\t");
+      const [id, cwd, createdAt, updatedAt] = line.split("\t");
       return {
         id: String(id || ""),
         cwd: String(cwd || ""),
         createdAt: Number.parseInt(createdAt, 10) || 0,
         updatedAt: Number.parseInt(updatedAt, 10) || 0,
-        archived: archived === "1",
       };
     })
     .filter((row) => row.id);
 }
 
-function readArchivedThreadRows(options = {}) {
-  return readThreadRows(options).filter((row) => row.archived);
-}
-
-function codexThreadState(options = {}) {
-  if (typeof options.resolveCodexThreads === "function") {
-    return options.resolveCodexThreads(options);
+function archivedThreadState(options = {}) {
+  if (typeof options.resolveCodexArchivedThreads === "function") {
+    return options.resolveCodexArchivedThreads(options);
   }
   const cache = options.codexThreadStateCache instanceof Map ? options.codexThreadStateCache : null;
-  const cacheKey = `threads:${codexHome(options)}`;
+  const cacheKey = `archivedThreads:${codexHome(options)}`;
   if (cache && cache.has(cacheKey)) {
     return cache.get(cacheKey);
   }
-  const rows = readThreadRows(options);
+  const rows = readArchivedThreadRows(options);
   const state = {
     ids: new Set(rows.map((row) => row.id)),
-    archivedIds: new Set(rows.filter((row) => row.archived).map((row) => row.id)),
     rows,
   };
   if (cache) {
@@ -80,35 +74,15 @@ function codexThreadState(options = {}) {
   return state;
 }
 
-function archivedThreadState(options = {}) {
-  if (typeof options.resolveCodexArchivedThreads === "function") {
-    return options.resolveCodexArchivedThreads(options);
-  }
-  const state = codexThreadState(options);
-  return {
-    ids: state.archivedIds || new Set((state.rows || []).filter((row) => row.archived).map((row) => row.id)),
-    rows: (state.rows || []).filter((row) => row.archived),
-  };
-}
-
 function isArchivedByCodexThreadState(session, options = {}) {
   const state = archivedThreadState(options);
   const sessionId = String(session?.session_id || "");
   return Boolean(sessionId && state.ids.has(sessionId));
 }
 
-function hasCodexThreadState(session, options = {}) {
-  const state = codexThreadState(options);
-  const sessionId = String(session?.session_id || "");
-  return Boolean(sessionId && state.ids instanceof Set && state.ids.has(sessionId));
-}
-
 module.exports = {
   archivedThreadState,
-  codexThreadState,
-  hasCodexThreadState,
   isArchivedByCodexThreadState,
   readArchivedThreadRows,
-  readThreadRows,
   stateDbCandidates,
 };

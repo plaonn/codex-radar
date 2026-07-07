@@ -290,7 +290,6 @@ function sessionWithCatalogTitle(session, catalog) {
 module.exports = {
   catalogFromThreadLists,
   catalogTitleForSession,
-  catalogEntryForSession,
   emptyCodexThreadCatalog,
   isArchivedByCodexThreadCatalog,
   loadCodexThreadCatalog,

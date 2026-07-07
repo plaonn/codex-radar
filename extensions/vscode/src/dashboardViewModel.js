@@ -13,9 +13,8 @@ const {
   statusText,
 } = require("./sessionViewModel");
 const { isDoneSession, sessionStateKey } = require("./readState");
-const { hasCodexThreadState, isArchivedByCodexThreadState } = require("./codexThreadState");
+const { isArchivedByCodexThreadState } = require("./codexThreadState");
 const {
-  catalogEntryForSession,
   isArchivedByCodexThreadCatalog,
   sessionWithCatalogTitle,
 } = require("./codexThreadCatalog");
@@ -55,24 +54,11 @@ function isArchivedSession(session, options = {}) {
   return isArchived;
 }
 
-function canTrustMissingCatalogEntry(catalog) {
-  return catalog?.entries instanceof Map && !catalog.error;
-}
-
 function isUnresolvableDoneSession(session, options = {}) {
   if (!isDoneSession(session) || isArchivedSession(session, options)) {
     return false;
   }
-  if (transcriptPathInfo(session, options).path) {
-    return false;
-  }
-  if (!canTrustMissingCatalogEntry(options.codexThreadCatalog)) {
-    return false;
-  }
-  if (catalogEntryForSession(session, options.codexThreadCatalog)) {
-    return false;
-  }
-  return !hasCodexThreadState(session, options);
+  return !transcriptPathInfo(session, options).path;
 }
 
 function statusOptions(currentStatusFilter = "") {
