@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.24
+
+Release candidate package for stable sidebar project ordering. This version is not a Marketplace publication.
+
+### Changed
+
+- Keep non-attention sidebar projects in a stable name order so running activity does not continuously reshuffle the list.
+- Continue to pin current workspace projects first and sort projects needing review by latest attention activity.
+
 ## 0.3.23
 
 Release candidate package for sidebar double-click behavior. This version is not a Marketplace publication.

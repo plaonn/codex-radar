@@ -275,6 +275,38 @@ test("orders multiple current workspace projects by workspace folder order", () 
   assert.deepEqual(model.sidebarGroups.map((group) => group.project), ["first", "second"]);
 });
 
+test("keeps non-attention sidebar projects stable despite running activity", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "zeta-running-latest",
+      cwd: "/work/zeta",
+      project: "zeta",
+      display_status: "running",
+      last_seen_at: "2026-07-05T00:30:00+09:00",
+    },
+    {
+      session_id: "alpha-running",
+      cwd: "/work/alpha",
+      project: "alpha",
+      display_status: "running",
+      last_seen_at: "2026-07-05T00:20:00+09:00",
+    },
+    {
+      session_id: "middle-approval",
+      cwd: "/work/middle",
+      project: "middle",
+      display_status: "waiting_approval",
+      last_seen_at: "2026-07-05T00:01:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    resolveTranscriptPathInfo: activeTranscriptResolver,
+  });
+
+  assert.deepEqual(model.groups.map((group) => group.project), ["zeta", "alpha", "middle"]);
+  assert.deepEqual(model.sidebarGroups.map((group) => group.project), ["middle", "alpha", "zeta"]);
+});
+
 test("counts running and tool-running active sessions separately from attention", () => {
   const sessions = decorateSessions([
     { session_id: "running", project: "project-a", display_status: "running" },

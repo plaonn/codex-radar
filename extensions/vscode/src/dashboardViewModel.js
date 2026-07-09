@@ -209,10 +209,16 @@ function sidebarProjectGroups(sessions, options = {}) {
       .map((session) => sessionWorkspaceIndex(session, folders))
       .filter((index) => index >= 0);
     const workspaceIndex = matchingIndexes.length ? Math.min(...matchingIndexes) : -1;
+    const latestAttentionAt = group.sessions
+      .filter((session) => session.isAttention)
+      .map((session) => Date.parse(session.lastSeenAt || ""))
+      .filter(Number.isFinite)
+      .sort((left, right) => right - left)[0] || 0;
     return {
       ...group,
       isCurrentWorkspace: workspaceIndex >= 0,
       workspaceIndex,
+      latestAttentionAt,
       originalIndex,
     };
   });
@@ -228,9 +234,20 @@ function sidebarProjectGroups(sessions, options = {}) {
       if (right.isCurrentWorkspace) {
         return 1;
       }
-      return left.originalIndex - right.originalIndex;
+      if (left.attention && right.attention) {
+        return right.latestAttentionAt - left.latestAttentionAt
+          || left.project.localeCompare(right.project)
+          || left.originalIndex - right.originalIndex;
+      }
+      if (left.attention) {
+        return -1;
+      }
+      if (right.attention) {
+        return 1;
+      }
+      return left.project.localeCompare(right.project) || left.originalIndex - right.originalIndex;
     })
-    .map(({ originalIndex, workspaceIndex, ...group }) => group);
+    .map(({ latestAttentionAt, originalIndex, workspaceIndex, ...group }) => group);
 }
 
 function buildDashboardModel(sessions, options = {}) {
