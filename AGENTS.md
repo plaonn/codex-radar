@@ -22,4 +22,6 @@
 - 코드 변경 후 `PYTHONPATH=src python3 -m unittest discover`를 실행한다.
 - Python 구조 변경 후 `python3 -m compileall src tests`를 실행한다.
 - VS Code extension 변경 후 `npm --prefix extensions/vscode test`를 실행한다.
+- VS Code extension 변경 후 시험 설치나 동작 확인용 VSIX를 만들 때는, 사용자가 명시적으로 same-version rebuild를 요청하지 않은 한 먼저 `extensions/vscode/package.json` version을 올리고 관련 version 기대값/문서를 함께 갱신한다.
 - VS Code extension 구현을 완료했으면 시험용 VSIX 생성을 위해 `npm --prefix extensions/vscode run package`도 실행한다. 생성된 `.vsix`는 gitignored artifact이며 commit하지 않는다.
+- VSIX 생성 후에는 산출물 파일명과 manifest/package version이 새 version을 가리키는지 확인한다.
