@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.23
+
+Release candidate package for sidebar double-click behavior. This version is not a Marketplace publication.
+
+### Fixed
+
+- Prevent sidebar double-click Open in Codex from also opening the Radar preview.
+
 ## 0.3.22
 
 Release candidate package for sidebar project navigation and unresolvable done-session cleanup. This version is not a Marketplace publication.
