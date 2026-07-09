@@ -133,6 +133,24 @@
 - Derived specs/tests: future `codex-radar rpc` or equivalent JSON/JSONL protocol, shared mobile/gui state builder, strict stdout protocol with diagnostics on stderr, bounded/redacted preview output, foreground in-app attention events, no remote HTTP listener by default.
 - Revisit when: Android app, mobile web/PWA, background notification, multi-host dashboard, or remote write actions become active milestones.
 
+### R10: surface-independent local runtime
+
+- Status: candidate direction
+- Requirement: Codex lifecycle 상태 수집과 latest-state cache/protocol 생성은 VS Code extension 같은 특정 UI client가 아니라 host-local `codex-radar` runtime/indexer가 담당해야 한다.
+- Rationale: VS Code extension, future Android app, TUI, CLI fallback이 같은 lifecycle-derived state와 privacy boundary를 재사용해야 한다. UI client별로 Codex transcript, rollout log, state DB 같은 내부 파일을 각자 scan해 상태를 추론하면 attention 상태의 의미와 정확도가 표면마다 갈라질 수 있다.
+- Failure prevented: extension-only scan에 의존해 `waiting_approval`, `tool_running`, `done` 같은 attention 상태를 놓치거나 다르게 해석하는 문제. VS Code extension에 indexer ownership이 묶여 future app surface가 별도 관측 로직을 재구현하는 문제.
+- Assumptions: Codex lifecycle hook 또는 그에 준하는 host-local lifecycle event surface가 계속 제공된다. UI client는 local runtime이 만든 sanitized state/protocol을 읽을 수 있다.
+- Derived specs/tests: current `codex-radar hook` producer and `sessions.json` cache, GUI `SessionSource` read adapter, future shared GUI/mobile state builder, future `codex-radar rpc`, setup diagnostics for missing or outdated runtime/indexer, stable hook entrypoint with explicit migration when hook wiring changes.
+- Revisit when: Codex가 공식 stable cross-client session/status API를 제공하거나, lifecycle hook 없이도 `waiting_approval`/`tool_running`/`done` 상태를 안정적으로 제공하는 supported local API가 생길 때.
+
+#### R10a: stable hook entrypoint and migration boundary
+
+- Status: candidate direction
+- Requirement: 배포 가능한 hook integration은 가능한 한 stable command/shim을 `hooks.json`에 등록하고, helper/indexer implementation 업데이트는 hook config 변경 없이 처리해야 한다. hook event set, command contract, privacy boundary가 바뀌는 경우에만 사용자 승인 기반 migration을 요구해야 한다.
+- Rationale: extension, CLI, future app 배포가 반복되어도 global Codex hook config churn을 줄이고, 사용자가 승인하지 않은 Codex config 변경을 피해야 한다.
+- Failure prevented: extension update마다 hook path가 깨지는 문제, outdated hook wiring이 조용히 남아 세션 index가 비는 문제, global Codex config가 자동으로 변경되는 privacy/automation boundary 위반.
+- Derived specs/tests: setup/doctor detects missing or outdated hook runtime, hook migration preview/diff before write, uninstall or disable path for stable shim, no automatic `~/.codex/hooks.json` edits outside explicit setup/migration flow.
+
 ## Rationale
 
 VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.

@@ -39,6 +39,17 @@ Codex hook event
   -> sessions/transcript/tui commands
 ```
 
+Current UI architecture separates the lifecycle index producer from UI clients:
+
+```text
+Codex hook event
+  -> codex-radar local indexer/runtime
+  -> sessions.json latest-state session index
+  -> VS Code extension / terminal commands
+```
+
+현재 VS Code extension은 standalone session index producer가 아니다. Extension은 extension host-local `sessions.json`, transcript preview source, Codex rollout usage log, optional Codex thread metadata를 read-only로 읽는 UI client다. `sessions.json` producer는 현재 `codex-radar hook` CLI이며, Codex hook integration이 없거나 state cache가 아직 없으면 extension dashboard/sidebar는 빈 상태 또는 unavailable 상태를 보여줄 수 있다. 배포 UX에서는 이 상태를 silent failure로 두지 않고 setup/diagnostic surface에서 indexer/runtime 연결 상태를 설명해야 한다.
+
 runtime state 기본 위치:
 
 ```text
@@ -202,6 +213,13 @@ GUI privacy/action boundary v1:
 - GUI는 raw transcript file을 기본 list에 자동 노출하지 않는다. 기본 navigation에는 host-local transcript에서 파생한 redacted title/snippet display fields를 표시할 수 있지만 raw transcript path나 raw transcript content는 표시하지 않는다.
 - VS Code extension은 sidebar item selection처럼 사용자가 명시적으로 고른 단일 session에 한해 editor preview에서 transcript skim을 제공할 수 있다. Preview Webview에는 extension host가 만든 bounded, redacted user/Codex message entries와 sanitized Markdown HTML만 전달하고 raw transcript path나 tool/internal event text는 표시하지 않는다. `sessions.json`에 transcript path가 없으면 extension host의 `CODEX_HOME` 또는 `~/.codex` 아래 Codex transcript store에서 session id가 포함된 `.jsonl` 파일을 read-only로 찾을 수 있다. transcript file을 찾지 못하면 extension은 cached latest assistant summary만 fallback으로 표시할 수 있다. 전체 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.
+
+Distribution/setup boundary:
+
+- Current VS Code extension install alone does not create or update the `sessions.json` producer.
+- Current setup expects a host-local `codex-radar` command and Codex hook configuration that invokes `codex-radar hook`.
+- Extension setup or diagnostics may explain missing runtime/indexer state, but current VS Code GUI does not automatically edit `~/.codex/hooks.json`.
+- Future packaged setup may provide a stable hook entrypoint/shim and helper runtime, but hook wiring changes remain explicit migration actions rather than silent extension activation side effects.
 
 ## Automation Boundary
 

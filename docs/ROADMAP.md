@@ -31,6 +31,14 @@
 - GitHub Release에 VSIX를 attached artifact로 배포하는 경로를 먼저 안정화한다.
 - Marketplace publish는 publisher/namespace, marketplace metadata, asset policy, release 운영 방식이 정해진 뒤 별도 milestone으로 진행한다.
 
+## Local Runtime / Distribution Direction
+
+- 장기 배포 모델은 VS Code extension을 `codex-radar` runtime owner로 만들기보다, host-local `codex-radar` indexer/runtime을 core로 두고 VS Code extension, future Android app, TUI, CLI를 client surface로 분리하는 방향을 우선 검토한다.
+- Extension-only scan mode는 설치가 단순하더라도 `waiting_approval`, `tool_running`, `done` 같은 lifecycle-derived attention state의 source of truth가 약해지므로 primary architecture로 두지 않는다. 필요하면 lightweight history/preview fallback으로만 검토한다.
+- Windows local-only 배포를 다룰 때도 Python vs Node helper, extension-bundled helper, separate CLI package 같은 선택은 implementation/distribution choice로 남기고, requirement는 stable local runtime/indexer와 explicit setup/migration boundary로 둔다.
+- Hook integration은 stable entrypoint/shim을 지향한다. Helper implementation 업데이트는 가능한 한 hook config 변경 없이 처리하고, event wiring이나 command contract 변경처럼 `hooks.json` migration이 필요한 경우에는 diff/preview와 사용자 승인을 요구한다.
+- Setup UX는 extension 하나를 설치한 사용자가 빈 dashboard만 보지 않도록 missing/outdated indexer, missing hook wiring, inaccessible state directory를 명확히 진단하는 방향으로 발전시킨다.
+
 ## Mobile Direction
 
 - 모바일의 장기 surface는 Android app이지만, 초기 bridge는 별도 remote HTTP server보다 SSH 위의 machine-readable `codex-radar` protocol을 우선 검토한다.
