@@ -118,12 +118,53 @@ function relativeTimeText(timestamp, options = {}) {
   return new Date(valueMs).toISOString().slice(0, 10);
 }
 
+function stateDurationText(session, options = {}) {
+  const displayState = String(session.display_state || session.display_status || "");
+  const timestamp = session.display_state_started_at || session.last_seen_at;
+  const valueMs = Date.parse(String(timestamp || ""));
+  if (!Number.isFinite(valueMs)) {
+    return "";
+  }
+
+  const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
+  const diffSeconds = Math.max(0, Math.floor((nowMs - valueMs) / 1000));
+  const suffix = displayState === "running"
+    ? "running"
+    : displayState === "waiting_approval"
+      ? "waiting"
+      : "";
+  if (!suffix) {
+    return relativeTimeText(timestamp, options);
+  }
+  if (diffSeconds < 60) {
+    return `now ${suffix}`;
+  }
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ${suffix}`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h ${suffix}`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) {
+    return `${diffDays}d ${suffix}`;
+  }
+
+  return `${new Date(valueMs).toISOString().slice(0, 10)} ${suffix}`;
+}
+
 function sessionDescription(session, options = {}) {
   const parts = [];
   if (options.showProject && session.project) {
     parts.push(String(session.project));
   }
-  const status = statusText(session.display_status);
+  const displayState = String(session.display_state || session.display_status || "");
+  const status = statusText(displayState);
   if (session.is_unread_done) {
     parts.push("Unread reply");
   } else if (String(session.display_status || "") === "done") {
@@ -137,9 +178,9 @@ function sessionDescription(session, options = {}) {
   if (session.model) {
     parts.push(String(session.model));
   }
-  const lastSeen = relativeTimeText(session.last_seen_at, options);
-  if (lastSeen) {
-    parts.push(lastSeen);
+  const stateDuration = stateDurationText(session, options);
+  if (stateDuration) {
+    parts.push(stateDuration);
   }
   return parts.join(" | ");
 }
@@ -195,6 +236,7 @@ module.exports = {
   sessionTitle,
   sessionTooltip,
   shortSessionId,
+  stateDurationText,
   statusText,
   truncateText,
 };

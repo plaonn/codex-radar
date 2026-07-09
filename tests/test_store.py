@@ -16,6 +16,7 @@ from codex_radar.store import (
     record_hook_event,
     save_config,
     session_display_status,
+    update_session_cache,
 )
 
 
@@ -274,6 +275,66 @@ class StoreTests(unittest.TestCase):
 
             self.assertEqual("done", session["status"])
             self.assertEqual("", session["current_tool"])
+
+    def test_display_state_tracks_macro_state_without_tool_resets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            started = update_session_cache(
+                normalize_event(
+                    {
+                        "hook_event_name": "UserPromptSubmit",
+                        "session_id": "session-1",
+                        "cwd": "/tmp/project-a",
+                    },
+                    recorded_at="2026-07-03T00:00:00+00:00",
+                ),
+                state_dir,
+            )
+            # Use normalized events directly so the test can control recorded_at.
+            tool_started = update_session_cache(
+                normalize_event(
+                    {
+                        "hook_event_name": "PreToolUse",
+                        "session_id": "session-1",
+                        "cwd": "/tmp/project-a",
+                        "tool_name": "Bash",
+                    },
+                    recorded_at="2026-07-03T00:05:00+00:00",
+                ),
+                state_dir,
+            )
+            tool_finished = update_session_cache(
+                normalize_event(
+                    {
+                        "hook_event_name": "PostToolUse",
+                        "session_id": "session-1",
+                        "cwd": "/tmp/project-a",
+                    },
+                    recorded_at="2026-07-03T00:06:00+00:00",
+                ),
+                state_dir,
+            )
+            waiting = update_session_cache(
+                normalize_event(
+                    {
+                        "hook_event_name": "PermissionRequest",
+                        "session_id": "session-1",
+                        "cwd": "/tmp/project-a",
+                    },
+                    recorded_at="2026-07-03T00:07:00+00:00",
+                ),
+                state_dir,
+            )
+
+            self.assertEqual("running", started["display_state"])
+            self.assertEqual(started["last_seen_at"], started["display_state_started_at"])
+            self.assertEqual("tool_running", tool_started["status"])
+            self.assertEqual("running", tool_started["display_state"])
+            self.assertEqual(started["display_state_started_at"], tool_started["display_state_started_at"])
+            self.assertEqual("running", tool_finished["display_state"])
+            self.assertEqual(started["display_state_started_at"], tool_finished["display_state_started_at"])
+            self.assertEqual("waiting_approval", waiting["display_state"])
+            self.assertEqual("2026-07-03T00:07:00+00:00", waiting["display_state_started_at"])
 
     def test_subagent_start_and_stop_update_status_and_current_tool(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

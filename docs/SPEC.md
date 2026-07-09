@@ -113,6 +113,11 @@ Privacy and stability boundary:
 
 정규화된 event는 hook processing 중 session index update를 위한 in-memory record다. 현재 default runtime state에는 raw hook event log를 누적 저장하지 않는다.
 
+Session cache는 위 event metadata에서 latest-state record를 만들며, `status`와 별도로 GUI/summary용 macro state를 유지한다:
+
+- `display_state`: 사용자-facing macro state. 현재 `tool_running`은 사용자가 스캔하는 거시 상태에서는 `running`으로 합쳐진다.
+- `display_state_started_at`: 현재 `display_state`가 시작된 capture 시간. `PreToolUse`/`PostToolUse` 같은 tool-level event는 `running` display state duration을 reset하지 않는다.
+
 derived status:
 
 - `active`: session 시작 또는 resume.
@@ -121,6 +126,16 @@ derived status:
 - `waiting_approval`: Codex가 permission을 요청함.
 - `done`: turn 종료.
 - `unknown`: event를 명확히 mapping하지 못함.
+
+display state:
+
+- `active`
+- `running`: `running`과 `tool_running`을 사용자-facing macro state로 합친 상태.
+- `waiting_approval`
+- `done`
+- `unknown`
+
+VS Code GUI row metadata는 `done`이면 reply age를 `7m ago`처럼 보여주고, `running`이면 `7m running`, `waiting_approval`이면 `7m waiting`처럼 현재 macro state duration을 보여줄 수 있다. Tool name은 보조 metadata로 표시할 수 있지만 `tool_running` 자체는 project ordering이나 macro duration을 reset하는 user-facing state로 취급하지 않는다.
 
 display-only status:
 

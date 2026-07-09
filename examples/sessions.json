@@ -4,6 +4,8 @@
     "session-approval": {
       "current_tool": "",
       "cwd": "/tmp/project-a",
+      "display_state": "waiting_approval",
+      "display_state_started_at": "2026-07-04T00:05:00+00:00",
       "event_count": 3,
       "first_seen_at": "2026-07-04T00:00:00+00:00",
       "last_assistant_message": "I need permission to run the command.",
@@ -20,6 +22,8 @@
     "session-running": {
       "current_tool": "Bash",
       "cwd": "/tmp/project-b",
+      "display_state": "running",
+      "display_state_started_at": "2026-07-04T00:01:00+00:00",
       "event_count": 2,
       "first_seen_at": "2026-07-04T00:01:00+00:00",
       "last_assistant_message": "Running tests.",

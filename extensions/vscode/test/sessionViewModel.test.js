@@ -15,6 +15,7 @@ const {
   sessionTitle,
   sessionTooltip,
   shortSessionId,
+  stateDurationText,
   statusText,
   truncateText,
 } = require("../src/sessionViewModel");
@@ -41,14 +42,14 @@ test("formats session rows without transcript content", () => {
   assert.equal(sessionLabel(session), "session-appr - I need permission to run the command.");
   assert.equal(
     sessionDescription(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }),
-    "Waiting approval | Bash | gpt-5 | 7m ago",
+    "Waiting approval | Bash | gpt-5 | 7m waiting",
   );
   assert.equal(
     sessionDescription(
       { ...session, project: "codex-radar" },
       { nowMs: Date.parse("2026-07-04T00:07:00+00:00"), showProject: true },
     ),
-    "codex-radar | Waiting approval | Bash | gpt-5 | 7m ago",
+    "codex-radar | Waiting approval | Bash | gpt-5 | 7m waiting",
   );
   assert.equal(sessionTooltip(session, { nowMs: Date.parse("2026-07-04T00:07:00+00:00") }), [
     "Project: -",
@@ -96,6 +97,21 @@ test("makes reply read state visible in row descriptions", () => {
 
   assert.equal(sessionDescription({ ...base, is_unread_done: true }, now), "Unread reply | 7m ago");
   assert.equal(sessionDescription({ ...base, is_done_read: true }, now), "Read reply | 7m ago");
+});
+
+test("shows macro running duration without exposing tool-running as row state", () => {
+  const session = {
+    display_status: "tool_running",
+    display_state: "running",
+    display_state_started_at: "2026-07-04T00:00:00+00:00",
+    current_tool: "Bash",
+    model: "gpt-5",
+    last_seen_at: "2026-07-04T00:05:00+00:00",
+  };
+  const now = { nowMs: Date.parse("2026-07-04T00:07:00+00:00") };
+
+  assert.equal(stateDurationText(session, now), "7m running");
+  assert.equal(sessionDescription(session, now), "Running | Bash | gpt-5 | 7m running");
 });
 
 test("uses distinct row icons for unread and read done sessions", () => {

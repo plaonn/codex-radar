@@ -28,6 +28,8 @@ SESSION_CACHE_FIELDS = (
     "last_seen_at",
     "last_event_name",
     "status",
+    "display_state",
+    "display_state_started_at",
     "cwd",
     "project",
     "transcript_path",
@@ -40,6 +42,9 @@ SESSION_CACHE_FIELDS = (
 )
 STALE_SESSION_SECONDS = 30 * 60
 STALE_ELIGIBLE_STATUSES = {"active", "running", "tool_running"}
+DISPLAY_STATE_BY_STATUS = {
+    "tool_running": "running",
+}
 
 
 def utc_now() -> str:
@@ -93,6 +98,11 @@ def session_display_status(
 def session_seen_since(session: Dict[str, Any], since: datetime) -> bool:
     last_seen_at = parse_timestamp(session.get("last_seen_at"))
     return last_seen_at is not None and last_seen_at >= since
+
+
+def display_state_for_status(status: Any) -> str:
+    value = _string(status) or "unknown"
+    return DISPLAY_STATE_BY_STATUS.get(value, value)
 
 
 def default_state_dir() -> Path:
@@ -315,6 +325,15 @@ def update_session_cache(event: Dict[str, Any], state_dir: Optional[Path] = None
     current_tool = event.get("tool_name") or previous.get("current_tool", "")
     if event.get("event_name") in {"PostToolUse", "Stop", "SubagentStop"}:
         current_tool = ""
+    display_state = display_state_for_status(event.get("status", "unknown"))
+    previous_display_state = display_state_for_status(
+        previous.get("display_state") or previous.get("status", "")
+    )
+    display_state_started_at = (
+        previous.get("display_state_started_at")
+        if previous_display_state == display_state
+        else ""
+    ) or event["recorded_at"]
 
     session = {
         "session_id": session_id,
@@ -322,6 +341,8 @@ def update_session_cache(event: Dict[str, Any], state_dir: Optional[Path] = None
         "last_seen_at": event["recorded_at"],
         "last_event_name": event.get("event_name", "unknown"),
         "status": event.get("status", "unknown"),
+        "display_state": display_state,
+        "display_state_started_at": display_state_started_at,
         "cwd": event.get("cwd") or previous.get("cwd", ""),
         "project": event.get("project") or previous.get("project", ""),
         "transcript_path": event.get("transcript_path") or previous.get("transcript_path", ""),

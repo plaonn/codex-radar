@@ -30,6 +30,8 @@
         "last_seen_at",
         "last_event_name",
         "status",
+        "display_state",
+        "display_state_started_at",
         "cwd",
         "project",
         "transcript_path",
@@ -65,6 +67,20 @@
             "done",
             "unknown"
           ]
+        },
+        "display_state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "running",
+            "waiting_approval",
+            "done",
+            "unknown"
+          ]
+        },
+        "display_state_started_at": {
+          "type": "string",
+          "format": "date-time"
         },
         "cwd": {
           "type": "string"

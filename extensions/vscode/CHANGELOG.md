@@ -2,6 +2,15 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.25
+
+Release candidate package for macro state duration display. This version is not a Marketplace publication.
+
+### Changed
+
+- Show running rows with macro-state duration such as `7m running` instead of treating tool-level events as the user-facing state.
+- Preserve running duration across `tool_running` transitions while still showing the current tool as secondary metadata.
+
 ## 0.3.24
 
 Release candidate package for stable sidebar project ordering. This version is not a Marketplace publication.
