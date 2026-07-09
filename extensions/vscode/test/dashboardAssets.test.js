@@ -103,6 +103,8 @@ test("opens eligible sidebar sessions in Codex on double-click", () => {
   const js = readDashboardJs();
 
   assert.match(js, /addEventListener\("dblclick"/);
+  assert.match(js, /deferClickSelection/);
+  assert.match(js, /clearTimeout\(node\.codexRadarClickTimer\)/);
   assert.match(js, /codexRadarSession\?\.actions\?\.canOpen/);
   assert.match(js, /type:\s*"sessionAction", action:\s*"open"/);
 });

@@ -138,10 +138,28 @@ function sessionNode(session, options = {}) {
   });
   node.tabIndex = 0;
   node.setAttribute("role", "button");
-  node.addEventListener("click", () => {
-    send({ type: "selectSession", key: node.dataset.sessionKey || "" });
+  node.addEventListener("click", (event) => {
+    if (!options.deferClickSelection) {
+      send({ type: "selectSession", key: node.dataset.sessionKey || "" });
+      return;
+    }
+    if (node.codexRadarClickTimer) {
+      clearTimeout(node.codexRadarClickTimer);
+      node.codexRadarClickTimer = null;
+    }
+    if (event.detail > 1) {
+      return;
+    }
+    node.codexRadarClickTimer = setTimeout(() => {
+      node.codexRadarClickTimer = null;
+      send({ type: "selectSession", key: node.dataset.sessionKey || "" });
+    }, 220);
   });
   node.addEventListener("dblclick", () => {
+    if (node.codexRadarClickTimer) {
+      clearTimeout(node.codexRadarClickTimer);
+      node.codexRadarClickTimer = null;
+    }
     if (node.codexRadarSession?.actions?.canOpen) {
       send({ type: "sessionAction", action: "open", key: node.dataset.sessionKey || "" });
     }
@@ -541,7 +559,10 @@ function updateSidebarProjectNode(project, group, options = {}) {
   if (collapsed) {
     clear(sessions);
   } else {
-    patchSessionList(sessions, group.sessions, "", { showActions: options.showActions });
+    patchSessionList(sessions, group.sessions, "", {
+      showActions: options.showActions,
+      deferClickSelection: options.deferClickSelection,
+    });
   }
 }
 
@@ -586,14 +607,15 @@ function renderSidebar(app, model, surface) {
   const root = sidebarRoot(app, surface);
   const list = sidebarListRoot(root);
   if (surface === "attention") {
-    patchSessionList(list, model.attention, "No sessions need review", { showActions: true });
+    patchSessionList(list, model.attention, "No sessions need review", { showActions: true, deferClickSelection: true });
   } else if (surface === "archived") {
-    patchSessionList(list, model.archived, "No archived sessions", { showActions: true });
+    patchSessionList(list, model.archived, "No archived sessions", { showActions: true, deferClickSelection: true });
   } else {
     patchProjectGroups(list, model.sidebarGroups || model.groups, model.emptyState || "No sessions match this filter", {
       collapsible: true,
       defaultCollapseQuiet: true,
       showActions: true,
+      deferClickSelection: true,
     });
   }
 }
