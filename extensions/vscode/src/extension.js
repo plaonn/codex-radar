@@ -1,3 +1,4 @@
+const fs = require("node:fs");
 const path = require("node:path");
 const vscode = require("vscode");
 
@@ -5,6 +6,7 @@ const { officialCodexThreadUriString } = require("./codexLink");
 const {
   STATUS_FILTER_VALUES,
   defaultStateDir,
+  inspectSessionCache,
   loadSessionCache,
   normalizeStatusFilter,
 } = require("./sessionSource");
@@ -41,6 +43,18 @@ const {
 } = require("./codexThreadCatalog");
 const { buildSessionPreviewModel } = require("./transcriptPreview");
 const { statusText } = require("./sessionViewModel");
+const {
+  PENDING_WORKSPACE_HANDOFF_KEY,
+  createPendingWorkspaceHandoff,
+  isPendingWorkspaceHandoffFresh,
+  normalizeOpenThreadBehavior,
+  normalizePendingWorkspaceHandoff,
+  pendingWorkspaceHandoffMatches,
+  resolveWorkspaceHandoffAction,
+} = require("./workspaceHandoff");
+
+const OPEN_WORKSPACE_LABEL = "Open Project in New Window";
+const OPEN_HERE_LABEL = "Open Here";
 
 function configuredStateDir() {
   const configured = vscode.workspace.getConfiguration("codexRadar").get("stateDir", "");
@@ -48,6 +62,12 @@ function configuredStateDir() {
     return path.resolve(configured.replace(/^~(?=$|[\\/])/, process.env.HOME || "~"));
   }
   return defaultStateDir();
+}
+
+function configuredOpenThreadBehavior() {
+  return normalizeOpenThreadBehavior(
+    vscode.workspace.getConfiguration("codexRadar").get("openThreadBehavior", "ask"),
+  );
 }
 
 function readKeys(globalState) {
@@ -86,6 +106,14 @@ function currentWorkspaceFolders() {
   return (vscode.workspace.workspaceFolders || []).map((folder) => folder.uri.fsPath).filter(Boolean);
 }
 
+function workspaceUriForPath(fsPath) {
+  const currentUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (currentUri && currentUri.scheme !== "file") {
+    return currentUri.with({ path: fsPath, query: "", fragment: "" });
+  }
+  return vscode.Uri.file(fsPath);
+}
+
 function sessionFromTarget(target) {
   const session = target && target.session ? target.session : target;
   if (!session || typeof session !== "object") {
@@ -113,13 +141,13 @@ async function openOfficialCodexThread(target, options = {}) {
   const session = sessionFromTarget(target);
   if (!session) {
     await vscode.window.showWarningMessage("Select a Codex Radar session to open in Codex.");
-    return false;
+    return { opened: false, handedOff: false };
   }
 
   const uri = officialCodexThreadUri(session);
   if (!uri) {
     await vscode.window.showWarningMessage("Codex session id is not available for this session.");
-    return false;
+    return { opened: false, handedOff: false };
   }
   const actionState = sessionCard(session, {
     homeDir: process.env.HOME || "",
@@ -127,18 +155,132 @@ async function openOfficialCodexThread(target, options = {}) {
   }).actions;
   if (isArchivedSession(session, { homeDir: process.env.HOME || "", codexThreadCatalog: options.codexThreadCatalog })) {
     await vscode.window.showWarningMessage("Archived Codex sessions cannot be opened in the Codex extension.");
-    return false;
+    return { opened: false, handedOff: false };
   }
   if (!actionState.canOpen) {
     await vscode.window.showWarningMessage("This Codex session is not available to open in the Codex extension.");
-    return false;
+    return { opened: false, handedOff: false };
+  }
+
+  const handoffAction = await resolveWorkspaceHandoffAction(session, {
+    workspaceFolders: options.workspaceFolders || currentWorkspaceFolders(),
+    behavior: options.openThreadBehavior || configuredOpenThreadBehavior(),
+    choose: async ({ cwd }) => {
+      const selected = await vscode.window.showWarningMessage(
+        "This Codex thread belongs to a different workspace.",
+        {
+          modal: true,
+          detail: `Session workspace: ${cwd}\n\nOpen the project before resuming the thread?`,
+        },
+        OPEN_WORKSPACE_LABEL,
+        OPEN_HERE_LABEL,
+      );
+      if (selected === OPEN_WORKSPACE_LABEL) {
+        return "openWorkspace";
+      }
+      if (selected === OPEN_HERE_LABEL) {
+        return "openHere";
+      }
+      return "cancel";
+    },
+  });
+  if (handoffAction.action === "cancel") {
+    return { opened: false, handedOff: false };
+  }
+
+  if (handoffAction.action === "openWorkspace") {
+    const context = options.context;
+    if (!context) {
+      await vscode.window.showWarningMessage("Could not prepare the destination workspace handoff.");
+      return { opened: false, handedOff: false };
+    }
+    try {
+      const stat = await fs.promises.stat(handoffAction.cwd);
+      if (!stat.isDirectory()) {
+        throw new Error("Session workspace is not a directory.");
+      }
+    } catch {
+      const fallback = await vscode.window.showWarningMessage(
+        "The session workspace is not available on this extension host.",
+        { modal: true, detail: handoffAction.cwd },
+        OPEN_HERE_LABEL,
+      );
+      if (fallback !== OPEN_HERE_LABEL) {
+        return { opened: false, handedOff: false };
+      }
+      const opened = await vscode.env.openExternal(uri);
+      if (!opened) {
+        await vscode.window.showWarningMessage("Could not open this session in the Codex extension.");
+      }
+      return { opened, handedOff: false };
+    }
+
+    const pending = createPendingWorkspaceHandoff(session);
+    if (!pending) {
+      await vscode.window.showWarningMessage("Could not prepare the destination workspace handoff.");
+      return { opened: false, handedOff: false };
+    }
+    await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, pending);
+    try {
+      await vscode.commands.executeCommand(
+        "vscode.openFolder",
+        workspaceUriForPath(handoffAction.cwd),
+        { forceNewWindow: true },
+      );
+      return { opened: false, handedOff: true };
+    } catch {
+      const current = normalizePendingWorkspaceHandoff(
+        context.globalState.get(PENDING_WORKSPACE_HANDOFF_KEY),
+      );
+      if (current?.requestId === pending.requestId) {
+        await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, undefined);
+      }
+      await vscode.window.showWarningMessage("Could not open the session workspace in a new window.");
+      return { opened: false, handedOff: false };
+    }
   }
 
   const opened = await vscode.env.openExternal(uri);
   if (!opened) {
     await vscode.window.showWarningMessage("Could not open this session in the Codex extension.");
   }
-  return opened;
+  return { opened, handedOff: false };
+}
+
+async function resumePendingWorkspaceHandoff(context) {
+  const stored = context.globalState.get(PENDING_WORKSPACE_HANDOFF_KEY);
+  const pending = normalizePendingWorkspaceHandoff(stored);
+  if (!pending || !isPendingWorkspaceHandoffFresh(pending)) {
+    if (stored !== undefined) {
+      await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, undefined);
+    }
+    return false;
+  }
+  if (!pendingWorkspaceHandoffMatches(pending, currentWorkspaceFolders())) {
+    return false;
+  }
+
+  await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, undefined);
+  const uri = officialCodexThreadUri({ session_id: pending.sessionId });
+  if (!uri) {
+    return false;
+  }
+  const opened = await vscode.env.openExternal(uri);
+  if (!opened) {
+    await vscode.window.showWarningMessage("Could not resume the Codex thread in this workspace.");
+    return false;
+  }
+  if (pending.displayStatus === "done" && pending.lastSeenAt) {
+    await updateReadKeys(
+      context.globalState,
+      markDoneRead(readKeys(context.globalState), {
+        session_id: pending.sessionId,
+        display_status: pending.displayStatus,
+        last_seen_at: pending.lastSeenAt,
+      }),
+    );
+  }
+  return true;
 }
 
 function webviewNonce() {
@@ -271,6 +413,9 @@ function viewBadge(model, surface) {
 
 function radarStatusText(model) {
   const counts = model?.counts || {};
+  if (model?.setup && !counts.total) {
+    return "$(radar) Radar setup";
+  }
   const attention = counts.attention || 0;
   const running = counts.running || 0;
   const visible = counts.visible || 0;
@@ -282,12 +427,22 @@ function radarStatusText(model) {
 
 function radarStatusTooltip(model) {
   const counts = model?.counts || {};
-  return [
+  const lines = [
     `Attention: ${counts.attention || 0}`,
     `Running: ${counts.running || 0}`,
     `Active sessions: ${counts.visible || 0}`,
     `Archived sessions: ${counts.archived || 0}`,
-  ].join("\n");
+  ];
+  if (model?.setup) {
+    lines.push("", model.setup.title);
+    if (model.setup.detail) {
+      lines.push(model.setup.detail);
+    }
+    if (model.setup.action) {
+      lines.push(model.setup.action);
+    }
+  }
+  return lines.join("\n");
 }
 
 class RadarWebviewController {
@@ -319,8 +474,11 @@ class RadarWebviewController {
   async refresh(options = {}) {
     const refreshSerial = this.refreshSerial + 1;
     this.refreshSerial = refreshSerial;
+    let sessionSourceDiagnostic = null;
     try {
-      const loadedSessions = loadSessionCache(configuredStateDir());
+      const stateDir = configuredStateDir();
+      sessionSourceDiagnostic = inspectSessionCache(stateDir);
+      const loadedSessions = sessionSourceDiagnostic.canLoad ? loadSessionCache(stateDir) : [];
       const readKeysForSessions = await prunedReadKeys(this.context.globalState, loadedSessions);
       const sessions = decorateSessions(loadedSessions, readKeysForSessions);
       const codexThreadCatalog = await this.loadCodexThreadCatalog(sessions);
@@ -336,6 +494,7 @@ class RadarWebviewController {
         selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
         workspaceFolders: currentWorkspaceFolders(),
+        sessionSourceDiagnostic,
       });
       this.selectedKey = this.model.selected?.key || "";
       this.selectedSessionIdentity = previewSessionIdentity(this.model.selected);
@@ -351,6 +510,7 @@ class RadarWebviewController {
         selectedIdentity: this.selectedSessionIdentity,
         statusFilter: this.statusFilter,
         workspaceFolders: currentWorkspaceFolders(),
+        sessionSourceDiagnostic,
       });
       this.lastError = error instanceof Error ? error.message : String(error);
     }
@@ -535,8 +695,11 @@ class RadarWebviewController {
     }
 
     if (action === "open") {
-      const opened = await openOfficialCodexThread(session, { codexThreadCatalog: this.codexThreadCatalog });
-      if (opened && isDoneSession(session)) {
+      const result = await openOfficialCodexThread(session, {
+        codexThreadCatalog: this.codexThreadCatalog,
+        context: this.context,
+      });
+      if (result.opened && isDoneSession(session)) {
         await this.markSessionRead(session);
       }
     } else if (action === "markRead") {
@@ -723,7 +886,7 @@ class RadarStatusBar {
   }
 }
 
-function activate(context) {
+async function activate(context) {
   const radarStatusBar = new RadarStatusBar();
   const controller = new RadarWebviewController(context, {
     onModelChange: (model) => radarStatusBar.refresh(model),
@@ -756,6 +919,9 @@ function activate(context) {
     radarStatusBar,
     usageStatusBar,
   );
+  if (await resumePendingWorkspaceHandoff(context)) {
+    await controller.refresh();
+  }
 }
 
 function deactivate() {}
@@ -772,5 +938,7 @@ module.exports = {
   previewHtml,
   radarStatusText,
   radarStatusTooltip,
+  resumePendingWorkspaceHandoff,
   statusFilterItems,
+  workspaceUriForPath,
 };

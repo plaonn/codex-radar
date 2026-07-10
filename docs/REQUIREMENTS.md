@@ -112,6 +112,15 @@
 - Failure prevented: GUI 구현 중 terminal workflow를 잃어 실제 thread visibility가 퇴보하는 문제.
 - Derived specs/tests: terminal MVP remains supported while GUI integration is experimental.
 
+#### R7e: workspace-aware thread resume
+
+- Status: confirmed direction, workspace-aware VS Code handoff active
+- Requirement: 다른 workspace의 Codex thread를 GUI에서 재개할 때는 session working directory를 자동으로 무시하지 않고, 해당 directory를 포함하는 workspace에서 열지 현재 window에서 열지 사용자가 통제할 수 있어야 한다.
+- Rationale: thread identity만 전달해 unrelated workspace의 Codex에서 재개하면 대화는 맞아도 file context가 달라 실제 후속 작업의 안전성과 효율이 떨어진다.
+- Failure prevented: 사용자가 다른 repository가 열린 window에서 thread를 재개한 뒤 잘못된 file context를 기준으로 조사하거나 수정하는 문제.
+- Assumptions: current session cache의 `cwd`는 thread가 사용한 working directory를 나타내지만, 과거 saved `.code-workspace` 또는 multi-root workspace identity까지 복원하지는 않는다.
+- Derived specs/tests: current-workspace path containment check, mismatch modal, `ask`/`openWorkspace`/`openHere` setting, destination-window one-shot handoff, Remote SSH URI authority preservation, missing/unavailable cwd fallback.
+
 ### R8: host-local Codex usage visibility
 
 - Status: confirmed direction, experimental rollout-log adapter active

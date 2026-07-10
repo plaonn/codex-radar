@@ -10,6 +10,7 @@ const {
   findSessionByKey,
   isArchivedSession,
   isUnresolvableDoneSession,
+  normalizeSetupDiagnostic,
   sessionCard,
   statusOptions,
 } = require("../src/dashboardViewModel");
@@ -419,4 +420,27 @@ test("labels dashboard status options", () => {
     { label: "Needs review", value: "attention", isSelected: true },
     { label: "Active", value: "active", isSelected: false },
   ]);
+});
+
+test("carries session source setup diagnostics into empty dashboard models", () => {
+  const model = buildDashboardModel([], {
+    sessionSourceDiagnostic: {
+      code: "missing-session-index",
+      severity: "warning",
+      title: "No Codex Radar session index yet",
+      detail: "The state directory exists, but sessions.json has not been written.",
+      action: "Verify the Codex lifecycle hook is configured.",
+    },
+  });
+
+  assert.equal(model.emptyState, "No Codex Radar session index yet");
+  assert.equal(model.setup.code, "missing-session-index");
+  assert.equal(model.setup.action, "Verify the Codex lifecycle hook is configured.");
+});
+
+test("hides ready setup diagnostics from dashboard models", () => {
+  assert.equal(normalizeSetupDiagnostic({ code: "ready", title: "Ready" }), null);
+  assert.equal(buildDashboardModel([], {
+    sessionSourceDiagnostic: { code: "ready", title: "Ready" },
+  }).setup, null);
 });

@@ -2,6 +2,25 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.27
+
+Release candidate package for workspace-aware Codex handoff. This version is not a Marketplace publication.
+
+### Added
+
+- Detect when a session working directory is outside the current VS Code workspace before opening it in Codex.
+- Let users ask each time, open the project in a new window, or resume in the current window through `codexRadar.openThreadBehavior`.
+- Carry a bounded one-shot handoff into the destination local or Remote SSH window before opening the selected Codex thread.
+
+## 0.3.26
+
+Release candidate package for first-run setup diagnostics. This version is not a Marketplace publication.
+
+### Added
+
+- Diagnose missing state directories, missing or empty `sessions.json`, unsupported session-index schema, and stale session-index activity in the VS Code surface.
+- Show setup guidance in the Projects dashboard/sidebar empty state without editing Codex hook configuration.
+
 ## 0.3.25
 
 Release candidate package for macro state duration display. This version is not a Marketplace publication.

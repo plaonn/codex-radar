@@ -665,6 +665,32 @@ select {
   color: var(--vscode-descriptionForeground);
 }
 
+.setup-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 10px;
+  padding: 10px;
+  border: 1px solid var(--vscode-panel-border);
+  border-left: 3px solid var(--vscode-charts-yellow);
+  border-radius: var(--radius);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.setup-notice.severity-error {
+  border-left-color: var(--vscode-errorForeground);
+}
+
+.setup-notice span {
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
+}
+
+.setup-notice .setup-action {
+  color: var(--vscode-foreground);
+}
+
 .error {
   color: var(--vscode-errorForeground);
 }

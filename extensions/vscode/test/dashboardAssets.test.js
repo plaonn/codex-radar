@@ -109,6 +109,17 @@ test("opens eligible sidebar sessions in Codex on double-click", () => {
   assert.match(js, /type:\s*"sessionAction", action:\s*"open"/);
 });
 
+test("routes workspace mismatches through a new-window handoff", () => {
+  const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
+
+  assert.match(extension, /openThreadBehavior/);
+  assert.match(extension, /This Codex thread belongs to a different workspace/);
+  assert.match(extension, /"vscode\.openFolder"/);
+  assert.match(extension, /currentUri\.with\(\{ path: fsPath/);
+  assert.match(extension, /forceNewWindow:\s*true/);
+  assert.match(extension, /resumePendingWorkspaceHandoff/);
+});
+
 test("renders speaker snippets with compact text badges", () => {
   const js = readDashboardJs();
   const css = readDashboardCss();
@@ -133,6 +144,17 @@ test("updates sidebar rows with keyed patching instead of full rebuilds", () => 
   assert.match(js, /if \(state\.error \|\| !state\.model\) \{[\s\S]*return;[\s\S]*\}/);
   assert.match(js, /if \(isSidebarSurface\(state\.surface\)\) \{[\s\S]*renderSidebar\(app, state\.model, state\.surface\);[\s\S]*return;/);
   assert.doesNotMatch(js, /app\.appendChild\(sidebar(?:Attention|Projects|Archived)\(/);
+});
+
+test("renders setup diagnostics without replacing the session dashboard", () => {
+  const js = readDashboardJs();
+  const css = readDashboardCss();
+
+  assert.match(js, /function setupNoticeNode\(setup\)/);
+  assert.match(js, /model\.setup && \(!model\.groups\.length \|\| model\.setup\.code === "stale-session-index"\)/);
+  assert.match(js, /Refresh after the next Codex turn to update this view\./);
+  assert.match(css, /\.setup-notice\s*\{/);
+  assert.match(css, /\.setup-notice\.severity-error\s*\{/);
 });
 
 test("keeps preview content aligned with narrower editor gutters", () => {

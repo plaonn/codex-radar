@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.3.25",
+  "version": "0.3.27",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -65,6 +65,21 @@
           "type": "string",
           "default": "",
           "description": "Override codex-radar state directory. Empty uses CODEX_RADAR_HOME, XDG_STATE_HOME/codex-radar, or ~/.local/state/codex-radar."
+        },
+        "codexRadar.openThreadBehavior": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "openWorkspace",
+            "openHere"
+          ],
+          "enumDescriptions": [
+            "Ask whether to open the session workspace or resume in the current window.",
+            "Open the session working directory in a new window before resuming the thread.",
+            "Resume the thread in the current window even when its workspace differs."
+          ],
+          "default": "ask",
+          "description": "Controls Open in Codex only when the session working directory is outside the current VS Code workspace."
         }
       }
     },

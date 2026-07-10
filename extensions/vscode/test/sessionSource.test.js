@@ -8,6 +8,7 @@ const {
   defaultStateDir,
   filterSessionsByStatus,
   groupSessionsByProject,
+  inspectSessionCache,
   loadSessionCache,
   normalizeStatusFilter,
   sessionDisplayStatus,
@@ -64,6 +65,105 @@ test("missing state directory returns no sessions without creating it", () => {
   try {
     assert.deepEqual(loadSessionCache(missingState), []);
     assert.equal(fs.existsSync(missingState), false);
+  } finally {
+    fs.rmSync(tmp, { force: true, recursive: true });
+  }
+});
+
+test("diagnoses missing state directory without creating it", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-vscode-"));
+  const missingState = path.join(tmp, "missing-state");
+  try {
+    const diagnostic = inspectSessionCache(missingState);
+
+    assert.equal(diagnostic.code, "missing-state-dir");
+    assert.equal(diagnostic.canLoad, false);
+    assert.equal(fs.existsSync(missingState), false);
+  } finally {
+    fs.rmSync(tmp, { force: true, recursive: true });
+  }
+});
+
+test("diagnoses missing session index inside existing state directory", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-vscode-"));
+  try {
+    const diagnostic = inspectSessionCache(tmp);
+
+    assert.equal(diagnostic.code, "missing-session-index");
+    assert.equal(diagnostic.canLoad, false);
+  } finally {
+    fs.rmSync(tmp, { force: true, recursive: true });
+  }
+});
+
+test("diagnoses an empty session index", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-vscode-"));
+  try {
+    fs.writeFileSync(path.join(tmp, "sessions.json"), JSON.stringify({
+      schema_version: 1,
+      sessions: {},
+    }), "utf8");
+
+    const diagnostic = inspectSessionCache(tmp);
+
+    assert.equal(diagnostic.code, "empty-session-index");
+    assert.equal(diagnostic.canLoad, true);
+    assert.equal(diagnostic.sessionsCount, 0);
+  } finally {
+    fs.rmSync(tmp, { force: true, recursive: true });
+  }
+});
+
+test("diagnoses a stale session index without hiding sessions", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-vscode-"));
+  try {
+    fs.writeFileSync(path.join(tmp, "sessions.json"), JSON.stringify({
+      schema_version: 1,
+      sessions: {
+        "session-1": {
+          session_id: "session-1",
+          status: "running",
+          last_seen_at: "2026-07-04T00:00:00+00:00",
+        },
+      },
+    }), "utf8");
+
+    const diagnostic = inspectSessionCache(tmp, {
+      nowMs: Date.parse("2026-07-04T00:31:00+00:00"),
+      recentAfterMs: 30 * 60 * 1000,
+    });
+
+    assert.equal(diagnostic.code, "stale-session-index");
+    assert.equal(diagnostic.canLoad, true);
+    assert.equal(diagnostic.sessionsCount, 1);
+    assert.deepEqual(loadSessionCache(tmp).map((session) => session.session_id), ["session-1"]);
+  } finally {
+    fs.rmSync(tmp, { force: true, recursive: true });
+  }
+});
+
+test("diagnoses a ready session index", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-vscode-"));
+  try {
+    fs.writeFileSync(path.join(tmp, "sessions.json"), JSON.stringify({
+      schema_version: 1,
+      sessions: {
+        "session-1": {
+          session_id: "session-1",
+          status: "running",
+          last_seen_at: "2026-07-04T00:29:00+00:00",
+        },
+      },
+    }), "utf8");
+
+    const diagnostic = inspectSessionCache(tmp, {
+      nowMs: Date.parse("2026-07-04T00:31:00+00:00"),
+      recentAfterMs: 30 * 60 * 1000,
+    });
+
+    assert.equal(diagnostic.code, "ready");
+    assert.equal(diagnostic.canLoad, true);
+    assert.equal(diagnostic.sessionsCount, 1);
   } finally {
     fs.rmSync(tmp, { force: true, recursive: true });
   }

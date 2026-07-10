@@ -245,6 +245,20 @@ function sessionList(sessions, emptyText, options = {}) {
   return list;
 }
 
+function setupNoticeNode(setup) {
+  if (!setup) {
+    return null;
+  }
+  const children = [el("strong", { text: setup.title || "Codex Radar setup needs attention" })];
+  if (setup.detail) {
+    children.push(el("span", { text: setup.detail }));
+  }
+  if (setup.action) {
+    children.push(el("span", { className: "setup-action", text: setup.action }));
+  }
+  return el("div", { className: `setup-notice severity-${setup.severity || "info"}` }, children);
+}
+
 function patchSessionList(container, sessions, emptyText, options = {}) {
   const existing = new Map();
   for (const child of Array.from(container.children)) {
@@ -365,9 +379,15 @@ function projectsPane(model) {
     el("span", { className: "pane-title", text: "Projects" }),
     el("span", { className: "count", text: `${model.counts.filtered}/${model.counts.visible}` }),
   ]));
+  if (model.setup && (!model.groups.length || model.setup.code === "stale-session-index")) {
+    pane.appendChild(setupNoticeNode(model.setup));
+  }
   const body = el("div", { className: "list" });
   if (!model.groups.length) {
-    body.appendChild(el("div", { className: "empty", text: model.emptyState || "No sessions match this filter" }));
+    body.appendChild(el("div", {
+      className: "empty",
+      text: model.setup ? "Refresh after the next Codex turn to update this view." : model.emptyState || "No sessions match this filter",
+    }));
   }
   for (const group of model.groups) {
     body.appendChild(projectGroupNode(group));

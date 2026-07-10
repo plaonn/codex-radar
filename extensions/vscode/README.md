@@ -8,6 +8,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 
 - Provides a dedicated Codex Radar Activity Bar container.
 - Reads `sessions.json` through a small `SessionSource` adapter.
+- Shows setup diagnostics when the extension host cannot find or use the Radar state directory/session index, including missing state, missing or empty `sessions.json`, unsupported schema, and stale index activity.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted.
 - Provides native collapsible sidebar sections for `Attention`, `Projects`, and collapsed `Archived`, with each section body rendered by a Webview.
 - Provides `Codex Radar: Open Dashboard` to open a richer Webview dashboard in an editor tab.
@@ -27,6 +28,7 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Includes an `attention` filter for only attention-worthy sessions.
 - Provides a manual refresh command in the view title.
 - Opens a sidebar card, double-clicked sidebar row, preview header action, or dashboard-selected session in the official Codex extension via `vscode://openai.chatgpt/local/<session_id>` when a host-local rollout/transcript file can be resolved for that session.
+- Detects when the session working directory is outside the current workspace and can ask whether to open that project in a new window or resume the thread here.
 - Provides actions to mark done sessions read/unread. Archived sessions cannot be opened through the official Codex handoff.
 
 ## Boundaries
@@ -41,6 +43,16 @@ This package is prepared for local VSIX and GitHub Release distribution first. I
 - Does not read raw transcript files or show raw transcript paths in sidebar labels, descriptions, dashboard cards, or inspector fields.
 - Shows only a redacted snippet from `sessions.json` cached assistant summary in sidebar/dashboard surfaces.
 - Does not send transcript or session metadata outside the extension host.
+
+## Open in Codex Workspace Behavior
+
+`codexRadar.openThreadBehavior` applies only when the selected session's `cwd` is outside the current VS Code workspace:
+
+- `ask` (default): choose `Open Project in New Window`, `Open Here`, or cancel.
+- `openWorkspace`: open the session working directory in a new window and resume the thread there.
+- `openHere`: resume in the current window even when the workspace differs.
+
+The extension preserves the current local, Remote SSH, WSL, or Dev Container URI authority when opening the destination window. Session state records only `cwd`, so this does not reconstruct a historical saved `.code-workspace` or multi-root layout.
 
 ## Version Policy
 
@@ -63,7 +75,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.22.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.27.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -79,21 +91,24 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 
 2. In the Remote SSH VS Code window, install the generated VSIX and reload the window.
 3. Open the Codex Radar Activity Bar container.
-4. Confirm the sidebar shows native `Attention`, `Projects`, and collapsed `Archived` sections whose bodies are rendered as Webview content.
-5. Confirm sidebar bodies start directly with their lists, without duplicate `Attention`, `Projects`, or `Archived` headers inside the Webview body.
-6. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
-7. Use the `Projects` section title filter button and confirm it changes only the `Projects` section, not the attention badge.
-8. In the `Projects` section, confirm project headers are visually prominent, session rows are indented under projects, and quiet projects can fold/unfold their sessions. Quiet projects should start collapsed when no status filter is active.
-9. Right-click a session item and confirm the context menu shows `Copy Session ID` instead of edit actions.
-10. Use `Codex Radar: Open Dashboard` from the Command Palette.
-11. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
-12. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator with muted row treatment, and `unknown` uses a colored `!` indicator.
-13. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
-14. Confirm archived Codex sessions appear in `Archived`, are excluded from `Attention` and `Projects`, and have `Open in Codex` disabled.
-15. Confirm the Radar status bar item shows attention, running, and visible session counts, and opens the dashboard when clicked.
-16. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, and an `Open in Codex` button for eligible sessions.
-17. Try `Open in Codex (Experimental)` from a sidebar action, sidebar row double-click, preview header action, or dashboard inspector only as a non-blocking handoff check. A failed handoff does not fail the VSIX smoke test because the URI route is not a stable public contract.
-18. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
+4. If the state directory or `sessions.json` is intentionally absent, confirm `Projects` shows setup diagnostics instead of a silent empty list.
+5. Confirm the sidebar shows native `Attention`, `Projects`, and collapsed `Archived` sections whose bodies are rendered as Webview content.
+6. Confirm sidebar bodies start directly with their lists, without duplicate `Attention`, `Projects`, or `Archived` headers inside the Webview body.
+7. Confirm sidebar cards show status, model/tool metadata, actions, and redacted snippets from `sessions.json`.
+8. Use the `Projects` section title filter button and confirm it changes only the `Projects` section, not the attention badge.
+9. In the `Projects` section, confirm project headers are visually prominent, session rows are indented under projects, and quiet projects can fold/unfold their sessions. Quiet projects should start collapsed when no status filter is active.
+10. Right-click a session item and confirm the context menu shows `Copy Session ID` instead of edit actions.
+11. Use `Codex Radar: Open Dashboard` from the Command Palette.
+12. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
+13. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator with muted row treatment, and `unknown` uses a colored `!` indicator.
+14. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
+15. Confirm archived Codex sessions appear in `Archived`, are excluded from `Attention` and `Projects`, and have `Open in Codex` disabled.
+16. Confirm the Radar status bar item shows attention, running, and visible session counts, and opens the dashboard when clicked.
+17. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, and an `Open in Codex` button for eligible sessions.
+18. Open a session whose `cwd` is inside the current workspace and confirm the Codex handoff does not show a workspace prompt.
+19. Open a session from another project with `codexRadar.openThreadBehavior` set to `ask`; confirm the modal can open its project in a new window, open the thread here, or cancel.
+20. Confirm `openWorkspace` preserves the current Remote SSH/local extension host and resumes the selected thread in the destination window. Treat a Codex URI failure as non-blocking because that route is not a stable public contract.
+21. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 

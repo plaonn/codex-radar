@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.3.25");
+  assert.equal(manifest.version, "0.3.27");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -127,4 +127,13 @@ test("does not expose retention config, prune commands, CLI settings, or transcr
   assert.equal(viewTitleCommands.includes("codexRadar.pruneNow"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.cliPath"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(properties, "codexRadar.pythonPath"), false);
+});
+
+test("configures workspace mismatch behavior for Open in Codex", () => {
+  const manifest = readManifest();
+  const setting = manifest.contributes.configuration.properties["codexRadar.openThreadBehavior"];
+
+  assert.equal(setting.default, "ask");
+  assert.deepEqual(setting.enum, ["ask", "openWorkspace", "openHere"]);
+  assert.equal(setting.enumDescriptions.length, 3);
 });

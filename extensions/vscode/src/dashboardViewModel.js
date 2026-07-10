@@ -70,6 +70,25 @@ function statusOptions(currentStatusFilter = "") {
   }));
 }
 
+function normalizeSetupDiagnostic(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const code = String(value.code || "");
+  if (!code || code === "ready") {
+    return null;
+  }
+  return {
+    code,
+    severity: String(value.severity || "info"),
+    title: String(value.title || "Codex Radar setup needs attention"),
+    detail: String(value.detail || ""),
+    action: String(value.action || ""),
+    sessionsCount: Number.isFinite(value.sessionsCount) ? value.sessionsCount : 0,
+    lastUpdatedAt: String(value.lastUpdatedAt || ""),
+  };
+}
+
 function sessionActionState(session, options = {}) {
   const isArchived = isArchivedSession(session, options);
   const hasResolvableRollout = Boolean(transcriptPathInfo(session, options).path);
@@ -258,6 +277,7 @@ function buildDashboardModel(sessions, options = {}) {
     transcriptDisplayFieldCache: options.transcriptDisplayFieldCache instanceof Map ? options.transcriptDisplayFieldCache : new Map(),
   };
   const statusFilter = normalizeStatusFilter(options.statusFilter);
+  const setup = normalizeSetupDiagnostic(options.sessionSourceDiagnostic);
   const archivedSessions = sessions.filter((session) => isArchivedSession(session, modelOptions));
   const activeSessions = sessions.filter((session) => (
     !isArchivedSession(session, modelOptions) && !isUnresolvableDoneSession(session, modelOptions)
@@ -304,7 +324,8 @@ function buildDashboardModel(sessions, options = {}) {
     sidebarGroups: sidebarProjectGroups(filteredSessions, modelOptions),
     archived: cardsForSessions(archivedSessions, { ...modelOptions, showProject: true }),
     selected: selectedSession ? sessionCard(selectedSession, modelOptions) : null,
-    emptyState: sessions.length === 0 ? "No sessions indexed" : "",
+    emptyState: sessions.length === 0 ? (setup?.title || "No sessions indexed") : "",
+    setup,
   };
 }
 
@@ -322,6 +343,7 @@ module.exports = {
   findSessionByKey,
   isArchivedSession,
   isUnresolvableDoneSession,
+  normalizeSetupDiagnostic,
   sidebarProjectGroups,
   sessionCard,
   sessionDisplayFields,
