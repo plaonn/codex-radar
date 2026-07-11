@@ -1,62 +1,129 @@
 <p align="center">
+  <a href="README.md"><strong>English</strong></a> | <a href="README.ko.md">한국어</a>
+</p>
+
+<p align="center">
   <img src="extensions/vscode/media/codex-radar.png" width="128" alt="Codex Radar icon">
 </p>
 
 <h1 align="center">Codex Radar</h1>
 
 <p align="center">
-  <strong>프로젝트별 Codex thread를 한눈에.</strong><br>
-  실행 중인 작업과 확인이 필요한 상태를 보고, 올바른 workspace에서 바로 이어간다.
+  <strong>Your Codex threads, organized by project.</strong><br>
+  See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-`codex-radar`는 Codex lifecycle hook을 받아 host-local session metadata를 프로젝트별로 인덱싱한다. VS Code extension은 이 상태를 읽어 thread 상태와 최근 대화를 보여주고, attention이 필요한 작업을 찾거나 올바른 workspace에서 대화를 이어가게 한다. CLI와 dependency-free TUI는 terminal fallback으로 유지한다.
+<p align="center"><strong>Public Beta · v0.4.0</strong></p>
 
-## 상태
+Codex Radar is a local dashboard for people who use Codex across multiple projects, especially in VS Code Remote SSH environments. It groups threads by project, surfaces approval requests and completed work, provides bounded conversation previews, and helps hand eligible threads back to the official Codex extension in the appropriate workspace.
 
-`0.4.0` public beta 상태다. 첫 배포 경로는 GitHub Release에 첨부된 VSIX이며, VS Code Marketplace에는 아직 publish하지 않는다. Host-local hook indexer, session list, transcript skim, dependency-free TUI와 project-grouped VS Code extension이 들어가 있다.
+The public beta is distributed as a VSIX through the [v0.4.0 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0). It is not published to the VS Code Marketplace or PyPI.
 
-VS Code extension은 Activity Bar에서 attention, project, archived thread를 보여주고, transcript preview와 workspace-aware Codex handoff를 제공한다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
+## Highlights
 
-VS Code extension scaffold는 [extensions/vscode](extensions/vscode)에 둔다. Python core는 stdlib-first를 유지하고, extension runtime과 Node 관련 파일은 이 subtree에 격리한다.
+- Dedicated VS Code Activity Bar views for `Attention`, `Projects`, and `Archived`, plus an editor dashboard.
+- Project-grouped navigation with clear running, approval, done/read, unknown, stale, and archived states.
+- Bounded, redacted transcript previews with a cached-summary fallback.
+- Workspace-aware `Open in Codex` handoff for eligible threads, including Remote SSH windows.
+- Setup diagnostics for missing, empty, stale, invalid, or unsupported local indexes.
+- Dependency-free Python CLI and TUI for terminal and headless workflows.
+- Configurable local retention and an opt-in foreground terminal watcher.
 
-## 개발 설치
+## How It Works
+
+Codex Radar has two host-local parts. The helper/indexer receives explicitly configured Codex lifecycle hook events and maintains the latest known state for each thread. The VS Code extension is a read-only client of that local index; it is not an extension-only product and does not create the index by itself.
+
+```text
+Codex lifecycle events
+  -> codex-radar hook
+  -> host-local sessions.json
+  -> VS Code extension / CLI / TUI
+```
+
+The index records observed lifecycle state rather than an authoritative live process state. For example, `waiting_approval` means Radar observed a permission request, `done` means it observed a stop event, and `stale` is a display status for an active-looking session with no recent hook update.
+
+State is stored in the first applicable location:
+
+```text
+$CODEX_RADAR_HOME
+$XDG_STATE_HOME/codex-radar
+~/.local/state/codex-radar
+```
+
+See the [session cache v1 schema](docs/schemas/session-cache-v1.schema.json) and [example index](examples/sessions.json) for the current read contract.
+
+## Requirements
+
+- Python 3.9 or later on the host where Codex runs.
+- Codex with lifecycle hook support and permission to configure `~/.codex/hooks.json`.
+- VS Code 1.90 or later for the extension.
+- The official Codex extension for `Open in Codex` handoff.
+
+For Remote SSH, install the helper, configure the hook, and install the VSIX on the remote extension host. Codex Radar reads state and transcripts from that host. Native Windows-only distribution is not part of the current documented public beta; WSL and Dev Container URI authority are preserved by workspace handoff, but those environments have not replaced the Remote SSH-focused workflow.
+
+## Install the Helper
+
+The helper is currently installed from a source checkout; there is no PyPI package.
 
 ```bash
+git clone --branch v0.4.0 --depth 1 https://github.com/plaonn/codex-radar.git
+cd codex-radar
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
+python -m pip install .
 ```
 
-## 명령
+Verify that the helper is available on the same host and in the same shell environment used by Codex:
 
 ```bash
-codex-radar hook              # stdin의 hook JSON payload 1개로 session index 갱신
-codex-radar sessions          # 인덱싱된 세션 목록 출력
-codex-radar transcript <id>   # session id 또는 path로 transcript 훑어보기
-codex-radar tui               # 터미널 dashboard 열기
-codex-radar watch             # done foreground watcher 실행
-codex-radar path              # state directory 출력
-codex-radar doctor            # 짧은 로컬 진단 출력
-codex-radar config get        # server-side codex-radar config 출력
-codex-radar config set retention_days 7
-codex-radar prune             # retention 기준으로 오래된 Radar session 제거
-codex-radar completion <sh>   # bash, zsh, fish completion script 출력
+codex-radar doctor
+codex-radar path
 ```
 
-`codex-radar tui`에서는 session이 project header 아래에 묶여 표시된다. `up/down` 또는 `j/k`로 session을 선택하고, 하단 preview에서 최근 transcript skim을 확인한다. Enter는 resumable row에서 같은 terminal을 `codex resume <session_id>`로 전환한다. session id가 없거나 placeholder unknown id인 row는 disabled로 표시된다.
+## Configure the Codex Hook
 
-`active`, `running`, `tool_running` session이 30분 넘게 update되지 않으면 `sessions`와 `tui`에서 `stale`로 표시된다. cache의 원본 status는 바꾸지 않는다.
+Hook setup is explicit. Codex Radar does not install hooks, edit `~/.codex/hooks.json`, or overwrite unrelated hooks.
 
-`codex-radar sessions`와 `codex-radar tui`는 project column과 `--project`, `--status`, `--model`, `--since` 필터를 지원한다. `codex-radar sessions --group-project`는 text output을 project header로 묶어 보여주며 JSON output shape는 바꾸지 않는다. `--since`는 `last_seen_at` 기준이며 ISO-8601 timestamp 또는 `30m`, `2h`, `7d` 같은 duration을 받는다.
+1. Review [`examples/hooks.json`](examples/hooks.json).
+2. Merge its `hooks` object into `~/.codex/hooks.json` on the host where Codex runs.
+3. Start or resume Codex. If hook review is requested, inspect and trust the hook through `/hooks`.
+4. Run a short Codex turn, then verify the index:
+
+   ```bash
+   codex-radar sessions
+   codex-radar tui
+   ```
+
+Follow the complete [hook installation runbook](docs/runbooks/install-hooks.md), including removal instructions.
+
+## Install the VSIX
+
+Download [`codex-radar-vscode-0.4.0.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.0/codex-radar-vscode-0.4.0.vsix) from the [v0.4.0 Public Beta release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0), then install it into the VS Code extension host where Codex and Radar state live:
 
 ```bash
+code --install-extension codex-radar-vscode-0.4.0.vsix --force
+```
+
+For Remote SSH, connect to the remote window before installing the VSIX so the workspace extension runs beside the remote helper and index. Reload the window, then open **Codex Radar** from the Activity Bar.
+
+## Usage
+
+The VS Code sidebar keeps attention-worthy work and project groups visible. Use **Codex Radar: Open Dashboard** for the larger dashboard, select a session for its preview, and use **Open in Codex** for eligible non-archived threads. When a thread belongs to another workspace, the default `codexRadar.openThreadBehavior` setting asks whether to open that project in a new window or continue in the current window.
+
+The terminal interface provides the same local index as a fallback:
+
+```bash
+codex-radar sessions
+codex-radar sessions --group-project
 codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
-codex-radar sessions --group-project
+codex-radar transcript <session-id>
 codex-radar tui --project codex-radar --since 1d
+codex-radar watch
+codex-radar usage
 ```
 
-`retention_days`는 server-side config이며 기본값은 7일이다. hook update는 이 기준으로 오래된 Radar session을 `sessions.json`에서 자동 제거한다. `0`은 pruning 비활성화다. `codex-radar prune`은 같은 규칙을 수동 실행하거나 `--dry-run`으로 확인하는 운영 command다. 과거 버전이 만든 legacy `events.jsonl`은 hook update 또는 prune 시 제거된다. Codex transcript 파일이나 공식 Codex thread/archive 상태는 건드리지 않는다.
+Retention applies only to Radar's session index and defaults to seven days. It does not delete Codex transcripts, official threads, or archive state.
 
 ```bash
 codex-radar config get retention_days
@@ -65,9 +132,7 @@ codex-radar prune --dry-run
 codex-radar prune
 ```
 
-`codex-radar watch`는 opt-in foreground watcher다. state cache를 polling하다가 새 `done` session을 보면 terminal bell과 최소 metadata line을 출력한다. 시작 시 현재 session 수와 matching 수를 출력하며, 시작 전에 이미 `done`이었던 session은 기본으로 다시 알리지 않는다. 기존 session도 보고 싶으면 `--include-existing`, 승인 대기까지 같이 보고 싶으면 `--status done --status waiting_approval`을 사용한다. hook path에서는 notification을 보내지 않는다. 이 command는 terminal MVP/fallback이며 future GUI integration을 대체하지 않는다.
-
-Shell completion은 script를 출력해서 사용한다.
+Shell completion scripts are available for Bash, Zsh, and Fish:
 
 ```bash
 codex-radar completion zsh > ~/.zfunc/_codex-radar
@@ -75,48 +140,63 @@ codex-radar completion bash > ~/.local/share/bash-completion/completions/codex-r
 codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 ```
 
-runtime state 기본 위치:
+## Privacy and Security
 
-```text
-$CODEX_RADAR_HOME
-or $XDG_STATE_HOME/codex-radar
-or ~/.local/state/codex-radar
-```
+- Session metadata, transcript-derived previews, and usage snapshots remain on the extension host; Codex Radar does not provide cloud sync.
+- The default index stores only the latest known state per thread and does not keep a raw hook event log.
+- Sidebar and dashboard surfaces use sanitized metadata and redacted snippets. They do not display raw transcript paths.
+- The extension watches `sessions.json` read-only. It does not edit hooks, transcripts, the session index, or server-side `config.json`.
+- The experimental usage adapter reads host-local Codex rollout logs without reading `auth.json`, making server requests, or storing raw rollout content.
+- Transcript and session data are sensitive local data. Review the hook configuration and protect the Radar state directory accordingly.
 
-Future GUI integration은 작은 adapter를 통해 `sessions.json`을 직접 읽는 방식으로 시작한다. v1 cache schema는 [docs/schemas/session-cache-v1.schema.json](docs/schemas/session-cache-v1.schema.json), 예시는 [examples/sessions.json](examples/sessions.json)에 둔다.
+## Current Limitations
 
-VS Code extension은 기본 navigation을 위해 `sessions.json`을 직접 읽는다. Public beta extension은 retention 설정/정리 UI를 노출하지 않으며, retention 운영은 terminal의 `codex-radar config`와 `codex-radar prune` CLI를 사용한다.
+- Public beta distribution is through GitHub Releases only, not the VS Code Marketplace or PyPI.
+- The extension requires the separately installed host-local helper/indexer and explicit hook setup.
+- `Open in Codex` uses an experimental local URI route and may be unavailable for some sessions.
+- Archived sessions cannot be opened through the Codex handoff.
+- Conversation previews are bounded and do not replace Codex's native transcript view.
+- There are no OS or external notifications. The VS Code attention views and opt-in terminal watcher are the available cues.
+- Lifecycle status is based on the most recently observed hook event, not continuous process monitoring.
 
-## VS Code extension VSIX
+## Development and Testing
 
-VS Code extension은 아직 Marketplace에 publish하지 않는다. 현재 public beta release path는 GitHub Release에 첨부된 VSIX를 설치하는 방식이다. Extension은 host-local `codex-radar` helper/indexer와 사용자가 명시적으로 설정한 Codex hook을 필요로 하며, hook을 자동 설치하거나 `~/.codex/hooks.json`을 수정하지 않는다.
+For an editable development install:
 
 ```bash
-npm --prefix extensions/vscode test
-npm --prefix extensions/vscode run package
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.0.vsix --force
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
 ```
 
-Remote SSH smoke test, privacy boundary, version policy, release checklist는 [extensions/vscode/README.md](extensions/vscode/README.md)에 둔다. 변경 이력은 [extensions/vscode/CHANGELOG.md](extensions/vscode/CHANGELOG.md)에 둔다. 생성된 `.vsix`는 gitignored artifact이며 repository에 commit하지 않는다.
-
-## Hook 설정
-
-[docs/runbooks/install-hooks.md](docs/runbooks/install-hooks.md)를 따른다.
-
-`examples/hooks.json`은 user-level Codex hook 예시다. `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `Stop` event를 `codex-radar hook`으로 보낸다.
-
-## RDD 표면
-
-- [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md): root goal, RDD requirement hierarchy, rationale, failure prevented.
-- [docs/SPEC.md](docs/SPEC.md): 현재 terminal MVP 동작, data model, automation/privacy boundary.
-- [docs/ROADMAP.md](docs/ROADMAP.md): 미래 방향과 non-goal.
-
-Active task tracking은 tracked public 파일에 저장하지 않는다.
-
-## 검증
+Run the Python and extension test suites:
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover
 python3 -m compileall src tests
 npm --prefix extensions/vscode test
 ```
+
+Maintainers can package a local VSIX with:
+
+```bash
+npm --prefix extensions/vscode run package
+```
+
+The generated `extensions/vscode/codex-radar-vscode-<version>.vsix` is a gitignored release artifact and should not be committed. See the [extension guide](extensions/vscode/README.md) for the Remote SSH smoke test and release checklist.
+
+## Release and Distribution
+
+The current release is [Codex Radar 0.4.0 Public Beta](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0). GitHub Release assets are the supported public beta distribution path. Marketplace and PyPI publication remain separate future decisions.
+
+See the [0.4.0 release notes](docs/releases/0.4.0.md) and [extension changelog](extensions/vscode/CHANGELOG.md) for details.
+
+## Documentation and Support
+
+- [Requirements](docs/REQUIREMENTS.md)
+- [Current specification](docs/SPEC.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Hook installation runbook](docs/runbooks/install-hooks.md)
+- [VS Code extension guide](extensions/vscode/README.md)
+- [Report a bug or request a feature](https://github.com/plaonn/codex-radar/issues)
+- [MIT License](LICENSE)
