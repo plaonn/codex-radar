@@ -2,6 +2,14 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.29
+
+Release candidate package refining the full-color product icon hierarchy. This version is not a Marketplace publication.
+
+### Changed
+
+- Reduce the visual weight of the full-icon-only inner ring, crosshair, sweep field, and sweep line so the outer ring, prompt, and signal dot remain primary.
+
 ## 0.3.28
 
 Release candidate package for Codex Radar product branding. This version is not a Marketplace publication.

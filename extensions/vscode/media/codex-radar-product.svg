@@ -1,10 +1,10 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect x="8" y="8" width="240" height="240" rx="50" fill="#121820"/>
   <circle cx="128" cy="128" r="84" stroke="#21C7C5" stroke-width="10"/>
-  <circle cx="128" cy="128" r="53" stroke="#21C7C5" stroke-width="4" opacity="0.38"/>
-  <path d="M128 44V212M44 128H212" stroke="#21C7C5" stroke-width="4" opacity="0.28"/>
-  <path d="M128 128V44A84 84 0 0 1 173 57L128 128Z" fill="#21C7C5" opacity="0.18"/>
-  <path d="M128 128L171 60" stroke="#21C7C5" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="128" cy="128" r="53" stroke="#21C7C5" stroke-width="4" opacity="0.3"/>
+  <path d="M128 44V212M44 128H212" stroke="#21C7C5" stroke-width="4" opacity="0.2"/>
+  <path d="M128 128V44A84 84 0 0 1 173 57L128 128Z" fill="#21C7C5" opacity="0.1"/>
+  <path d="M128 128L171 60" stroke="#21C7C5" stroke-width="7" stroke-linecap="round" opacity="0.48"/>
   <circle cx="165" cy="101" r="8" fill="#FF6B5F"/>
   <path d="M84 102L110 128L84 154M142 154H174" stroke="#F5F8FA" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
