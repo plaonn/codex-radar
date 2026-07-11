@@ -25,10 +25,10 @@
 
 ## VS Code Extension Release
 
-- 정식 VS Code extension 출시는 GUI surface가 Remote SSH와 official Codex handoff에서 유용하다는 검증 뒤의 staged milestone으로 둔다.
-- Release readiness는 marketplace publish와 분리한다.
-- Release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
-- GitHub Release에 VSIX를 attached artifact로 배포하는 경로를 먼저 안정화한다.
+- 현재 distribution stage는 `0.4.0` public beta이며, GitHub Release에 VSIX를 attached artifact로 배포한다.
+- GitHub Release readiness와 Marketplace publish는 별도 milestone로 유지한다.
+- Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
+- GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.
 - Marketplace publish는 publisher/namespace, marketplace metadata, asset policy, release 운영 방식이 정해진 뒤 별도 milestone으로 진행한다.
 
 ## Local Runtime / Distribution Direction

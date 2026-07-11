@@ -2,6 +2,23 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.0
+
+Public beta distributed as a GitHub Release VSIX. This version is not a Marketplace publication and requires the host-local `codex-radar` helper/indexer plus explicit Codex hook setup.
+
+### Added
+
+- Organize Codex threads by project across dedicated `Attention`, `Projects`, and `Archived` sidebar sections and an editor dashboard.
+- Preview bounded, redacted recent conversation context and distinguish running, approval, unread done, read done, unknown, and archived states.
+- Resume eligible threads through the official Codex extension with workspace-aware handoff for local and Remote SSH windows.
+- Diagnose missing, empty, stale, or unsupported host-local session indexes without silently changing hook configuration.
+- Surface host-local Codex usage and reset details from the experimental read-only rollout adapter.
+
+### Boundaries
+
+- Keep transcript and session metadata local to the extension host; do not send external notifications or expose raw paths in primary navigation.
+- Do not install hooks, edit `~/.codex/hooks.json`, or operate without the host-local Radar state producer.
+
 ## 0.3.29
 
 Release candidate package refining the full-color product icon hierarchy. This version is not a Marketplace publication.

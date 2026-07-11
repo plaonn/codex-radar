@@ -9,7 +9,7 @@
   See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-This package is prepared for local VSIX and GitHub Release distribution first. It is not published to the VS Code Marketplace yet.
+Version `0.4.0` is the Codex Radar public beta, distributed as a VSIX attached to a GitHub Release. It is not published to the VS Code Marketplace.
 
 ## Current Scope
 
@@ -71,7 +71,15 @@ The extension preserves the current local, Remote SSH, WSL, or Dev Container URI
 
 ## Install From VSIX
 
-Build the local VSIX from the repository root:
+Download `codex-radar-vscode-0.4.0.vsix` from the GitHub Release, then install it into the extension host where Codex runs:
+
+```bash
+code --install-extension codex-radar-vscode-0.4.0.vsix --force
+```
+
+The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development install](../../README.md#개발-설치) and [hook setup runbook](../../docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
+
+Maintainers can build the VSIX from the repository root:
 
 ```bash
 npm --prefix extensions/vscode run package
@@ -79,10 +87,10 @@ npm --prefix extensions/vscode run package
 
 The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX files are gitignored release artifacts and should not be committed.
 
-Install into the extension host you want to test:
+Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.29.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.0.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
