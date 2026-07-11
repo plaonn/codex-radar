@@ -1,6 +1,13 @@
-# Codex Radar VS Code Extension
+<p align="center">
+  <img src="media/codex-radar.png" width="112" alt="Codex Radar icon">
+</p>
 
-VS Code surface for extension host-local `codex-radar` session state.
+<h1 align="center">Codex Radar</h1>
+
+<p align="center">
+  <strong>Your Codex threads, organized by project.</strong><br>
+  See what is running, what needs attention, and resume in the right workspace.
+</p>
 
 This package is prepared for local VSIX and GitHub Release distribution first. It is not published to the VS Code Marketplace yet.
 
@@ -75,7 +82,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.3.27.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.28.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.3.27");
+  assert.equal(manifest.version, "0.3.28");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -25,9 +25,24 @@ test("declares release metadata and workspace extension host scope", () => {
     "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
   );
   assert.equal(manifest.bugs.url, "https://github.com/plaonn/codex-radar/issues");
+  assert.equal(manifest.icon, "media/codex-radar.png");
   assert.deepEqual(manifest.extensionKind, ["workspace"]);
   assert.equal(manifest.keywords.includes("remote"), true);
   assert.equal(manifest.keywords.includes("ssh"), true);
+});
+
+test("ships coordinated product and Activity Bar icon assets", () => {
+  const mediaDir = path.resolve(__dirname, "..", "media");
+  const png = fs.readFileSync(path.join(mediaDir, "codex-radar.png"));
+  const activitySvg = fs.readFileSync(path.join(mediaDir, "codex-radar.svg"), "utf8");
+
+  assert.equal(png.subarray(1, 4).toString("ascii"), "PNG");
+  assert.equal(png.readUInt32BE(16), 256);
+  assert.equal(png.readUInt32BE(20), 256);
+  assert.equal(fs.existsSync(path.join(mediaDir, "codex-radar-product.svg")), true);
+  assert.equal(fs.existsSync(path.join(mediaDir, "codex-radar-mark.svg")), true);
+  assert.match(activitySvg, /currentColor/);
+  assert.doesNotMatch(activitySvg, /#[0-9A-Fa-f]{3,8}/);
 });
 
 test("contributes native sidebar sections whose contents are Webviews", () => {

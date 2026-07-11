@@ -2,6 +2,20 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.3.28
+
+Release candidate package for Codex Radar product branding. This version is not a Marketplace publication.
+
+### Added
+
+- Add coordinated full-color product, reduced color mark, and monochrome Activity Bar icon assets.
+- Add a 256px package icon for extension details and future Marketplace presentation.
+
+### Changed
+
+- Replace the generic target glyph with the approved radar-and-prompt identity.
+- Align package and README copy around project-grouped Codex threads, attention, and workspace-aware resume.
+
 ## 0.3.27
 
 Release candidate package for workspace-aware Codex handoff. This version is not a Marketplace publication.

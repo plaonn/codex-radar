@@ -1,8 +1,8 @@
 {
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
-  "description": "VS Code view for extension host-local codex-radar sessions.",
-  "version": "0.3.27",
+  "description": "Project-grouped Codex thread radar for VS Code.",
+  "version": "0.3.28",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -20,6 +20,7 @@
   "categories": [
     "Other"
   ],
+  "icon": "media/codex-radar.png",
   "keywords": [
     "codex",
     "radar",

@@ -1,14 +1,21 @@
-# codex-radar
+<p align="center">
+  <img src="extensions/vscode/media/codex-radar.png" width="128" alt="Codex Radar icon">
+</p>
 
-원격 개발 환경에서 host-local Codex thread 상태를 빠르게 확인하는 radar.
+<h1 align="center">Codex Radar</h1>
 
-`codex-radar`는 VS Code Remote SSH와 remote host 안의 Codex를 함께 쓰는 환경에서 Codex lifecycle hook을 받아 세션 metadata를 프로젝트별로 인덱싱하고, 프로젝트 단위로 thread를 구분해 현재 상태나 최근 대화 내용을 빠르게 확인할 수 있게 한다. 최종적으로는 VS Code extension 같은 GUI surface와 통합하는 것을 지향하지만, 초기 MVP는 terminal-first workflow를 제공한다.
+<p align="center">
+  <strong>프로젝트별 Codex thread를 한눈에.</strong><br>
+  실행 중인 작업과 확인이 필요한 상태를 보고, 올바른 workspace에서 바로 이어간다.
+</p>
+
+`codex-radar`는 Codex lifecycle hook을 받아 host-local session metadata를 프로젝트별로 인덱싱한다. VS Code extension은 이 상태를 읽어 thread 상태와 최근 대화를 보여주고, attention이 필요한 작업을 찾거나 올바른 workspace에서 대화를 이어가게 한다. CLI와 dependency-free TUI는 terminal fallback으로 유지한다.
 
 ## 상태
 
-초기 로컬 MVP 상태다. hook indexer, session list, transcript skim, dependency-free TUI가 들어가 있다.
+로컬 release candidate 상태다. hook indexer, session list, transcript skim, dependency-free TUI와 project-grouped VS Code extension이 들어가 있다.
 
-VS Code extension 또는 유사 GUI 통합은 experimental direction이다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
+VS Code extension은 Activity Bar에서 attention, project, archived thread를 보여주고, transcript preview와 workspace-aware Codex handoff를 제공한다. OS/external notification 전송과 hook 자동 설치는 privacy boundary가 별도로 정해질 때까지 의도적으로 scope 밖에 둔다.
 
 VS Code extension scaffold는 [extensions/vscode](extensions/vscode)에 둔다. Python core는 stdlib-first를 유지하고, extension runtime과 Node 관련 파일은 이 subtree에 격리한다.
 
@@ -87,7 +94,7 @@ VS Code extension은 아직 Marketplace에 publish하지 않는다. 현재 relea
 ```bash
 npm --prefix extensions/vscode test
 npm --prefix extensions/vscode run package
-code --install-extension extensions/vscode/codex-radar-vscode-0.1.15.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.3.28.vsix --force
 ```
 
 Remote SSH smoke test, privacy boundary, version policy, release checklist는 [extensions/vscode/README.md](extensions/vscode/README.md)에 둔다. 변경 이력은 [extensions/vscode/CHANGELOG.md](extensions/vscode/CHANGELOG.md)에 둔다. 생성된 `.vsix`는 gitignored artifact이며 repository에 commit하지 않는다.
