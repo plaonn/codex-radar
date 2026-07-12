@@ -16,7 +16,7 @@ Version `0.4.0` is the Codex Radar public beta, distributed as a VSIX attached t
 - Provides a dedicated Codex Radar Activity Bar container.
 - Reads `sessions.json` through a small `SessionSource` adapter.
 - Shows setup diagnostics when the extension host cannot find or use the Radar state directory/session index, including missing state, missing or empty `sessions.json`, unsupported schema, and stale index activity.
-- Refreshes automatically when `sessions.json` is created, changed, or deleted.
+- Refreshes automatically when `sessions.json` is created, changed, or deleted, and when an archived transcript is created or deleted under the extension host's `CODEX_HOME` (or `~/.codex`). Active transcript changes do not refresh the navigation, and the manual refresh command is the fallback instead of periodic polling.
 - Provides native collapsible sidebar sections for `Attention`, `Projects`, and collapsed `Archived`, with each section body rendered by a Webview.
 - Provides `Codex Radar: Open Dashboard` to open a richer Webview dashboard in an editor tab.
 - Shows `waiting_approval` and unread `done` sessions in the sidebar and dashboard attention inbox.
@@ -117,7 +117,7 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 12. Confirm the editor dashboard shows the attention inbox, project groups, selected-session inspector, status/model/tool metadata, and redacted snippets from `sessions.json`.
 13. Confirm `running`/`tool_running` use neutral spinners, unread `done` uses a blue/cyan filled indicator, read `done` uses a hollow gray indicator with muted row treatment, and `unknown` uses a colored `!` indicator.
 14. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
-15. Confirm archived Codex sessions appear in `Archived`, are excluded from `Attention` and `Projects`, and have `Open in Codex` disabled.
+15. Archive and unarchive a Codex session and confirm it moves into and out of `Archived` automatically without pressing Refresh. Confirm archived sessions are excluded from `Attention` and `Projects` and have `Open in Codex` disabled.
 16. Confirm the Radar status bar item shows attention, running, and visible session counts, and opens the dashboard when clicked.
 17. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, and an `Open in Codex` button for eligible sessions.
 18. Open a session whose `cwd` is inside the current workspace and confirm the Codex handoff does not show a workspace prompt.

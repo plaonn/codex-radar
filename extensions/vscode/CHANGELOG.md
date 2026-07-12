@@ -2,6 +2,16 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.1
+
+### Added
+
+- Refresh the Radar navigation when archived transcript files are created or deleted on the extension host, so Codex archive and unarchive actions appear without periodic polling.
+
+### Boundaries
+
+- Keep active transcript changes disconnected from Radar navigation refresh and retain the manual Refresh command as the fallback for missed filesystem events.
+
 ## 0.4.0
 
 Public beta distributed as a GitHub Release VSIX. This version is not a Marketplace publication and requires the host-local `codex-radar` helper/indexer plus explicit Codex hook setup.

@@ -175,7 +175,7 @@ GUI read contract v1:
 - VS Code extension은 Remote SSH workspace extension host에서 실행되어 그 host의 filesystem 기준으로 state와 transcript를 읽는 것을 기본 전제로 한다. UI client machine의 Codex state를 읽기 위해 `extensionKind: ["ui"]`를 강제하지 않는다.
 - VS Code extension manifest는 `extensionKind: ["workspace"]`로 workspace extension host execution을 명시한다.
 - GUI implementation은 `SessionSource` 같은 얇은 read adapter를 두고 view/component code가 file read에 직접 결합하지 않게 한다.
-- GUI는 `sessions.json` 생성/변경/삭제를 read-only로 watch해 navigation view를 refresh할 수 있다. 이 watcher는 state directory나 cache file을 생성하지 않고, 변경된 cache를 다시 읽는 역할만 한다.
+- GUI는 `sessions.json` 생성/변경/삭제를 read-only로 watch해 navigation view를 refresh할 수 있다. 또한 extension host의 `CODEX_HOME` 또는 `~/.codex` 아래 `archived_sessions/**/*.jsonl` 생성/삭제를 watch해 archive/unarchive를 즉시 refresh한다. Active `sessions/**/*.jsonl` transcript 변경은 navigation refresh에 연결하지 않으며, 주기적 fallback polling 없이 기존 manual refresh command를 event 누락 시 fallback으로 사용한다. 이 watcher들은 state directory, cache file, transcript를 생성하거나 수정하지 않는다.
 - GUI는 state directory/session index를 read-only로 검사해 setup diagnostic을 표시할 수 있다. Missing state/index, empty index, unsupported schema, stale index activity는 사용자-facing empty/setup state로 표시되며, extension은 이를 해결하기 위해 Codex hook config나 Radar state file을 직접 쓰지 않는다.
 - GUI는 host-local `codex app-server`의 experimental `thread/list`를 read-only optional metadata catalog로 호출해 exact `session_id` match 기준 title과 archived id를 보강할 수 있다. 이 호출은 `turn/start`를 만들지 않고 모델 작업을 시작하지 않으며, 실패/timeout 시 기존 `sessions.json`과 transcript-derived display field로 fallback한다.
 - 나중에 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커지면 adapter를 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 교체할 수 있다.

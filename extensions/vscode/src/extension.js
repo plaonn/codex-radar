@@ -11,6 +11,9 @@ const {
   normalizeStatusFilter,
 } = require("./sessionSource");
 const {
+  WatcherSetManager,
+  archivedTranscriptWatchTarget,
+  registerArchiveRefreshHandlers,
   registerRefreshHandlers,
   sessionCacheWatchTarget,
 } = require("./sessionWatcher");
@@ -777,27 +780,27 @@ function createSessionCacheWatcher(onRefresh) {
   };
 }
 
-class SessionCacheWatcherManager {
+function createArchivedTranscriptWatcher(onRefresh) {
+  const target = archivedTranscriptWatchTarget(defaultCodexHome());
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(target.base, target.pattern),
+  );
+  const refreshHandlers = registerArchiveRefreshHandlers(watcher, onRefresh);
+
+  return {
+    dispose() {
+      refreshHandlers.dispose();
+      watcher.dispose();
+    },
+  };
+}
+
+class SessionCacheWatcherManager extends WatcherSetManager {
   constructor(onRefresh) {
-    this.onRefresh = onRefresh;
-    this.current = null;
-    this.reset();
-  }
-
-  reset() {
-    this.disposeCurrent();
-    this.current = createSessionCacheWatcher(this.onRefresh);
-  }
-
-  disposeCurrent() {
-    if (this.current) {
-      this.current.dispose();
-      this.current = null;
-    }
-  }
-
-  dispose() {
-    this.disposeCurrent();
+    super(() => [
+      createSessionCacheWatcher(onRefresh),
+      createArchivedTranscriptWatcher(onRefresh),
+    ]);
   }
 }
 
