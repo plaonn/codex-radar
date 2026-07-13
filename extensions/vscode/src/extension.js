@@ -47,12 +47,7 @@ const {
 const { buildSessionPreviewModel } = require("./transcriptPreview");
 const { statusText } = require("./sessionViewModel");
 const {
-  PENDING_WORKSPACE_HANDOFF_KEY,
-  createPendingWorkspaceHandoff,
-  isPendingWorkspaceHandoffFresh,
   normalizeOpenThreadBehavior,
-  normalizePendingWorkspaceHandoff,
-  pendingWorkspaceHandoffCanResume,
   resolveWorkspaceHandoffAction,
 } = require("./workspaceHandoff");
 
@@ -192,11 +187,6 @@ async function openOfficialCodexThread(target, options = {}) {
   }
 
   if (handoffAction.action === "openWorkspace") {
-    const context = options.context;
-    if (!context) {
-      await vscode.window.showWarningMessage("Could not prepare the destination workspace handoff.");
-      return { opened: false, handedOff: false };
-    }
     try {
       const stat = await fs.promises.stat(handoffAction.cwd);
       if (!stat.isDirectory()) {
@@ -218,26 +208,17 @@ async function openOfficialCodexThread(target, options = {}) {
       return { opened, handedOff: false };
     }
 
-    const pending = createPendingWorkspaceHandoff(session);
-    if (!pending) {
-      await vscode.window.showWarningMessage("Could not prepare the destination workspace handoff.");
-      return { opened: false, handedOff: false };
-    }
-    await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, pending);
     try {
       await vscode.commands.executeCommand(
         "vscode.openFolder",
         workspaceUriForPath(handoffAction.cwd),
         { forceNewWindow: true },
       );
+      await vscode.window.showInformationMessage(
+        "Project opened in a new window. Open the thread from Codex Radar there.",
+      );
       return { opened: false, handedOff: true };
     } catch {
-      const current = normalizePendingWorkspaceHandoff(
-        context.globalState.get(PENDING_WORKSPACE_HANDOFF_KEY),
-      );
-      if (current?.requestId === pending.requestId) {
-        await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, undefined);
-      }
       await vscode.window.showWarningMessage("Could not open the session workspace in a new window.");
       return { opened: false, handedOff: false };
     }
@@ -248,44 +229,6 @@ async function openOfficialCodexThread(target, options = {}) {
     await vscode.window.showWarningMessage("Could not open this session in the Codex extension.");
   }
   return { opened, handedOff: false };
-}
-
-async function resumePendingWorkspaceHandoff(context) {
-  const stored = context.globalState.get(PENDING_WORKSPACE_HANDOFF_KEY);
-  const pending = normalizePendingWorkspaceHandoff(stored);
-  if (!pending || !isPendingWorkspaceHandoffFresh(pending)) {
-    if (stored !== undefined) {
-      await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, undefined);
-    }
-    return false;
-  }
-  if (!pendingWorkspaceHandoffCanResume(pending, currentWorkspaceFolders(), {
-    windowFocused: vscode.window.state.focused,
-  })) {
-    return false;
-  }
-
-  await context.globalState.update(PENDING_WORKSPACE_HANDOFF_KEY, undefined);
-  const uri = officialCodexThreadUri({ session_id: pending.sessionId });
-  if (!uri) {
-    return false;
-  }
-  const opened = await vscode.env.openExternal(uri);
-  if (!opened) {
-    await vscode.window.showWarningMessage("Could not resume the Codex thread in this workspace.");
-    return false;
-  }
-  if (pending.displayStatus === "done" && pending.lastSeenAt) {
-    await updateReadKeys(
-      context.globalState,
-      markDoneRead(readKeys(context.globalState), {
-        session_id: pending.sessionId,
-        display_status: pending.displayStatus,
-        last_seen_at: pending.lastSeenAt,
-      }),
-    );
-  }
-  return true;
 }
 
 function webviewNonce() {
@@ -702,7 +645,6 @@ class RadarWebviewController {
     if (action === "open") {
       const result = await openOfficialCodexThread(session, {
         codexThreadCatalog: this.codexThreadCatalog,
-        context: this.context,
       });
       if (result.opened && isDoneSession(session)) {
         await this.markSessionRead(session);
@@ -920,18 +862,10 @@ async function activate(context) {
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => controller.refresh()),
-    vscode.window.onDidChangeWindowState(async (state) => {
-      if (state.focused && await resumePendingWorkspaceHandoff(context)) {
-        await controller.refresh();
-      }
-    }),
     watcherManager,
     radarStatusBar,
     usageStatusBar,
   );
-  if (await resumePendingWorkspaceHandoff(context)) {
-    await controller.refresh();
-  }
 }
 
 function deactivate() {}
@@ -948,7 +882,6 @@ module.exports = {
   previewHtml,
   radarStatusText,
   radarStatusTooltip,
-  resumePendingWorkspaceHandoff,
   statusFilterItems,
   workspaceUriForPath,
 };

@@ -2,6 +2,17 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.3
+
+### Changed
+
+- Make cross-workspace Codex handoff an explicit two-step flow. Radar opens the destination project in a new VS Code window, then the user opens the thread from Radar in that window.
+
+### Boundaries
+
+- Remove the extension-global pending handoff and focus-triggered URI retry because the Codex URI does not provide a supported way to target a specific VS Code window.
+- Keep direct Codex thread opening unchanged when the session already belongs to the current workspace or the user explicitly selects `Open Here`.
+
 ## 0.4.2
 
 ### Fixed

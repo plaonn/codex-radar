@@ -1,8 +1,6 @@
 const path = require("node:path");
 
 const OPEN_THREAD_BEHAVIORS = new Set(["ask", "openWorkspace", "openHere"]);
-const PENDING_WORKSPACE_HANDOFF_KEY = "codexRadar.pendingWorkspaceHandoff.v1";
-const DEFAULT_HANDOFF_MAX_AGE_MS = 5 * 60 * 1000;
 
 function normalizeOpenThreadBehavior(value) {
   const behavior = String(value || "");
@@ -67,85 +65,10 @@ async function resolveWorkspaceHandoffAction(session, options = {}) {
   return { action: "cancel", ...context };
 }
 
-function createPendingWorkspaceHandoff(session, options = {}) {
-  const sessionId = String(session?.session_id || "").trim();
-  const cwd = normalizedFsPath(session?.cwd);
-  if (!sessionId || !cwd) {
-    return null;
-  }
-  return {
-    requestId: String(options.requestId || `${options.now ?? Date.now()}:${sessionId}`),
-    sessionId,
-    cwd,
-    requestedAt: Number.isFinite(options.now) ? options.now : Date.now(),
-    displayStatus: String(session?.display_status || session?.status || ""),
-    lastSeenAt: String(session?.last_seen_at || ""),
-  };
-}
-
-function normalizePendingWorkspaceHandoff(value) {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const requestId = String(value.requestId || "").trim();
-  const sessionId = String(value.sessionId || "").trim();
-  const cwd = normalizedFsPath(value.cwd);
-  const requestedAt = Number(value.requestedAt);
-  if (!requestId || !sessionId || !cwd || !Number.isFinite(requestedAt)) {
-    return null;
-  }
-  return {
-    requestId,
-    sessionId,
-    cwd,
-    requestedAt,
-    displayStatus: String(value.displayStatus || ""),
-    lastSeenAt: String(value.lastSeenAt || ""),
-  };
-}
-
-function isPendingWorkspaceHandoffFresh(value, options = {}) {
-  const pending = normalizePendingWorkspaceHandoff(value);
-  if (!pending) {
-    return false;
-  }
-  const now = Number.isFinite(options.now) ? options.now : Date.now();
-  const maxAgeMs = Number.isFinite(options.maxAgeMs)
-    ? options.maxAgeMs
-    : DEFAULT_HANDOFF_MAX_AGE_MS;
-  return pending.requestedAt <= now && now - pending.requestedAt <= maxAgeMs;
-}
-
-function pendingWorkspaceHandoffMatches(value, workspaceFolders = []) {
-  const pending = normalizePendingWorkspaceHandoff(value);
-  return Boolean(
-    pending
-    && workspaceFolders
-      .map(workspaceFolderPath)
-      .filter(Boolean)
-      .some((folder) => isSameOrChildPath(pending.cwd, folder)),
-  );
-}
-
-function pendingWorkspaceHandoffCanResume(value, workspaceFolders = [], options = {}) {
-  return Boolean(
-    options.windowFocused
-    && isPendingWorkspaceHandoffFresh(value, options)
-    && pendingWorkspaceHandoffMatches(value, workspaceFolders),
-  );
-}
-
 module.exports = {
-  DEFAULT_HANDOFF_MAX_AGE_MS,
   OPEN_THREAD_BEHAVIORS,
-  PENDING_WORKSPACE_HANDOFF_KEY,
-  createPendingWorkspaceHandoff,
-  isPendingWorkspaceHandoffFresh,
   isSameOrChildPath,
   normalizeOpenThreadBehavior,
-  normalizePendingWorkspaceHandoff,
-  pendingWorkspaceHandoffCanResume,
-  pendingWorkspaceHandoffMatches,
   resolveWorkspaceHandoffAction,
   sessionWorkspaceContext,
 };

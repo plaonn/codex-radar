@@ -119,7 +119,7 @@
 - Rationale: thread identity만 전달해 unrelated workspace의 Codex에서 재개하면 대화는 맞아도 file context가 달라 실제 후속 작업의 안전성과 효율이 떨어진다.
 - Failure prevented: 사용자가 다른 repository가 열린 window에서 thread를 재개한 뒤 잘못된 file context를 기준으로 조사하거나 수정하는 문제.
 - Assumptions: current session cache의 `cwd`는 thread가 사용한 working directory를 나타내지만, 과거 saved `.code-workspace` 또는 multi-root workspace identity까지 복원하지는 않는다.
-- Derived specs/tests: current-workspace path containment check, mismatch modal, `ask`/`openWorkspace`/`openHere` setting, destination-workspace and focused-window-gated one-shot handoff, Remote SSH URI authority preservation, missing/unavailable cwd fallback.
+- Derived specs/tests: current-workspace path containment check, mismatch modal, `ask`/`openWorkspace`/`openHere` setting, cross-workspace open stops after opening the destination window, same-workspace explicit second action opens the Codex thread, Remote SSH URI authority preservation, missing/unavailable cwd fallback.
 
 ### R8: host-local Codex usage visibility
 
