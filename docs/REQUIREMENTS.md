@@ -119,7 +119,7 @@
 - Rationale: thread identity만 전달해 unrelated workspace의 Codex에서 재개하면 대화는 맞아도 file context가 달라 실제 후속 작업의 안전성과 효율이 떨어진다.
 - Failure prevented: 사용자가 다른 repository가 열린 window에서 thread를 재개한 뒤 잘못된 file context를 기준으로 조사하거나 수정하는 문제.
 - Assumptions: current session cache의 `cwd`는 thread가 사용한 working directory를 나타내지만, 과거 saved `.code-workspace` 또는 multi-root workspace identity까지 복원하지는 않는다.
-- Derived specs/tests: current-workspace path containment check, mismatch modal, `ask`/`openWorkspace`/`openHere` setting, destination-window one-shot handoff, Remote SSH URI authority preservation, missing/unavailable cwd fallback.
+- Derived specs/tests: current-workspace path containment check, mismatch modal, `ask`/`openWorkspace`/`openHere` setting, destination-workspace and focused-window-gated one-shot handoff, Remote SSH URI authority preservation, missing/unavailable cwd fallback.
 
 ### R8: host-local Codex usage visibility
 
@@ -129,7 +129,7 @@
 - Failure prevented: extension host의 Codex 사용량 상태를 모른 채 새 Codex 작업을 시작하는 문제.
 - Assumptions: Codex가 같은 extension host의 `CODEX_HOME` 또는 `~/.codex` 아래 `sessions/rollout-*.jsonl`에 `token_count`/`rate_limits` event를 남긴다. 이 rollout JSONL shape는 공식 stable API가 아니므로 experimental adapter로 취급한다.
 - Non-goals: local UI client machine의 별도 Codex state 읽기, `auth.json` 읽기, 서버 요청, 공식 Codex config/hook 수정, raw rollout line 저장.
-- Derived specs/tests: `codex-radar usage --json`, host-local VS Code status bar usage snapshot, null/unavailable fallback, broken JSONL skip, latest `token_count` selection, raw path/content exclusion.
+- Derived specs/tests: `codex-radar usage --json`, host-local VS Code status bar usage snapshot, `window_minutes`-based 5h/7d semantic pool placement, absent-pool placeholder, null/unavailable fallback, broken JSONL skip, latest `token_count` selection, raw path/content exclusion.
 - Revisit when: Codex가 공식 local usage API/export/status endpoint를 제공하거나 rollout schema가 사라질 때.
 
 ### R9: foreground mobile cockpit over SSH

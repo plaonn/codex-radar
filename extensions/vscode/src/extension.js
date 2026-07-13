@@ -52,7 +52,7 @@ const {
   isPendingWorkspaceHandoffFresh,
   normalizeOpenThreadBehavior,
   normalizePendingWorkspaceHandoff,
-  pendingWorkspaceHandoffMatches,
+  pendingWorkspaceHandoffCanResume,
   resolveWorkspaceHandoffAction,
 } = require("./workspaceHandoff");
 
@@ -259,7 +259,9 @@ async function resumePendingWorkspaceHandoff(context) {
     }
     return false;
   }
-  if (!pendingWorkspaceHandoffMatches(pending, currentWorkspaceFolders())) {
+  if (!pendingWorkspaceHandoffCanResume(pending, currentWorkspaceFolders(), {
+    windowFocused: vscode.window.state.focused,
+  })) {
     return false;
   }
 
@@ -918,6 +920,11 @@ async function activate(context) {
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => controller.refresh()),
+    vscode.window.onDidChangeWindowState(async (state) => {
+      if (state.focused && await resumePendingWorkspaceHandoff(context)) {
+        await controller.refresh();
+      }
+    }),
     watcherManager,
     radarStatusBar,
     usageStatusBar,

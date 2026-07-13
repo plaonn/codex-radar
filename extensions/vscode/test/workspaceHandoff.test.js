@@ -7,6 +7,7 @@ const {
   createPendingWorkspaceHandoff,
   isPendingWorkspaceHandoffFresh,
   normalizeOpenThreadBehavior,
+  pendingWorkspaceHandoffCanResume,
   pendingWorkspaceHandoffMatches,
   resolveWorkspaceHandoffAction,
   sessionWorkspaceContext,
@@ -118,4 +119,27 @@ test("creates bounded pending handoffs that match only the destination workspace
   assert.equal(isPendingWorkspaceHandoffFresh(pending, { now: 4_000, maxAgeMs: 2_000 }), false);
   assert.equal(pendingWorkspaceHandoffMatches(pending, ["/work/project"]), true);
   assert.equal(pendingWorkspaceHandoffMatches(pending, ["/work/other"]), false);
+});
+
+test("resumes a pending handoff only in the focused destination workspace", () => {
+  const pending = createPendingWorkspaceHandoff(
+    { session_id: "session-1", cwd: "/work/project" },
+    { requestId: "request-1", now: 1_000 },
+  );
+
+  assert.equal(pendingWorkspaceHandoffCanResume(
+    pending,
+    ["/work/project"],
+    { windowFocused: false, now: 2_000 },
+  ), false);
+  assert.equal(pendingWorkspaceHandoffCanResume(
+    pending,
+    ["/work/other"],
+    { windowFocused: true, now: 2_000 },
+  ), false);
+  assert.equal(pendingWorkspaceHandoffCanResume(
+    pending,
+    ["/work/project"],
+    { windowFocused: true, now: 2_000 },
+  ), true);
 });

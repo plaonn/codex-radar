@@ -164,13 +164,25 @@ def format_usage_snapshot(snapshot: Dict[str, Any]) -> str:
     if not snapshot.get("available"):
         reason = snapshot.get("reason") or "unavailable"
         return f"Codex usage unavailable ({reason})"
-    primary = snapshot.get("primary") if isinstance(snapshot.get("primary"), dict) else {}
-    secondary = snapshot.get("secondary") if isinstance(snapshot.get("secondary"), dict) else {}
+    primary = snapshot.get("primary") if isinstance(snapshot.get("primary"), dict) else None
+    secondary = snapshot.get("secondary") if isinstance(snapshot.get("secondary"), dict) else None
+    five_hour = next(
+        (window for window in (primary, secondary) if window and window.get("window_minutes") == 300),
+        None,
+    )
+    seven_day = next(
+        (window for window in (primary, secondary) if window and window.get("window_minutes") == 10080),
+        None,
+    )
+    if five_hour is None and primary and primary.get("window_minutes") is None:
+        five_hour = primary
+    if seven_day is None and secondary and secondary.get("window_minutes") is None:
+        seven_day = secondary
     parts = []
-    if "used_percent" in primary:
-        parts.append(f"5h used {primary['used_percent']:.0f}%")
-    if "used_percent" in secondary:
-        parts.append(f"7d used {secondary['used_percent']:.0f}%")
+    if five_hour and "used_percent" in five_hour:
+        parts.append(f"5h used {five_hour['used_percent']:.0f}%")
+    if seven_day and "used_percent" in seven_day:
+        parts.append(f"7d used {seven_day['used_percent']:.0f}%")
     if snapshot.get("plan_type"):
         parts.append(f"plan {snapshot['plan_type']}")
     return "Codex usage: " + ", ".join(parts)

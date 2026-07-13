@@ -116,6 +116,18 @@ class UsageTests(unittest.TestCase):
 
         self.assertEqual("Codex usage: 5h used 71%, 7d used 11%, plan prolite", text)
 
+    def test_format_usage_snapshot_identifies_lone_seven_day_primary_window(self) -> None:
+        text = format_usage_snapshot(
+            {
+                "available": True,
+                "primary": {"used_percent": 24.0, "window_minutes": 10080},
+                "secondary": None,
+                "plan_type": "prolite",
+            }
+        )
+
+        self.assertEqual("Codex usage: 7d used 24%, plan prolite", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -162,18 +162,48 @@ function loadUsageSnapshot(options = {}) {
   return { ...base, reason: "token_count_unavailable" };
 }
 
+function semanticRateWindows(snapshot) {
+  const windows = {
+    fiveHour: null,
+    sevenDay: null,
+  };
+  const candidates = [snapshot?.primary, snapshot?.secondary]
+    .filter((window) => window && typeof window === "object");
+  for (const window of candidates) {
+    const windowMinutes = Number(window.window_minutes);
+    if (windowMinutes === 300) {
+      windows.fiveHour = window;
+    } else if (windowMinutes === 10080) {
+      windows.sevenDay = window;
+    }
+  }
+
+  // Preserve compatibility with older rollout events that omitted window_minutes.
+  if (!windows.fiveHour && snapshot?.primary && !Number.isFinite(Number(snapshot.primary.window_minutes))) {
+    windows.fiveHour = snapshot.primary;
+  }
+  if (!windows.sevenDay && snapshot?.secondary && !Number.isFinite(Number(snapshot.secondary.window_minutes))) {
+    windows.sevenDay = snapshot.secondary;
+  }
+  return windows;
+}
+
 function usageStatusText(snapshot) {
-  if (!snapshot || !snapshot.available || !snapshot.primary) {
+  if (!snapshot || !snapshot.available) {
     return "$(hubot) -- · --";
   }
-  const primaryRemaining = Number(snapshot.primary.remaining_percent);
-  if (!Number.isFinite(primaryRemaining)) {
+  const { fiveHour, sevenDay } = semanticRateWindows(snapshot);
+  const fiveHourRemaining = Number(fiveHour?.remaining_percent);
+  const sevenDayRemaining = Number(sevenDay?.remaining_percent);
+  const remainingValues = [fiveHourRemaining, sevenDayRemaining].filter(Number.isFinite);
+  if (!remainingValues.length) {
     return "$(hubot) -- · --";
   }
-  const secondaryRemaining = Number(snapshot.secondary?.remaining_percent);
-  const secondaryText = Number.isFinite(secondaryRemaining) ? `${Math.round(secondaryRemaining)}%` : "--";
-  const icon = primaryRemaining <= 10 ? "$(error)" : primaryRemaining <= 30 ? "$(warning)" : "$(hubot)";
-  return `${icon} ${Math.round(primaryRemaining)}% · ${secondaryText}`;
+  const lowestRemaining = Math.min(...remainingValues);
+  const fiveHourText = Number.isFinite(fiveHourRemaining) ? `${Math.round(fiveHourRemaining)}%` : "--";
+  const sevenDayText = Number.isFinite(sevenDayRemaining) ? `${Math.round(sevenDayRemaining)}%` : "--";
+  const icon = lowestRemaining <= 10 ? "$(error)" : lowestRemaining <= 30 ? "$(warning)" : "$(hubot)";
+  return `${icon} ${fiveHourText} · ${sevenDayText}`;
 }
 
 function pad2(value) {
@@ -244,12 +274,13 @@ function usageStatusTooltip(snapshot, options = {}) {
     return `Codex usage remaining unavailable: ${snapshot?.reason || "unknown"}`;
   }
   const nowMs = options.nowMs ?? Date.now();
+  const { fiveHour, sevenDay } = semanticRateWindows(snapshot);
   let lines = [];
-  if (snapshot.primary) {
-    lines = lines.concat(resetLine("5h", snapshot.primary, nowMs));
+  if (fiveHour) {
+    lines = lines.concat(resetLine("5h", fiveHour, nowMs));
   }
-  if (snapshot.secondary) {
-    lines = lines.concat(resetLine("7d", snapshot.secondary, nowMs));
+  if (sevenDay) {
+    lines = lines.concat(resetLine("7d", sevenDay, nowMs));
   }
   if (snapshot.plan_type) {
     lines.push(`Plan: ${snapshot.plan_type}`);
@@ -263,6 +294,7 @@ module.exports = {
   formatReset,
   loadUsageSnapshot,
   recentRolloutFiles,
+  semanticRateWindows,
   usageStatusText,
   usageStatusTooltip,
 };

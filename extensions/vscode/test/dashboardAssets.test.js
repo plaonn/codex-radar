@@ -118,6 +118,8 @@ test("routes workspace mismatches through a new-window handoff", () => {
   assert.match(extension, /currentUri\.with\(\{ path: fsPath/);
   assert.match(extension, /forceNewWindow:\s*true/);
   assert.match(extension, /resumePendingWorkspaceHandoff/);
+  assert.match(extension, /onDidChangeWindowState/);
+  assert.match(extension, /state\.focused/);
 });
 
 test("renders speaker snippets with compact text badges", () => {

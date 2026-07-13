@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.2
+
+### Fixed
+
+- Identify the 5-hour and 7-day Codex usage pools by `window_minutes` instead of assuming that `primary` and `secondary` always have fixed meanings. A missing pool now stays in its `--` slot while the remaining pool is shown in the correct position.
+- Delay cross-workspace Codex thread URI handoff until the destination workspace window is focused, preventing the previously active Radar window from receiving the selected thread.
+
+### Boundaries
+
+- Preserve `primary` and `secondary` in the experimental rollout adapter output; semantic pool placement is a display/formatting rule with a legacy fallback for events without `window_minutes`.
+- Continue using the experimental Codex extension URI because no window-targeted public thread command is exposed.
+
 ## 0.4.1
 
 ### Added

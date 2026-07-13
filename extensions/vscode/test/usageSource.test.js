@@ -9,6 +9,7 @@ const {
   formatDurationUntil,
   formatReset,
   loadUsageSnapshot,
+  semanticRateWindows,
   usageStatusText,
   usageStatusTooltip,
 } = require("../src/usageSource");
@@ -111,6 +112,38 @@ test("formats status text as remaining primary and secondary percentages", () =>
       secondary: { used_percent: 15, remaining_percent: 85 },
     }),
     "$(error) 3% · 85%",
+  );
+});
+
+test("places a lone seven-day primary window in the seven-day status slot", () => {
+  const snapshot = {
+    available: true,
+    primary: {
+      used_percent: 24,
+      remaining_percent: 76,
+      window_minutes: 10080,
+      resets_at_iso: "2026-07-19T20:31:08.000Z",
+    },
+    secondary: null,
+  };
+
+  assert.deepEqual(semanticRateWindows(snapshot), {
+    fiveHour: null,
+    sevenDay: snapshot.primary,
+  });
+  assert.equal(usageStatusText(snapshot), "$(hubot) -- · 76%");
+  assert.doesNotMatch(usageStatusTooltip(snapshot), /5h:/);
+  assert.match(usageStatusTooltip(snapshot), /7d: 76% remaining/);
+});
+
+test("uses the lowest available semantic pool for the warning icon", () => {
+  assert.equal(
+    usageStatusText({
+      available: true,
+      primary: { remaining_percent: 8, window_minutes: 10080 },
+      secondary: null,
+    }),
+    "$(error) -- · 8%",
   );
 });
 

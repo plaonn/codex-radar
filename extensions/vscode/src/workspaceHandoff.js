@@ -127,6 +127,14 @@ function pendingWorkspaceHandoffMatches(value, workspaceFolders = []) {
   );
 }
 
+function pendingWorkspaceHandoffCanResume(value, workspaceFolders = [], options = {}) {
+  return Boolean(
+    options.windowFocused
+    && isPendingWorkspaceHandoffFresh(value, options)
+    && pendingWorkspaceHandoffMatches(value, workspaceFolders),
+  );
+}
+
 module.exports = {
   DEFAULT_HANDOFF_MAX_AGE_MS,
   OPEN_THREAD_BEHAVIORS,
@@ -136,6 +144,7 @@ module.exports = {
   isSameOrChildPath,
   normalizeOpenThreadBehavior,
   normalizePendingWorkspaceHandoff,
+  pendingWorkspaceHandoffCanResume,
   pendingWorkspaceHandoffMatches,
   resolveWorkspaceHandoffAction,
   sessionWorkspaceContext,
