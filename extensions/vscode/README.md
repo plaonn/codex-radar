@@ -9,7 +9,7 @@
   See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-Version `0.4.0` is the Codex Radar public beta, distributed as a VSIX attached to a GitHub Release. It is not published to the VS Code Marketplace.
+Version `0.4.3` is the current Codex Radar public beta, distributed as a VSIX attached to a GitHub Release. It is not published to the VS Code Marketplace.
 
 ## Current Scope
 
@@ -56,7 +56,7 @@ Version `0.4.0` is the Codex Radar public beta, distributed as a VSIX attached t
 `codexRadar.openThreadBehavior` applies only when the selected session's `cwd` is outside the current VS Code workspace:
 
 - `ask` (default): choose `Open Project in New Window`, `Open Here`, or cancel.
-- `openWorkspace`: open the session working directory in a new window and resume the thread there.
+- `openWorkspace`: open the session working directory in a new window. Radar does not automatically route the Codex thread across windows; select the session again from Radar in the destination window.
 - `openHere`: resume in the current window even when the workspace differs.
 
 The extension preserves the current local, Remote SSH, WSL, or Dev Container URI authority when opening the destination window. Session state records only `cwd`, so this does not reconstruct a historical saved `.code-workspace` or multi-root layout.
@@ -71,10 +71,10 @@ The extension preserves the current local, Remote SSH, WSL, or Dev Container URI
 
 ## Install From VSIX
 
-Download `codex-radar-vscode-0.4.0.vsix` from the GitHub Release, then install it into the extension host where Codex runs:
+Download `codex-radar-vscode-0.4.3.vsix` from the GitHub Release, then install it into the extension host where Codex runs:
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.0.vsix --force
+code --install-extension codex-radar-vscode-0.4.3.vsix --force
 ```
 
 The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development install](../../README.md#개발-설치) and [hook setup runbook](../../docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
@@ -90,7 +90,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.0.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.3.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -122,7 +122,7 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 17. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, and an `Open in Codex` button for eligible sessions.
 18. Open a session whose `cwd` is inside the current workspace and confirm the Codex handoff does not show a workspace prompt.
 19. Open a session from another project with `codexRadar.openThreadBehavior` set to `ask`; confirm the modal can open its project in a new window, open the thread here, or cancel.
-20. Confirm `openWorkspace` preserves the current Remote SSH/local extension host and resumes the selected thread in the destination window. Treat a Codex URI failure as non-blocking because that route is not a stable public contract.
+20. Confirm `openWorkspace` preserves the current Remote SSH/local extension host, opens only the destination project, and does not change the Codex thread in the source window. In the destination window, select the same session from Radar and confirm the same-workspace Codex handoff works. Treat a Codex URI failure as non-blocking because that route is not a stable public contract.
 21. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist

@@ -13,11 +13,11 @@
   See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-<p align="center"><strong>Public Beta · v0.4.0</strong></p>
+<p align="center"><strong>Public Beta · v0.4.3</strong></p>
 
 Codex Radar is a local dashboard for people who use Codex across multiple projects, especially in VS Code Remote SSH environments. It groups threads by project, surfaces approval requests and completed work, provides bounded conversation previews, and helps hand eligible threads back to the official Codex extension in the appropriate workspace.
 
-The public beta is distributed as a VSIX through the [v0.4.0 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0). It is not published to the VS Code Marketplace or PyPI.
+The public beta is distributed as a VSIX through the [v0.4.3 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3). It is not published to the VS Code Marketplace or PyPI.
 
 ## Highlights
 
@@ -66,7 +66,7 @@ For Remote SSH, install the helper, configure the hook, and install the VSIX on 
 The helper is currently installed from a source checkout; there is no PyPI package.
 
 ```bash
-git clone --branch v0.4.0 --depth 1 https://github.com/plaonn/codex-radar.git
+git clone --branch v0.4.3 --depth 1 https://github.com/plaonn/codex-radar.git
 cd codex-radar
 python3 -m venv .venv
 . .venv/bin/activate
@@ -98,10 +98,10 @@ Follow the complete [hook installation runbook](docs/runbooks/install-hooks.md),
 
 ## Install the VSIX
 
-Download [`codex-radar-vscode-0.4.0.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.0/codex-radar-vscode-0.4.0.vsix) from the [v0.4.0 Public Beta release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0), then install it into the VS Code extension host where Codex and Radar state live:
+Download [`codex-radar-vscode-0.4.3.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.3/codex-radar-vscode-0.4.3.vsix) from the [v0.4.3 Public Beta release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3), then install it into the VS Code extension host where Codex and Radar state live:
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.0.vsix --force
+code --install-extension codex-radar-vscode-0.4.3.vsix --force
 ```
 
 For Remote SSH, connect to the remote window before installing the VSIX so the workspace extension runs beside the remote helper and index. Reload the window, then open **Codex Radar** from the Activity Bar.
@@ -187,9 +187,9 @@ The generated `extensions/vscode/codex-radar-vscode-<version>.vsix` is a gitigno
 
 ## Release and Distribution
 
-The current release is [Codex Radar 0.4.0 Public Beta](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0). GitHub Release assets are the supported public beta distribution path. Marketplace and PyPI publication remain separate future decisions.
+The current release is [Codex Radar 0.4.3 Public Beta](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3). GitHub Release assets are the supported public beta distribution path. Marketplace and PyPI publication remain separate future decisions.
 
-See the [0.4.0 release notes](docs/releases/0.4.0.md) and [extension changelog](extensions/vscode/CHANGELOG.md) for details.
+See the [0.4.3 release notes](docs/releases/0.4.3.md) and [extension changelog](extensions/vscode/CHANGELOG.md) for details.
 
 ## Documentation and Support
 

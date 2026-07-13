@@ -13,11 +13,11 @@
   실행 중인 작업과 확인이 필요한 상태를 보고, 올바른 워크스페이스에서 바로 이어갈 수 있습니다.
 </p>
 
-<p align="center"><strong>공개 베타 · v0.4.0</strong></p>
+<p align="center"><strong>공개 베타 · v0.4.3</strong></p>
 
 Codex Radar는 여러 프로젝트에서 Codex를 사용하는 개발자를 위한 로컬 대시보드이며, 특히 VS Code Remote SSH 환경에 적합합니다. 스레드를 프로젝트별로 묶고, 승인 요청과 완료된 작업을 보여주며, 제한된 범위의 대화 미리보기를 제공합니다. 또한 이어갈 수 있는 스레드를 적절한 워크스페이스의 공식 Codex 확장으로 연결합니다.
 
-공개 베타는 [v0.4.0 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0)의 VSIX로 배포됩니다. VS Code Marketplace나 PyPI에는 게시되어 있지 않습니다.
+공개 베타는 [v0.4.3 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3)의 VSIX로 배포됩니다. VS Code Marketplace나 PyPI에는 게시되어 있지 않습니다.
 
 ## 주요 기능
 
@@ -66,7 +66,7 @@ Remote SSH에서는 helper 설치, hook 설정, VSIX 설치를 모두 원격 확
 현재 helper는 소스 checkout에서 설치하며 PyPI 패키지는 제공하지 않습니다.
 
 ```bash
-git clone --branch v0.4.0 --depth 1 https://github.com/plaonn/codex-radar.git
+git clone --branch v0.4.3 --depth 1 https://github.com/plaonn/codex-radar.git
 cd codex-radar
 python3 -m venv .venv
 . .venv/bin/activate
@@ -98,10 +98,10 @@ Hook은 사용자가 명시적으로 설정해야 합니다. Codex Radar는 hook
 
 ## VSIX 설치
 
-[v0.4.0 공개 베타 Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0)에서 [`codex-radar-vscode-0.4.0.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.0/codex-radar-vscode-0.4.0.vsix)를 다운로드한 다음, Codex와 Radar 상태가 있는 VS Code 확장 호스트에 설치합니다.
+[v0.4.3 공개 베타 Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3)에서 [`codex-radar-vscode-0.4.3.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.3/codex-radar-vscode-0.4.3.vsix)를 다운로드한 다음, Codex와 Radar 상태가 있는 VS Code 확장 호스트에 설치합니다.
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.0.vsix --force
+code --install-extension codex-radar-vscode-0.4.3.vsix --force
 ```
 
 Remote SSH에서는 원격 창에 연결한 상태에서 VSIX를 설치해야 워크스페이스 확장이 원격 helper 및 인덱스와 같은 곳에서 실행됩니다. 창을 다시 불러온 다음 Activity Bar에서 **Codex Radar**를 엽니다.
@@ -187,9 +187,9 @@ npm --prefix extensions/vscode run package
 
 ## 릴리스 및 배포
 
-현재 릴리스는 [Codex Radar 0.4.0 공개 베타](https://github.com/plaonn/codex-radar/releases/tag/v0.4.0)입니다. 공개 베타의 지원되는 배포 경로는 GitHub Release asset입니다. Marketplace 및 PyPI 게시는 별도의 향후 결정으로 남아 있습니다.
+현재 릴리스는 [Codex Radar 0.4.3 공개 베타](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3)입니다. 공개 베타의 지원되는 배포 경로는 GitHub Release asset입니다. Marketplace 및 PyPI 게시는 별도의 향후 결정으로 남아 있습니다.
 
-자세한 내용은 [0.4.0 릴리스 노트](docs/releases/0.4.0.md)와 [확장 변경 이력](extensions/vscode/CHANGELOG.md)을 참고합니다.
+자세한 내용은 [0.4.3 릴리스 노트](docs/releases/0.4.3.md)와 [확장 변경 이력](extensions/vscode/CHANGELOG.md)을 참고합니다.
 
 ## 문서 및 지원
 

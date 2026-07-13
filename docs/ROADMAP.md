@@ -25,7 +25,7 @@
 
 ## VS Code Extension Release
 
-- 현재 distribution stage는 `0.4.0` public beta이며, GitHub Release에 VSIX를 attached artifact로 배포한다.
+- 현재 distribution stage는 `0.4.3` public beta이며, GitHub Release에 VSIX를 attached artifact로 배포한다.
 - GitHub Release readiness와 Marketplace publish는 별도 milestone로 유지한다.
 - Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
 - GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.
