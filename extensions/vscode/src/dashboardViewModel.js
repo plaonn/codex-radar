@@ -40,6 +40,12 @@ function sessionIdentity(session) {
 }
 
 function isArchivedSession(session, options = {}) {
+  if (session?.archive_state === "archived") {
+    return true;
+  }
+  if (session?.archive_state === "active") {
+    return false;
+  }
   const key = archiveCacheKey(session);
   const cache = options.archivedSessionCache instanceof Map ? options.archivedSessionCache : null;
   if (cache && key && cache.has(key)) {
@@ -86,6 +92,28 @@ function normalizeSetupDiagnostic(value) {
     action: String(value.action || ""),
     sessionsCount: Number.isFinite(value.sessionsCount) ? value.sessionsCount : 0,
     lastUpdatedAt: String(value.lastUpdatedAt || ""),
+  };
+}
+
+function safeDiagnosticCode(value) {
+  const code = String(value || "");
+  return /^[a-z0-9][a-z0-9_.-]{0,63}$/.test(code) ? code : "";
+}
+
+function normalizeSourceDiagnostic(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const readSource = safeDiagnosticCode(value.readSource);
+  if (!readSource) {
+    return null;
+  }
+  return {
+    readSource,
+    requestedSource: safeDiagnosticCode(value.requestedSource),
+    exportObservation: safeDiagnosticCode(value.exportObservation),
+    exportSourceStatus: safeDiagnosticCode(value.exportSourceStatus),
+    fallbackReason: safeDiagnosticCode(value.fallbackReason),
   };
 }
 
@@ -278,6 +306,7 @@ function buildDashboardModel(sessions, options = {}) {
   };
   const statusFilter = normalizeStatusFilter(options.statusFilter);
   const setup = normalizeSetupDiagnostic(options.sessionSourceDiagnostic);
+  const source = normalizeSourceDiagnostic(options.sessionSourceDiagnostic);
   const archivedSessions = sessions.filter((session) => isArchivedSession(session, modelOptions));
   const activeSessions = sessions.filter((session) => (
     !isArchivedSession(session, modelOptions) && !isUnresolvableDoneSession(session, modelOptions)
@@ -326,6 +355,7 @@ function buildDashboardModel(sessions, options = {}) {
     selected: selectedSession ? sessionCard(selectedSession, modelOptions) : null,
     emptyState: sessions.length === 0 ? (setup?.title || "No sessions indexed") : "",
     setup,
+    source,
   };
 }
 
@@ -343,6 +373,7 @@ module.exports = {
   findSessionByKey,
   isArchivedSession,
   isUnresolvableDoneSession,
+  normalizeSourceDiagnostic,
   normalizeSetupDiagnostic,
   sidebarProjectGroups,
   sessionCard,

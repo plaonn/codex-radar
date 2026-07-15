@@ -222,6 +222,33 @@ test("builds display fields from transcript path without leaking tool output", (
   assert.equal(JSON.stringify(fields).includes("hidden"), false);
 });
 
+test("uses only sanitized identity fields for export-mode dashboard display", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-export-display-"));
+  try {
+    const transcriptPath = path.join(tmp, "rollout-session-1.jsonl");
+    fs.writeFileSync(transcriptPath, [
+      JSON.stringify({ role: "user", content: "private direct title" }),
+      JSON.stringify({ role: "assistant", content: "private direct summary" }),
+    ].join("\n"));
+    const session = {
+      session_id: "session-1",
+      project: "radar",
+      transcript_path: transcriptPath,
+      read_source: "export",
+    };
+
+    const exported = buildSessionDisplayFields(session);
+    const direct = buildSessionDisplayFields({ ...session, read_source: "direct" });
+
+    assert.equal(exported.title, "radar - session-1");
+    assert.equal(exported.snippet, "");
+    assert.match(direct.title, /private direct title/);
+    assert.equal(JSON.stringify(exported).includes("private direct"), false);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test("renders markdown as safe html", () => {
   const html = markdownToSafeHtml([
     "# Heading",

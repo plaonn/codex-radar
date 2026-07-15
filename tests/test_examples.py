@@ -47,7 +47,11 @@ class ExamplesTests(unittest.TestCase):
         for event_name, hook in _iter_hook_commands(config):
             with self.subTest(event_name=event_name):
                 self.assertEqual("command", hook.get("type"))
-                self.assertEqual("codex-radar hook", hook.get("command"))
+                self.assertEqual(
+                    "/home/YOUR_USER/.local/bin/codex-radar-hook",
+                    hook.get("command"),
+                )
+                self.assertTrue(hook["command"].startswith("/"))
                 self.assertEqual(5, hook.get("timeout"))
                 self.assertNotIn("env", hook)
                 self.assertNotIn("cwd", hook)

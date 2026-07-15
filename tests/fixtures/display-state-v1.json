@@ -1,0 +1,79 @@
+{
+  "contract": "codex-radar.display-state",
+  "version": 1,
+  "generated_at": "2026-07-14T00:00:00+00:00",
+  "source": {
+    "status": "ready"
+  },
+  "capabilities": [
+    "archive-state",
+    "transcript-preview",
+    "usage"
+  ],
+  "counts": {
+    "total": 3,
+    "visible": 2,
+    "active": 1,
+    "archived": 1,
+    "archive_unknown": 1,
+    "attention": 1,
+    "running": 1,
+    "done": 0
+  },
+  "sessions": [
+    {
+      "session_id": "archived-1",
+      "project": "radar",
+      "status": "done",
+      "display_status": "done",
+      "archive_state": "archived",
+      "requires_attention": false,
+      "first_seen_at": "2026-07-13T00:00:00+00:00",
+      "last_seen_at": "2026-07-13T01:00:00+00:00",
+      "display_state_started_at": "2026-07-13T01:00:00+00:00",
+      "model": "gpt-test",
+      "event_count": 2
+    },
+    {
+      "session_id": "running-1",
+      "project": "radar",
+      "status": "tool_running",
+      "display_status": "tool_running",
+      "archive_state": "unknown",
+      "requires_attention": false,
+      "first_seen_at": "2026-07-14T00:00:00+00:00",
+      "last_seen_at": "2026-07-14T00:05:00+00:00",
+      "display_state_started_at": "2026-07-14T00:00:00+00:00",
+      "model": "gpt-test",
+      "current_tool": "Bash",
+      "event_count": 4
+    },
+    {
+      "session_id": "waiting-1",
+      "project": "radar",
+      "status": "waiting_approval",
+      "display_status": "waiting_approval",
+      "archive_state": "active",
+      "requires_attention": true,
+      "first_seen_at": "2026-07-14T00:00:00+00:00",
+      "last_seen_at": "2026-07-14T00:06:00+00:00",
+      "display_state_started_at": "2026-07-14T00:06:00+00:00",
+      "model": "gpt-test",
+      "event_count": 5
+    }
+  ],
+  "usage": {
+    "available": true,
+    "pools": {
+      "five_hour": null,
+      "seven_day": {
+        "window_minutes": 10080,
+        "used_percent": 28.0,
+        "remaining_percent": 72.0,
+        "resets_at_iso": "2026-07-20T00:00:00+00:00"
+      }
+    },
+    "observed_at": "2026-07-14T00:00:00+00:00",
+    "plan_type": "pro"
+  }
+}

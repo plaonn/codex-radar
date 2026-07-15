@@ -9,12 +9,12 @@
   See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-Version `0.4.3` is the current Codex Radar public beta, distributed as a VSIX attached to a GitHub Release. It is not published to the VS Code Marketplace.
+Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
 ## Current Scope
 
 - Provides a dedicated Codex Radar Activity Bar container.
-- Reads `sessions.json` through a small `SessionSource` adapter.
+- Keeps the direct `sessions.json` adapter effective by default while locally observing semantic parity with `codex-radar export state --json`. Set `codexRadar.readSource` to `export` to opt into the shared sanitized contract; export failure or schema mismatch falls back to the direct adapter for this migration release.
 - Shows setup diagnostics when the extension host cannot find or use the Radar state directory/session index, including missing state, missing or empty `sessions.json`, unsupported schema, and stale index activity.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted, and when an archived transcript is created or deleted under the extension host's `CODEX_HOME` (or `~/.codex`). Active transcript changes do not refresh the navigation, and the manual refresh command is the fallback instead of periodic polling.
 - Provides native collapsible sidebar sections for `Attention`, `Projects`, and collapsed `Archived`, with each section body rendered by a Webview.
@@ -23,7 +23,7 @@ Version `0.4.3` is the current Codex Radar public beta, distributed as a VSIX at
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Routes host-local Codex archived sessions to the sidebar `Archived` section and dashboard archived list.
 - Also uses Codex local thread state as a direct archived-thread fallback when the Codex thread id matches the Radar session id.
-- Opens a single-session editor preview when a sidebar session item is selected. The preview shows session metadata plus the latest 120 redacted user/Codex messages with bounded messenger-style bubbles and safe Markdown rendering when the transcript file is available on the extension host. If `sessions.json` has no `transcript_path`, the extension falls back to the host-local Codex transcript store by session id. If no transcript file can be found, the preview shows the cached latest Codex summary when available.
+- Opens a single-session editor preview when a sidebar session item is selected. In export mode this explicit action invokes `codex-radar export preview <session-id> --limit 120`; direct transcript preview remains the fallback. The preview shows bounded redacted user/Codex messages with safe Markdown rendering.
 - Separates lifecycle status, done read state, and archived state in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator plus muted row treatment.
@@ -71,10 +71,10 @@ The extension preserves the current local, Remote SSH, WSL, or Dev Container URI
 
 ## Install From VSIX
 
-Download `codex-radar-vscode-0.4.3.vsix` from the GitHub Release, then install it into the extension host where Codex runs:
+After the `0.4.4` package is published to a GitHub Release, download `codex-radar-vscode-0.4.4.vsix` and install it into the extension host where Codex runs:
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.3.vsix --force
+code --install-extension codex-radar-vscode-0.4.4.vsix --force
 ```
 
 The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development install](../../README.md#개발-설치) and [hook setup runbook](../../docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
@@ -90,7 +90,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.3.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.4.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

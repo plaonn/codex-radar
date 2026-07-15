@@ -16,16 +16,16 @@
 - VS Code extension은 이 repository 안의 `extensions/vscode/` subtree에서 시작한다.
 - Python core는 stdlib-first를 유지하고, Node/extension dependency는 extension subtree에 격리한다.
 - 현재 GUI milestone은 `sessions.json`을 직접 읽는 sectioned Webview sidebar와 editor Webview dashboard의 hybrid surface다.
-- GUI implementation은 read adapter를 통해 state source를 캡슐화하고, 나중에 `codex-radar sessions --json` 또는 별도 `export/gui-state` command로 전환할 수 있어야 한다.
+- GUI implementation은 read adapter를 통해 state source를 캡슐화한다. Schema evolution, computed field, archive/usage normalization, transcript redaction policy가 이미 여러 surface에서 중복되기 시작했으므로 shared sanitized export contract로 전환하는 조건은 충족된 것으로 본다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `tool_running`, `done`, `unknown`)와 Codex archived state를 navigation 안에서 구분해야 한다.
 - 첫 GUI notification surface는 sidebar section badge와 dashboard count/highlight 같은 in-surface cue로 제한한다.
 - 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard/sidebar다. Extension-local read/unread UI state는 허용하지만 VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
-- CLI/export contract로 전환하는 시점은 schema evolution, computed field 증가, redaction/display policy 복잡화, cross-platform path 문제가 커질 때 재검토한다.
+- 전환 중에는 기존 direct `sessions.json`/host-local source를 한 release 동안 fallback으로 유지하고 golden parity test로 결과를 비교한 뒤 shared export를 기본 source로 바꾼다.
 
 ## VS Code Extension Release
 
-- 현재 distribution stage는 `0.4.3` public beta이며, GitHub Release에 VSIX를 attached artifact로 배포한다.
+- 현재 distribution stage는 `0.4.4` public beta이며, GitHub Release에 POSIX helper bundle과 VSIX를 attached artifact로 배포한다.
 - GitHub Release readiness와 Marketplace publish는 별도 milestone로 유지한다.
 - Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
 - GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.
@@ -38,6 +38,20 @@
 - Windows local-only 배포를 다룰 때도 Python vs Node helper, extension-bundled helper, separate CLI package 같은 선택은 implementation/distribution choice로 남기고, requirement는 stable local runtime/indexer와 explicit setup/migration boundary로 둔다.
 - Hook integration은 stable entrypoint/shim을 지향한다. Helper implementation 업데이트는 가능한 한 hook config 변경 없이 처리하고, event wiring이나 command contract 변경처럼 `hooks.json` migration이 필요한 경우에는 diff/preview와 사용자 승인을 요구한다.
 - Setup UX는 extension 하나를 설치한 사용자가 빈 dashboard만 보지 않도록 missing/outdated indexer, missing hook wiring, inaccessible state directory를 명확히 진단하는 방향으로 발전시킨다.
+- Public-beta helper의 첫 supported distribution은 GitHub Release의 POSIX helper bundle로 둔다. PyPI와 Windows package는 이 경로가 안정화된 뒤 별도 milestone로 미룬다.
+- 첫 supported scope는 POSIX Python 3.9+ host와 VS Code Remote SSH다. Bundle은 checksum manifest를 제공하고 immutable version runtime, atomic `current` switch, retained previous runtime을 사용해 upgrade와 rollback을 분리한다.
+- `hooks.json`에는 checkout이나 shell `PATH`에 의존하지 않는 fixed absolute shim(기본 예: `~/.local/bin/codex-radar-hook`)을 등록한다. Shim은 current runtime의 dedicated hook entrypoint로 연결하고 helper upgrade만으로 hook config를 다시 쓰지 않는다.
+- Installer/manager는 필요한 `hooks.json` fragment 또는 diff를 출력할 수 있지만 global Codex config를 자동 수정하지 않는다. 기존 `codex-radar hook` entrypoint는 migration을 위해 최소 한 public-beta release 동안 호환 경로로 유지한다.
+- VSIX version과 helper/runtime version은 독립적으로 움직일 수 있으므로 release asset에는 명시적인 compatibility manifest를 포함한다.
+
+## Shared State / Export Direction
+
+- Python core에 side-effect-free sanitized display-state builder를 먼저 만들고, 같은 builder를 호출하는 `codex-radar export state --json`을 첫 machine-readable surface로 둔다. RPC/server는 이 contract가 안정화된 뒤의 transport로 취급한다.
+- 기본 display-state contract와 transcript preview contract를 분리한다. Preview는 사용자가 session을 명시하고 limit을 지정한 bounded request에서만 생성한다.
+- Display state는 source status/capability, aggregate counts, sanitized session fields, semantic usage pools를 포함할 수 있다. Raw `cwd`, private file path, raw transcript/rollout payload, HTML, UI 문자열과 ordering, client-local read/unread state는 포함하지 않는다.
+- Archive state는 `active`, `archived`, `unknown` tri-state로 표현한다. v1 read/unread는 각 client의 local UI state로 유지한다.
+- Migration 순서는 shared builder/schema와 golden fixtures, export CLI와 privacy tests, VS Code export adapter/direct fallback parity, one-release observation, default source switch 순으로 둔다. Node-side duplicate scanner 제거는 default switch 이후에 한다.
+- Existing VS Code workspace handoff가 사용하는 raw `cwd`는 migration 동안 trusted host-local adapter에 남긴다. Future mobile/SSH protocol에서 raw path 기반 action이 필요해지면 별도 privacy/product decision을 요구한다.
 
 ## Mobile Direction
 
@@ -45,7 +59,7 @@
 - 모바일 앱의 primary use case는 사용자가 앱을 열고 여러 프로젝트의 Codex thread를 집중적으로 훑고 전환하는 foreground cockpit이다.
 - 앱이 닫혔거나 SSH 연결이 끊긴 동안 notification delivery를 보장하는 것은 초기 목표가 아니다. 그런 알림은 공식 ChatGPT/Codex app 또는 별도 push notification milestone의 역할로 둔다.
 - 모바일 앱은 SSH session에서 `codex-radar rpc` 같은 전용 process를 실행하고 newline-delimited JSON request/response/event를 주고받는 구조를 선호한다. 이 방식은 shell quoting 문제를 줄이고 stdout을 protocol 전용으로 유지할 수 있다.
-- RPC contract는 project/thread list, status/attention/running/done/archived counts, bounded redacted preview, read/unread 같은 가벼운 local action, foreground attention event를 우선한다.
+- RPC contract는 shared display-state/preview builder를 감싸는 transport로 제한하고, project/thread list, status/attention/running/done/archive counts, bounded redacted preview, foreground attention event를 우선한다. Shared read state나 remote write action은 v1 범위에 넣지 않는다.
 - Foreground attention event는 사용자가 다른 thread를 보고 있을 때 `done`, `waiting_approval`, `running -> done` 같은 변화를 in-app banner/toast로 보여주고, tap하면 해당 thread로 이동하게 한다.
 - TUI는 모바일의 primary path가 아니라 VS Code도 Android app도 없는 SSH-only 환경을 위한 lightweight fallback dashboard로 유지한다.
 - Shared state builder는 VS Code extension, TUI fallback, future mobile RPC가 같은 sanitized display model과 privacy boundary를 재사용할 수 있게 설계한다.

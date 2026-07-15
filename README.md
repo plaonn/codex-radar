@@ -13,11 +13,11 @@
   See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-<p align="center"><strong>Public Beta · v0.4.3</strong></p>
+<p align="center"><strong>Public Beta · v0.4.4</strong></p>
 
 Codex Radar is a local dashboard for people who use Codex across multiple projects, especially in VS Code Remote SSH environments. It groups threads by project, surfaces approval requests and completed work, provides bounded conversation previews, and helps hand eligible threads back to the official Codex extension in the appropriate workspace.
 
-The public beta is distributed as a VSIX through the [v0.4.3 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3). It is not published to the VS Code Marketplace or PyPI.
+The public beta is distributed through the [v0.4.4 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.4), with a POSIX helper bundle and VSIX. It is not published to the VS Code Marketplace or PyPI.
 
 ## Highlights
 
@@ -35,7 +35,7 @@ Codex Radar has two host-local parts. The helper/indexer receives explicitly con
 
 ```text
 Codex lifecycle events
-  -> codex-radar hook
+  -> ~/.local/bin/codex-radar-hook
   -> host-local sessions.json
   -> VS Code extension / CLI / TUI
 ```
@@ -63,14 +63,13 @@ For Remote SSH, install the helper, configure the hook, and install the VSIX on 
 
 ## Install the Helper
 
-The helper is currently installed from a source checkout; there is no PyPI package.
+The v0.4.4 release provides a POSIX helper bundle for Python 3.9 or later. Its installer verifies checksums, keeps immutable runtime versions, and supports atomic upgrade and rollback without changing Codex hook configuration. Download the bundle and adjacent checksum from the v0.4.4 Release, then run:
 
 ```bash
-git clone --branch v0.4.3 --depth 1 https://github.com/plaonn/codex-radar.git
-cd codex-radar
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install .
+shasum -a 256 -c codex-radar-helper-0.4.4.zip.sha256
+unzip codex-radar-helper-0.4.4.zip
+cd codex-radar-helper-0.4.4
+python3 install-helper.py install .
 ```
 
 Verify that the helper is available on the same host and in the same shell environment used by Codex:
@@ -80,12 +79,14 @@ codex-radar doctor
 codex-radar path
 ```
 
+For a release helper bundle, verify and extract the downloaded bundle, then run `python3 install-helper.py install .`. SHA-256 checks detect corruption but do not independently authenticate a bundle or its bootstrap installer; obtain all assets from the intended GitHub Release/account over trusted TLS. See the [hook installation runbook](docs/runbooks/install-hooks.md) for stable shim, status, rollback, and migration details.
+
 ## Configure the Codex Hook
 
-Hook setup is explicit. Codex Radar does not install hooks, edit `~/.codex/hooks.json`, or overwrite unrelated hooks.
+Hook setup is explicit. Codex Radar does not install hooks, edit `~/.codex/hooks.json`, or overwrite unrelated hooks. Release bundles provide a fixed absolute `~/.local/bin/codex-radar-hook` shim so helper upgrades do not require another hook-config change.
 
-1. Review [`examples/hooks.json`](examples/hooks.json).
-2. Merge its `hooks` object into `~/.codex/hooks.json` on the host where Codex runs.
+1. Run `codex-radar-helper hook-config` when using a release bundle, or review [`examples/hooks.json`](examples/hooks.json) and replace `/home/YOUR_USER` with the real absolute path.
+2. Merge the resulting `hooks` object into `~/.codex/hooks.json` on the host where Codex runs. To preview without writing, use `codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json`.
 3. Start or resume Codex. If hook review is requested, inspect and trust the hook through `/hooks`.
 4. Run a short Codex turn, then verify the index:
 
@@ -98,10 +99,10 @@ Follow the complete [hook installation runbook](docs/runbooks/install-hooks.md),
 
 ## Install the VSIX
 
-Download [`codex-radar-vscode-0.4.3.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.3/codex-radar-vscode-0.4.3.vsix) from the [v0.4.3 Public Beta release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3), then install it into the VS Code extension host where Codex and Radar state live:
+Download [`codex-radar-vscode-0.4.4.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.4/codex-radar-vscode-0.4.4.vsix) from the [v0.4.4 Public Beta release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.4), then install it into the VS Code extension host where Codex and Radar state live:
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.3.vsix --force
+code --install-extension codex-radar-vscode-0.4.4.vsix --force
 ```
 
 For Remote SSH, connect to the remote window before installing the VSIX so the workspace extension runs beside the remote helper and index. Reload the window, then open **Codex Radar** from the Activity Bar.
@@ -152,6 +153,8 @@ codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 ## Current Limitations
 
 - Public beta distribution is through GitHub Releases only, not the VS Code Marketplace or PyPI.
+- The helper bundle supports POSIX Python 3.9+ hosts; native Windows packaging remains a separate milestone.
+- `codex-radar-helper diagnose` checks the local runtime, stable shims, compatibility metadata, and hook wiring, but does not query remote release availability. `codex-radar doctor` remains focused on Radar state/cache.
 - The extension requires the separately installed host-local helper/indexer and explicit hook setup.
 - `Open in Codex` uses an experimental local URI route and may be unavailable for some sessions.
 - Archived sessions cannot be opened through the Codex handoff.
@@ -177,6 +180,16 @@ python3 -m compileall src tests
 npm --prefix extensions/vscode test
 ```
 
+For a helper release, first build a version-bumped pure-Python wheel, then package it with the compatibility/checksum manifest and standalone installer:
+
+```bash
+python scripts/build-helper-bundle.py \
+  --wheel dist/codex_radar-<version>-py3-none-any.whl \
+  --output dist/codex-radar-helper-<version>.zip
+```
+
+The command also writes an adjacent `.sha256` file. Versioned artifacts are release outputs and must not be committed.
+
 Maintainers can package a local VSIX with:
 
 ```bash
@@ -187,9 +200,9 @@ The generated `extensions/vscode/codex-radar-vscode-<version>.vsix` is a gitigno
 
 ## Release and Distribution
 
-The current release is [Codex Radar 0.4.3 Public Beta](https://github.com/plaonn/codex-radar/releases/tag/v0.4.3). GitHub Release assets are the supported public beta distribution path. Marketplace and PyPI publication remain separate future decisions.
+The current release is [Codex Radar 0.4.4 Public Beta](https://github.com/plaonn/codex-radar/releases/tag/v0.4.4). GitHub Release assets are the supported public beta distribution path. Marketplace and PyPI publication remain separate future decisions.
 
-See the [0.4.3 release notes](docs/releases/0.4.3.md) and [extension changelog](extensions/vscode/CHANGELOG.md) for details.
+See the [0.4.4 release notes](docs/releases/0.4.4.md) and [extension changelog](extensions/vscode/CHANGELOG.md) for details.
 
 ## Documentation and Support
 

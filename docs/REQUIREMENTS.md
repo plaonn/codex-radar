@@ -144,7 +144,7 @@
 
 ### R10: surface-independent local runtime
 
-- Status: candidate direction
+- Status: confirmed direction
 - Requirement: Codex lifecycle 상태 수집과 latest-state cache/protocol 생성은 VS Code extension 같은 특정 UI client가 아니라 host-local `codex-radar` runtime/indexer가 담당해야 한다.
 - Rationale: VS Code extension, future Android app, TUI, CLI fallback이 같은 lifecycle-derived state와 privacy boundary를 재사용해야 한다. UI client별로 Codex transcript, rollout log, state DB 같은 내부 파일을 각자 scan해 상태를 추론하면 attention 상태의 의미와 정확도가 표면마다 갈라질 수 있다.
 - Failure prevented: extension-only scan에 의존해 `waiting_approval`, `tool_running`, `done` 같은 attention 상태를 놓치거나 다르게 해석하는 문제. VS Code extension에 indexer ownership이 묶여 future app surface가 별도 관측 로직을 재구현하는 문제.
@@ -154,11 +154,22 @@
 
 #### R10a: stable hook entrypoint and migration boundary
 
-- Status: candidate direction
+- Status: confirmed direction
 - Requirement: 배포 가능한 hook integration은 가능한 한 stable command/shim을 `hooks.json`에 등록하고, helper/indexer implementation 업데이트는 hook config 변경 없이 처리해야 한다. hook event set, command contract, privacy boundary가 바뀌는 경우에만 사용자 승인 기반 migration을 요구해야 한다.
 - Rationale: extension, CLI, future app 배포가 반복되어도 global Codex hook config churn을 줄이고, 사용자가 승인하지 않은 Codex config 변경을 피해야 한다.
 - Failure prevented: extension update마다 hook path가 깨지는 문제, outdated hook wiring이 조용히 남아 세션 index가 비는 문제, global Codex config가 자동으로 변경되는 privacy/automation boundary 위반.
 - Derived specs/tests: setup/doctor detects missing or outdated hook runtime, hook migration preview/diff before write, uninstall or disable path for stable shim, no automatic `~/.codex/hooks.json` edits outside explicit setup/migration flow.
+
+#### R10b: shared sanitized display-state contract
+
+- Status: confirmed direction
+- Requirement: VS Code extension, CLI/TUI, future mobile/RPC client가 재사용하는 machine-readable state는 Python core의 shared sanitized builder가 생성해야 하며, 기본 list state와 사용자가 명시적으로 요청한 bounded transcript preview를 별도 versioned contract로 제공해야 한다.
+- Rationale: 현재 extension과 Python core가 session parsing, usage pool normalization, archive 판정, transcript preview/redaction 일부를 독립적으로 해석하므로 computed field와 privacy policy가 늘어날수록 surface별 의미가 갈릴 위험이 있다.
+- Failure prevented: 같은 thread가 client마다 다른 status/archive/usage 상태로 보이는 문제, raw path/content가 범용 export에 섞이는 문제, mobile/RPC 구현 전에 불안정한 UI-specific model이 protocol로 고착되는 문제.
+- Privacy boundary: 기본 sanitized state는 raw `cwd`, transcript path, rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다. `session_id`는 사용자가 선택한 host-local 또는 명시적 SSH trust boundary 안의 navigation identity로만 사용할 수 있다.
+- Assumptions: v1 read/unread는 client-local 파생 상태로 유지한다. Archive state는 불확실성을 숨기지 않고 `active`, `archived`, `unknown`을 구분한다. 기존 VS Code handoff는 export contract와 분리된 trusted host-local adapter를 migration 기간 동안 사용할 수 있다.
+- Derived specs/tests: `codex-radar export state --json`, `codex-radar export preview <session-id> --limit <n>`, versioned display-state/preview schemas, golden parity fixtures, strict stdout/stderr separation, negative privacy tests, and VS Code direct-source fallback during the one-release migration.
+- Revisit when: raw `cwd`가 필요한 remote action을 protocol에 추가하거나, shared read state, RPC listener, background event delivery, remote write action이 active milestone이 될 때.
 
 ## Rationale
 

@@ -625,6 +625,9 @@ function readTranscriptEntries(session, options = {}) {
 }
 
 function buildSessionDisplayFields(session, options = {}) {
+  if (session?.read_source === "export") {
+    return sessionDisplayFieldsFromEntries(session, [], options);
+  }
   const transcript = transcriptPathInfoForSession(session, options);
   if (transcript.path) {
     try {
@@ -643,7 +646,14 @@ function sessionTitle(session, options = {}) {
 
 function buildSessionPreviewModel(session, options = {}) {
   const transcript = readTranscriptEntries(session, options);
-  const displayFields = sessionDisplayFieldsFromEntries(session, transcript.entries, { ...options, titleLength: 140 });
+  return buildSessionPreviewModelFromEntries(session, transcript.entries, {
+    ...options,
+    transcriptMessage: transcript.message,
+  });
+}
+
+function buildSessionPreviewModelFromEntries(session, entries, options = {}) {
+  const displayFields = sessionDisplayFieldsFromEntries(session, entries, { ...options, titleLength: 140 });
   return {
     title: displayFields.title,
     project: String(session?.project || "-"),
@@ -654,14 +664,27 @@ function buildSessionPreviewModel(session, options = {}) {
     currentTool: String(session?.current_tool || ""),
     shortSessionId: shortSessionId(session?.session_id),
     summary: truncateText(compactText(redactText(session?.last_assistant_message || "", options)), 360),
-    transcriptMessage: transcript.message,
-    transcriptEntries: transcript.entries,
+    transcriptMessage: String(options.transcriptMessage || ""),
+    transcriptEntries: entries,
   };
+}
+
+function buildSessionPreviewModelFromExport(session, payload, options = {}) {
+  const entries = payload.messages.map((message) => ({
+    role: message.role,
+    label: message.role === "assistant" ? "Codex" : "You",
+    text: message.text,
+    html: markdownToSafeHtml(message.text),
+    source: "shared-export",
+  }));
+  return buildSessionPreviewModelFromEntries(session, entries, options);
 }
 
 module.exports = {
   buildSessionDisplayFields,
   buildSessionPreviewModel,
+  buildSessionPreviewModelFromEntries,
+  buildSessionPreviewModelFromExport,
   cachedSummaryEntries,
   collectConversationTexts,
   conversationEntriesFromItem,

@@ -465,6 +465,23 @@ class CliTests(unittest.TestCase):
         self.assertIn("include-existing", output)
         self.assertIn("retention-days", output)
         self.assertIn("codex-home", output)
+        self.assertIn("export", output)
+        self.assertIn("state preview", output)
+        self.assertIn("subcommand_from export", output)
+        self.assertIn("subcommand_from preview' -l limit", output)
+
+    def test_export_completion_is_present_in_all_shells(self) -> None:
+        for shell in ("bash", "zsh", "fish"):
+            with self.subTest(shell=shell):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    main(["completion", shell])
+                output = out.getvalue()
+                self.assertIn("export", output)
+                self.assertIn("state", output)
+                self.assertIn("preview", output)
+                self.assertIn("json", output)
+                self.assertIn("limit", output)
 
 
 if __name__ == "__main__":

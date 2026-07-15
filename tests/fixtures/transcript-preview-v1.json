@@ -1,0 +1,17 @@
+{
+  "contract": "codex-radar.transcript-preview",
+  "version": 1,
+  "generated_at": "2026-07-14T00:00:00+00:00",
+  "session_id": "session-1",
+  "limit": 2,
+  "messages": [
+    {
+      "role": "user",
+      "text": "show summary"
+    },
+    {
+      "role": "assistant",
+      "text": "done [REDACTED]"
+    }
+  ]
+}

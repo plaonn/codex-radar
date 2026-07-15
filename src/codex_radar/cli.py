@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 from .completion import COMPLETIONS, completion_script
+from .export_adapter import (
+    ExportAdapterError,
+    export_display_state,
+    export_transcript_preview,
+)
+from .hook import run_hook
 from .store import (
     DEFAULT_RETENTION_DAYS,
     default_state_dir,
@@ -18,12 +24,12 @@ from .store import (
     load_sessions,
     parse_timestamp,
     prune_sessions,
-    record_hook_event,
     save_config,
     session_display_status,
     session_seen_since,
 )
 from .transcript import format_skim, skim_transcript
+from .transcript_preview import MAX_PREVIEW_LIMIT
 from .tui import run_tui
 from .usage import default_codex_home, format_usage_snapshot, usage_snapshot
 from .watch import run_watch
@@ -62,17 +68,16 @@ def _since_arg(value: str) -> datetime:
     )
 
 
-def _read_stdin_json() -> Dict[str, Any]:
-    raw = sys.stdin.read()
-    if not raw.strip():
-        raise SystemExit("codex-radar hook expects one JSON payload on stdin")
+def _preview_limit_arg(value: str) -> int:
     try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"invalid hook JSON: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise SystemExit("hook JSON must be an object")
-    return payload
+        limit = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("expected an integer") from exc
+    if not 1 <= limit <= MAX_PREVIEW_LIMIT:
+        raise argparse.ArgumentTypeError(
+            f"expected a value between 1 and {MAX_PREVIEW_LIMIT}"
+        )
+    return limit
 
 
 def _project_name(session: Dict[str, Any]) -> str:
@@ -149,11 +154,10 @@ def _clip(value: object, width: int) -> str:
 
 
 def cmd_hook(args: argparse.Namespace) -> int:
-    payload = _read_stdin_json()
-    session = record_hook_event(payload, _state_dir_arg(args.state_dir))
-    if args.print_session:
-        print(json.dumps(session, ensure_ascii=False, sort_keys=True))
-    return 0
+    return run_hook(
+        state_dir=_state_dir_arg(args.state_dir),
+        print_session=args.print_session,
+    )
 
 
 def cmd_sessions(args: argparse.Namespace) -> int:
@@ -248,6 +252,26 @@ def cmd_usage(args: argparse.Namespace) -> int:
         print(json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True))
     else:
         print(format_usage_snapshot(snapshot))
+    return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    state_dir = _state_dir_arg(args.state_dir)
+    try:
+        if args.export_command == "state":
+            payload = export_display_state(state_dir)
+        elif args.export_command == "preview":
+            payload = export_transcript_preview(
+                args.session_id,
+                limit=args.limit,
+                state_dir=state_dir,
+            )
+        else:
+            raise ExportAdapterError("unsupported_export_command")
+    except ExportAdapterError as exc:
+        print(f"codex-radar export: {exc.code}", file=sys.stderr)
+        return 2
+    print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
     return 0
 
 
@@ -347,6 +371,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum recent rollout files to scan. Default: 30",
     )
     usage.set_defaults(func=cmd_usage)
+
+    export = subparsers.add_parser("export", help="Export sanitized machine-readable state")
+    export_subparsers = export.add_subparsers(dest="export_command", required=True)
+    export_state = export_subparsers.add_parser("state", help="Export sanitized display state JSON")
+    export_state.add_argument(
+        "--json",
+        action="store_true",
+        required=True,
+        help="Print the versioned JSON contract",
+    )
+    export_state.set_defaults(func=cmd_export)
+    export_preview = export_subparsers.add_parser(
+        "preview",
+        help="Export a bounded sanitized transcript preview",
+    )
+    export_preview.add_argument("session_id")
+    export_preview.add_argument(
+        "--limit",
+        type=_preview_limit_arg,
+        required=True,
+        help=f"Maximum messages to return (1-{MAX_PREVIEW_LIMIT})",
+    )
+    export_preview.set_defaults(func=cmd_export)
 
     config = subparsers.add_parser("config", help="Read or update codex-radar config")
     config_subparsers = config.add_subparsers(dest="config_command", required=True)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-radar"
-version = "0.4.0"
+version = "0.4.4"
 description = "Track and resume host-local Codex threads across projects."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -25,6 +25,8 @@ dependencies = []
 
 [project.scripts]
 codex-radar = "codex_radar.cli:main"
+codex-radar-hook = "codex_radar.hook:main"
+codex-radar-helper = "codex_radar.helper_manager:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

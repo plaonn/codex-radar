@@ -6,10 +6,14 @@ const { officialCodexThreadUriString } = require("./codexLink");
 const {
   STATUS_FILTER_VALUES,
   defaultStateDir,
-  inspectSessionCache,
   loadSessionCache,
   normalizeStatusFilter,
 } = require("./sessionSource");
+const {
+  loadExportPreview,
+  loadSessionState,
+  normalizeReadSourceMode,
+} = require("./exportSource");
 const {
   WatcherSetManager,
   archivedTranscriptWatchTarget,
@@ -44,7 +48,10 @@ const {
   loadCodexThreadCatalog,
   sessionWithCatalogTitle,
 } = require("./codexThreadCatalog");
-const { buildSessionPreviewModel } = require("./transcriptPreview");
+const {
+  buildSessionPreviewModel,
+  buildSessionPreviewModelFromExport,
+} = require("./transcriptPreview");
 const { statusText } = require("./sessionViewModel");
 const {
   normalizeOpenThreadBehavior,
@@ -65,6 +72,12 @@ function configuredStateDir() {
 function configuredOpenThreadBehavior() {
   return normalizeOpenThreadBehavior(
     vscode.workspace.getConfiguration("codexRadar").get("openThreadBehavior", "ask"),
+  );
+}
+
+function configuredReadSource() {
+  return normalizeReadSourceMode(
+    vscode.workspace.getConfiguration("codexRadar").get("readSource", "observe"),
   );
 }
 
@@ -381,6 +394,16 @@ function radarStatusTooltip(model) {
     `Active sessions: ${counts.visible || 0}`,
     `Archived sessions: ${counts.archived || 0}`,
   ];
+  if (model?.source) {
+    let source = `Read source: ${model.source.readSource}`;
+    if (model.source.exportObservation) {
+      source += ` · observation ${model.source.exportObservation}`;
+    }
+    if (model.source.fallbackReason) {
+      source += ` · ${model.source.fallbackReason}`;
+    }
+    lines.push(source);
+  }
   if (model?.setup) {
     lines.push("", model.setup.title);
     if (model.setup.detail) {
@@ -425,8 +448,9 @@ class RadarWebviewController {
     let sessionSourceDiagnostic = null;
     try {
       const stateDir = configuredStateDir();
-      sessionSourceDiagnostic = inspectSessionCache(stateDir);
-      const loadedSessions = sessionSourceDiagnostic.canLoad ? loadSessionCache(stateDir) : [];
+      const sourceState = await loadSessionState(stateDir, { mode: configuredReadSource() });
+      sessionSourceDiagnostic = sourceState.diagnostic;
+      const loadedSessions = sourceState.sessions;
       const readKeysForSessions = await prunedReadKeys(this.context.globalState, loadedSessions);
       const sessions = decorateSessions(loadedSessions, readKeysForSessions);
       const codexThreadCatalog = await this.loadCodexThreadCatalog(sessions);
@@ -548,12 +572,32 @@ class RadarWebviewController {
     return this.sessions.find((session) => previewSessionIdentity(session) === target) || null;
   }
 
-  openPreview(session, options = {}) {
+  async previewModel(displaySession) {
+    const mode = configuredReadSource();
+    if (mode === "direct") {
+      return buildSessionPreviewModel(displaySession, { homeDir: process.env.HOME || "" });
+    }
+    try {
+      const payload = await loadExportPreview(configuredStateDir(), previewSessionIdentity(displaySession));
+      if (mode === "export") {
+        return buildSessionPreviewModelFromExport(displaySession, payload, {
+          homeDir: process.env.HOME || "",
+        });
+      }
+    } catch {
+      // Preview remains usable through the trusted direct adapter for this migration release.
+    }
+    return buildSessionPreviewModel(displaySession, { homeDir: process.env.HOME || "" });
+  }
+
+  async openPreview(session, options = {}) {
     if (!session) {
       return;
     }
     const displaySession = sessionWithCatalogTitle(session, this.codexThreadCatalog);
     const sessionIdentity = previewSessionIdentity(displaySession);
+    const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
+    this.previewSessionKey = sessionIdentity;
     if (!this.previewPanel) {
       this.previewPanel = vscode.window.createWebviewPanel(
         "codexRadar.preview",
@@ -576,13 +620,16 @@ class RadarWebviewController {
     } else if (options.reveal !== false) {
       this.previewPanel.reveal(vscode.ViewColumn.Active);
     }
-    const shouldScrollToBottom = options.initialScrollToBottom ?? (sessionIdentity !== this.previewSessionKey);
     const card = sessionCard(displaySession, {
       homeDir: process.env.HOME || "",
       codexThreadCatalog: this.codexThreadCatalog,
     });
-    const model = buildSessionPreviewModel(displaySession, { homeDir: process.env.HOME || "" });
-    this.previewPanel.title = `Codex Radar: ${model.shortSessionId}`;
+    const panel = this.previewPanel;
+    const model = await this.previewModel(displaySession);
+    if (!panel || panel !== this.previewPanel || this.previewSessionKey !== sessionIdentity) {
+      return;
+    }
+    panel.title = `Codex Radar: ${model.shortSessionId}`;
     this.pendingPreviewState = {
       type: "previewState",
       model,
@@ -591,7 +638,6 @@ class RadarWebviewController {
       initialScrollToBottom: shouldScrollToBottom,
       sessionIdentity,
     };
-    this.previewSessionKey = sessionIdentity;
     this.postPreviewState();
   }
 
@@ -622,7 +668,7 @@ class RadarWebviewController {
     }
     const session = this.sessionForPreviewIdentity(this.previewSessionKey);
     if (session) {
-      this.openPreview(session, { reveal: false });
+      void this.openPreview(session, { reveal: false });
     }
   }
 
@@ -693,7 +739,7 @@ class RadarWebviewController {
       this.selectedSessionIdentity = requestedIdentity;
       await this.refresh({ updatePreview: false });
       if (surface !== "dashboard") {
-        this.openPreview(
+        await this.openPreview(
           this.sessionForPreviewIdentity(requestedIdentity) || this.sessionForKey(requestedKey) || requestedSession,
         );
       }
@@ -859,6 +905,8 @@ async function activate(context) {
       if (event.affectsConfiguration("codexRadar.stateDir")) {
         watcherManager.reset();
         controller.refresh();
+      } else if (event.affectsConfiguration("codexRadar.readSource")) {
+        controller.refresh();
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => controller.refresh()),
@@ -874,6 +922,7 @@ module.exports = {
   RadarWebviewController,
   activate,
   configuredStateDir,
+  configuredReadSource,
   dashboardHtml,
   deactivate,
   loadDecoratedSessions,

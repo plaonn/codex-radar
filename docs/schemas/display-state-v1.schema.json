@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/plaonn/codex-radar/docs/schemas/display-state-v1.schema.json",
+  "title": "codex-radar display state v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "version", "generated_at", "source", "capabilities", "counts", "sessions", "usage"],
+  "properties": {
+    "contract": { "const": "codex-radar.display-state" },
+    "version": { "const": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "source": { "$ref": "#/$defs/source" },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$" }
+    },
+    "counts": { "$ref": "#/$defs/counts" },
+    "sessions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/session" }
+    },
+    "usage": { "$ref": "#/$defs/usage" }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["ready", "partial", "unavailable", "invalid"] },
+        "reason": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$" }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "visible", "active", "archived", "archive_unknown", "attention", "running", "done"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "visible": { "type": "integer", "minimum": 0 },
+        "active": { "type": "integer", "minimum": 0 },
+        "archived": { "type": "integer", "minimum": 0 },
+        "archive_unknown": { "type": "integer", "minimum": 0 },
+        "attention": { "type": "integer", "minimum": 0 },
+        "running": { "type": "integer", "minimum": 0 },
+        "done": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "status", "display_status", "archive_state", "requires_attention", "event_count"],
+      "properties": {
+        "session_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$" },
+        "project": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[^/\\\\<>\\u0000-\\u001f\\u007f]+$" },
+        "status": { "enum": ["active", "running", "tool_running", "waiting_approval", "done", "unknown"] },
+        "display_status": { "enum": ["active", "running", "tool_running", "waiting_approval", "done", "unknown", "stale"] },
+        "archive_state": { "enum": ["active", "archived", "unknown"] },
+        "requires_attention": { "type": "boolean" },
+        "first_seen_at": { "type": "string", "format": "date-time" },
+        "last_seen_at": { "type": "string", "format": "date-time" },
+        "display_state_started_at": { "type": "string", "format": "date-time" },
+        "model": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[^/\\\\<>\\u0000-\\u001f\\u007f]+$" },
+        "current_tool": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[^/\\\\<>\\u0000-\\u001f\\u007f]+$" },
+        "event_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "pools"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "reason": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "plan_type": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$" },
+        "pools": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["five_hour", "seven_day"],
+          "properties": {
+            "five_hour": { "oneOf": [{ "$ref": "#/$defs/usageWindow" }, { "type": "null" }] },
+            "seven_day": { "oneOf": [{ "$ref": "#/$defs/usageWindow" }, { "type": "null" }] }
+          }
+        }
+      }
+    },
+    "usageWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_minutes"],
+      "properties": {
+        "window_minutes": { "enum": [300, 10080] },
+        "used_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "remaining_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "resets_at_iso": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

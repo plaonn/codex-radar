@@ -2,6 +2,19 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.4
+
+### Added
+
+- Add a shared-export read adapter for `codex-radar export state --json` and explicit bounded transcript preview export.
+- Add local observation mode that compares export and direct session semantics while keeping the direct adapter effective.
+
+### Boundaries
+
+- Keep the direct host-local adapter as the fallback for export command failure, source unavailability, and schema mismatch during this migration release.
+- Keep raw `cwd` and transcript paths out of the sanitized export contract and use direct metadata only inside the trusted extension host for workspace handoff and local preview fallback.
+- Keep read/unread state extension-local; this public beta remains a GitHub Release artifact rather than a Marketplace publication.
+
 ## 0.4.3
 
 ### Changed

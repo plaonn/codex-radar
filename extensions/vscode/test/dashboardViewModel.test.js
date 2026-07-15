@@ -444,3 +444,25 @@ test("hides ready setup diagnostics from dashboard models", () => {
     sessionSourceDiagnostic: { code: "ready", title: "Ready" },
   }).setup, null);
 });
+
+test("carries only safe read-source observation diagnostics into the dashboard model", () => {
+  const model = buildDashboardModel([], {
+    sessionSourceDiagnostic: {
+      code: "ready",
+      readSource: "direct",
+      requestedSource: "observe",
+      exportObservation: "matched",
+      fallbackReason: "/private/helper/path",
+      detail: "/private/state/path",
+    },
+  });
+
+  assert.deepEqual(model.source, {
+    readSource: "direct",
+    requestedSource: "observe",
+    exportObservation: "matched",
+    exportSourceStatus: "",
+    fallbackReason: "",
+  });
+  assert.equal(JSON.stringify(model).includes("/private"), false);
+});

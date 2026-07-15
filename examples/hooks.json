@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codex-radar hook",
+            "command": "/home/YOUR_USER/.local/bin/codex-radar-hook",
             "timeout": 5,
             "statusMessage": "Indexing Codex session"
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codex-radar hook",
+            "command": "/home/YOUR_USER/.local/bin/codex-radar-hook",
             "timeout": 5
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codex-radar hook",
+            "command": "/home/YOUR_USER/.local/bin/codex-radar-hook",
             "timeout": 5
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codex-radar hook",
+            "command": "/home/YOUR_USER/.local/bin/codex-radar-hook",
             "timeout": 5
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codex-radar hook",
+            "command": "/home/YOUR_USER/.local/bin/codex-radar-hook",
             "timeout": 5,
             "statusMessage": "Codex Radar noticed an approval request"
           }
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "codex-radar hook",
+            "command": "/home/YOUR_USER/.local/bin/codex-radar-hook",
             "timeout": 5
           }
         ]

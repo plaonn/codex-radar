@@ -12,6 +12,7 @@ COMMANDS = (
     "path",
     "doctor",
     "usage",
+    "export",
     "config",
     "prune",
     "completion",
@@ -22,6 +23,7 @@ SESSION_TEXT_OPTIONS = ("--group-project",)
 WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-existing", "--quiet-start")
 PRUNE_OPTIONS = ("--retention-days", "--dry-run")
 USAGE_OPTIONS = ("--codex-home", "--file-limit")
+EXPORT_COMMANDS = ("state", "preview")
 
 
 def bash_completion() -> str:
@@ -36,6 +38,7 @@ def bash_completion() -> str:
             *WATCH_OPTIONS,
             *PRUNE_OPTIONS,
             *USAGE_OPTIONS,
+            *EXPORT_COMMANDS,
             "get",
             "set",
             "retention_days",
@@ -52,9 +55,25 @@ complete -F _codex_radar_complete codex-radar
 def zsh_completion() -> str:
     commands = " ".join(COMMANDS)
     return f"""#compdef codex-radar
-_arguments \\
-  '1:command:({commands})' \\
-  '*::arg:->args'
+_codex_radar() {{
+  if (( CURRENT == 2 )); then
+    _values 'command' {commands}
+    return
+  fi
+  if [[ $words[2] == export ]]; then
+    if (( CURRENT == 3 )); then
+      _values 'export command' state preview
+      return
+    fi
+    case $words[3] in
+      state) _arguments '--json[print versioned JSON contract]' ;;
+      preview) _arguments '--limit=[maximum messages]:limit:' ;;
+    esac
+    return
+  fi
+  _arguments '*::arg:->args'
+}}
+_codex_radar
 """
 
 
@@ -81,6 +100,9 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l json",
         "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l codex-home -r",
         "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l file-limit -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from export; and not __fish_seen_subcommand_from state preview' -a 'state preview'",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from export; and __fish_seen_subcommand_from state' -l json",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from export; and __fish_seen_subcommand_from preview' -l limit -r",
     ]
     return "\n".join(lines) + "\n"
 

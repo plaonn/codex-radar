@@ -11,7 +11,12 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 
 현재 terminal MVP command contract:
 
-- `codex-radar hook`: stdin에서 hook payload 1개를 읽어 기록한다.
+- `codex-radar-hook`: stable helper bundle이 사용하는 전용 hook entrypoint다. stdin에서 hook payload 1개를 읽어 기록한다.
+- `codex-radar hook`: 공개 베타 migration 기간에 유지하는 legacy-compatible hook entrypoint다. 전용 entrypoint와 같은 producer path를 호출한다.
+- `codex-radar-helper install <bundle-dir>`: POSIX helper bundle을 검증하고 immutable runtime으로 설치한 뒤 stable shim과 `current` runtime을 연결한다. Codex hook config는 수정하지 않는다.
+- `codex-radar-helper status`: current/retained helper runtime을 machine-readable JSON으로 출력한다.
+- `codex-radar-helper rollback [runtime-version]`: retained runtime으로 `current` symlink를 원자적으로 전환한다.
+- `codex-radar-helper hook-config [--hooks-file <path>]`: fixed absolute hook shim을 사용하는 fragment 또는 no-write unified diff를 출력한다.
 - `codex-radar sessions`: 알려진 세션 목록을 출력한다. `--group-project`는 text output을 project header로 묶고 JSON output shape는 바꾸지 않는다.
 - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
 - `codex-radar tui`: 가벼운 session dashboard를 연다.
@@ -19,6 +24,8 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 - `codex-radar path`: active state directory를 출력한다. 이 command는 directory를 생성하지 않는 no-write discovery surface다.
 - `codex-radar doctor`: 짧은 로컬 진단을 출력한다.
 - `codex-radar usage`: host-local Codex rollout JSONL에서 최신 `token_count` usage snapshot을 read-only로 읽는다. `--json`은 VS Code와 automation이 사용하기 쉬운 JSON contract를 출력한다.
+- `codex-radar export state --json`: shared builder가 만든 sanitized display-state v1 contract만 stdout에 출력한다. Missing/invalid index는 state directory를 만들거나 고치지 않고 `source.status`와 safe reason code로 표현한다.
+- `codex-radar export preview <session-id> --limit <n>`: 명시한 indexed session 하나의 host-local transcript를 resolve해 bounded, redacted transcript-preview v1 contract만 stdout에 출력한다. `n`은 1 이상 200 이하로 명시해야 한다.
 - `codex-radar config get [key]`: server-side `codex-radar` config를 출력한다. 현재 config key는 `retention_days`다.
 - `codex-radar config set retention_days <days>`: server-side retention 기간을 일 단위로 저장한다. `0`은 pruning 비활성화를 뜻한다.
 - `codex-radar prune`: `retention_days` 기준으로 오래된 session을 `sessions.json`에서 제거하고 legacy `events.jsonl`이 있으면 제거한다. `--dry-run`은 실제 변경 없이 제거 후보를 출력한다.
@@ -92,6 +99,17 @@ Privacy and stability boundary:
 - `auth.json`을 읽지 않고, 서버 요청을 보내지 않고, Codex config/hook/session을 수정하지 않는다.
 - raw rollout line, raw transcript content, private rollout file path는 output model이나 Radar state에 저장하지 않는다.
 - `rate_limits`가 없거나 schema가 바뀌면 정상적인 unavailable snapshot으로 처리한다.
+
+## Sanitized Export Contracts
+
+`codex-radar export`는 RPC/listener 없이 shared Python builder를 감싸는 read-only machine-readable surface다. 성공 시 stdout은 JSON protocol 전용이며 diagnostics를 섞지 않는다. Preview lookup 실패는 private path나 raw input을 반복하지 않는 stable code만 stderr에 출력하고 nonzero로 종료한다.
+
+- Display state schema: [schemas/display-state-v1.schema.json](schemas/display-state-v1.schema.json).
+- Transcript preview schema: [schemas/transcript-preview-v1.schema.json](schemas/transcript-preview-v1.schema.json).
+- Display state는 raw `cwd`, transcript/rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다.
+- Archive lookup은 cached exact session과 host-local active/archived transcript store만 read-only로 확인한다. 확인할 수 없으면 `unknown`을 유지한다.
+- Preview는 `sessions.json`에 exact session identity가 있어야 하며 cached transcript path, 같은 basename의 moved transcript, 또는 session id가 포함된 host-local transcript filename 순서로 resolve한다.
+- 두 export command 모두 state/config/transcript/Codex home을 생성하거나 수정하지 않으며 외부 전송을 수행하지 않는다.
 
 ## Data Model
 
@@ -226,7 +244,7 @@ GUI privacy/action boundary v1:
 - GUI usage status bar는 Codex rollout JSONL을 read-only로 읽을 수 있지만 `auth.json`을 읽거나 서버 요청을 보내지 않는다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.
 - GUI는 `codex resume` 같은 local command execution을 직접 수행하지 않는다. 공식 Codex extension URI handoff는 experimental action으로만 둔다. command copy나 terminal handoff는 별도 requirement에서 다룬다.
-- 현재 VS Code GUI는 Python core CLI를 실행하지 않는다. retention config/prune GUI는 clearer surface가 생길 때 별도 requirement로 재도입한다.
+- VS Code GUI는 shared display-state migration을 위해 `codex-radar export state --json`을 로컬 observation/export source로 실행할 수 있고, 명시적인 preview 동작에서 bounded `export preview`를 호출할 수 있다. 기본 `observe` 모드에서는 direct adapter가 계속 유효하며 export 실패나 schema mismatch는 한 release 동안 direct source로 fallback한다. Retention config/prune GUI는 clearer surface가 생길 때 별도 requirement로 재도입한다.
 - GUI는 raw transcript file을 기본 list에 자동 노출하지 않는다. 기본 navigation에는 host-local transcript에서 파생한 redacted title/snippet display fields를 표시할 수 있지만 raw transcript path나 raw transcript content는 표시하지 않는다.
 - VS Code extension은 sidebar item selection처럼 사용자가 명시적으로 고른 단일 session에 한해 editor preview에서 transcript skim을 제공할 수 있다. Preview Webview에는 extension host가 만든 bounded, redacted user/Codex message entries와 sanitized Markdown HTML만 전달하고 raw transcript path나 tool/internal event text는 표시하지 않는다. `sessions.json`에 transcript path가 없으면 extension host의 `CODEX_HOME` 또는 `~/.codex` 아래 Codex transcript store에서 session id가 포함된 `.jsonl` 파일을 read-only로 찾을 수 있다. transcript file을 찾지 못하면 extension은 cached latest assistant summary만 fallback으로 표시할 수 있다. 전체 transcript 확인은 official Codex handoff 또는 terminal `codex-radar transcript` workflow에 맡긴다.
 - GUI는 transcript/session metadata를 외부로 전송하지 않는다.
@@ -234,9 +252,15 @@ GUI privacy/action boundary v1:
 Distribution/setup boundary:
 
 - Current VS Code extension install alone does not create or update the `sessions.json` producer.
-- Current setup expects a host-local `codex-radar` command and Codex hook configuration that invokes `codex-radar hook`.
+- Source setup can invoke the legacy `codex-radar hook` command. A release helper bundle uses a fixed absolute `~/.local/bin/codex-radar-hook` shim, which resolves through the helper runtime's `current` symlink.
 - Extension setup or diagnostics may explain missing runtime/indexer state, but current VS Code GUI does not automatically edit `~/.codex/hooks.json`.
-- Future packaged setup may provide a stable hook entrypoint/shim and helper runtime, but hook wiring changes remain explicit migration actions rather than silent extension activation side effects.
+- The POSIX helper manager verifies a manifest and SHA-256 artifact checksums, rejects unsupported Python/platform constraints, extracts one pure-Python wheel into `runtime/versions/<version>`, retains earlier versions, and atomically switches `runtime/current`. An existing immutable version may be reused only when its manifest digest matches.
+- Stable user command paths are symlinks to `runtime/current/bin`. The manager refuses to overwrite an existing non-symlink at those paths.
+- Bundle compatibility metadata declares the supported POSIX/Python boundary and a VS Code extension version range. VSIX and helper runtime versions remain independent.
+- `codex-radar-helper hook-config` prints the exact fragment, or a unified diff against an existing file, but never writes `~/.codex/hooks.json`. Hook wiring changes remain explicit user-approved migrations.
+- This milestone does not make `codex-radar doctor` or the helper manager detect missing/outdated stable shims, runtime compatibility drift, or actual hook wiring. `doctor` remains a state/cache diagnostic; automated R10a setup detection is a separate follow-up.
+- Bundle SHA-256 verification detects download or packaging corruption but is not an authenticity proof. Bootstrap trust comes from obtaining the installer, manifest, checksum, and bundle from the intended GitHub Release/account over trusted TLS.
+- Bundle artifact paths and retained runtime selections reject symlinks. Reactivating an existing immutable runtime verifies its marker and original manifest digest but does not rehash every extracted file; retained runtime contents remain inside the same-user local trust boundary.
 
 ## Automation Boundary
 
@@ -247,6 +271,8 @@ Distribution/setup boundary:
 - server-side `codex-radar` config와 session index retention pruning.
 - 사용자가 transcript/TUI command를 실행했을 때 로컬 transcript 파일 읽기.
 - 사용자가 TUI에서 resumable row를 선택하고 Enter를 눌렀을 때 같은 terminal process를 `codex resume <session_id>`로 교체하기.
+- 사용자가 helper manager를 명시적으로 실행했을 때 user-selected runtime root와 bin directory 아래에 verified immutable runtime, stable symlink, install history를 생성하거나 원자적으로 전환하기.
+- 사용자가 요청한 hook fragment 또는 existing hook config에 대한 no-write diff를 stdout으로 출력하기.
 
 금지:
 
