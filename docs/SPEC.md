@@ -258,7 +258,7 @@ Distribution/setup boundary:
 - Stable user command paths are symlinks to `runtime/current/bin`. The manager refuses to overwrite an existing non-symlink at those paths.
 - Bundle compatibility metadata declares the supported POSIX/Python boundary and a VS Code extension version range. VSIX and helper runtime versions remain independent.
 - `codex-radar-helper hook-config` prints the exact fragment, or a unified diff against an existing file, but never writes `~/.codex/hooks.json`. Hook wiring changes remain explicit user-approved migrations.
-- This milestone does not make `codex-radar doctor` or the helper manager detect missing/outdated stable shims, runtime compatibility drift, or actual hook wiring. `doctor` remains a state/cache diagnostic; automated R10a setup detection is a separate follow-up.
+- `codex-radar doctor` remains a state/cache diagnostic. The helper manager's read-only `diagnose` command checks the local runtime, stable shims, compatibility metadata, and actual hook wiring, but it does not provide remote latest-release authority or change local configuration.
 - Bundle SHA-256 verification detects download or packaging corruption but is not an authenticity proof. Bootstrap trust comes from obtaining the installer, manifest, checksum, and bundle from the intended GitHub Release/account over trusted TLS.
 - Bundle artifact paths and retained runtime selections reject symlinks. Reactivating an existing immutable runtime verifies its marker and original manifest digest but does not rehash every extracted file; retained runtime contents remain inside the same-user local trust boundary.
 
