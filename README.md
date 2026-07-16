@@ -124,6 +124,8 @@ codex-radar watch
 codex-radar usage
 ```
 
+`codex-radar usage --json` preserves a valid timezone-aware timestamp from the same rollout event as `client_event_at` and labels its experimental provenance. File modification time and scan time are not reported as the usage observation time. This host-local snapshot remains advisory and does not establish account or quota identity.
+
 Retention applies only to Radar's session index and defaults to seven days. It does not delete Codex transcripts, official threads, or archive state.
 
 ```bash

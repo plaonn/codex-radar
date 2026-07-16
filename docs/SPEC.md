@@ -82,13 +82,18 @@ Legacy state:
 Input:
 
 - 기본 Codex home: `$CODEX_HOME` 또는 `~/.codex`.
-- scan 대상: `<codex-home>/sessions/**/rollout-*.jsonl` 중 mtime 기준 최신 파일 일부.
-- 추출 대상: 최신 `payload.type == "token_count"` event의 `info`와 `rate_limits`.
+- scan 대상: `<codex-home>/sessions/**/rollout-*.jsonl` 중 mtime 기준 최신 파일 일부. mtime은 bounded candidate scan에만 사용하고 observation time으로 출력하지 않는다.
+- 추출 대상: `payload.type == "token_count"` event의 `info`, `rate_limits`, 같은 JSONL envelope의 timezone-aware `timestamp`.
+- 여러 candidate file의 최종 event는 valid envelope timestamp 기준으로 선택한다. 동일 timestamp와 payload의 duplicate event는 같은 observation으로 취급한다.
 
 Output:
 
 - `available`: usable `rate_limits` snapshot이 있으면 `true`.
 - `source`: `codex-session-rollout`.
+- `source_adapter_revision`: 현재 event-time contract는 `codex-session-rollout-v2`.
+- `client_event_at`: 선택한 `token_count`와 같은 rollout envelope의 timezone-aware timestamp를 UTC ISO-8601로 정규화한 값. 이 값은 provider/server measurement time이 아니라 client-side rollout event correlation time이다.
+- `timestamp_provenance`: `client_event_at`이 있으면 `rollout-envelope-timestamp`, 없거나 malformed이면 `unavailable`.
+- `observed_at`: compatibility field. `client_event_at`이 유효할 때만 같은 값으로 출력하고 `observed_at_provenance=client_event_at`을 함께 출력한다. File mtime이나 scan-time `generated_at`으로 대체하지 않는다.
 - `primary` / `secondary`: rollout source slot을 보존하며 `used_percent`, computed `remaining_percent`, `window_minutes`, `resets_at`, `resets_at_iso`를 담는다. UI/CLI의 5h/7d 의미 표시는 slot 위치가 아니라 `window_minutes`(`300`/`10080`)로 식별하며, 해당 pool이 없으면 status bar의 고정 위치에 `--`를 표시한다. `window_minutes`가 없는 legacy event에 한해서만 `primary=5h`, `secondary=7d` fallback을 적용한다.
 - `plan_type`, `context_window`, `last_token_usage`, `total_token_usage`: rollout event가 제공하는 요약 값.
 - `reason`: unavailable일 때 `token_count_unavailable` 또는 `rate_limits_unavailable`.
@@ -96,9 +101,10 @@ Output:
 Privacy and stability boundary:
 
 - 이 adapter는 Codex의 공식 stable usage API가 아니라 host-local rollout JSONL의 current observed shape를 읽는 experimental adapter다.
+- `client_event_at`, `limit_id`, `plan_type`은 authenticated account 또는 stable quota identity를 증명하지 않는다. Snapshot은 host-local advisory usage visibility이며 scheduling authority는 별도의 identity/mapping/policy contract를 요구한다.
 - `auth.json`을 읽지 않고, 서버 요청을 보내지 않고, Codex config/hook/session을 수정하지 않는다.
 - raw rollout line, raw transcript content, private rollout file path는 output model이나 Radar state에 저장하지 않는다.
-- `rate_limits`가 없거나 schema가 바뀌면 정상적인 unavailable snapshot으로 처리한다.
+- `rate_limits`가 없으면 정상적인 unavailable snapshot으로 처리한다. Timestamp가 없거나 malformed이면 usage payload 자체는 advisory output에 유지할 수 있지만 `client_event_at`과 `observed_at`은 출력하지 않는다.
 
 ## Sanitized Export Contracts
 

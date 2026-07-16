@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
@@ -9,6 +10,15 @@ from typing import Any, Dict, Iterable, Optional
 
 ROLLOUT_GLOB = "**/rollout-*.jsonl"
 USAGE_SOURCE = "codex-session-rollout"
+USAGE_SOURCE_ADAPTER_REVISION = "codex-session-rollout-v2"
+CLIENT_EVENT_TIMESTAMP_PROVENANCE = "rollout-envelope-timestamp"
+UNAVAILABLE_TIMESTAMP_PROVENANCE = "unavailable"
+
+
+@dataclass(frozen=True)
+class TokenCountEvent:
+    payload: Dict[str, Any]
+    client_event_at: Optional[datetime]
 
 
 def utc_now() -> str:
@@ -59,32 +69,47 @@ def _rate_window(value: Any) -> Optional[Dict[str, Any]]:
     return {key: item for key, item in window.items() if item is not None}
 
 
-def _token_count_payload(line: str) -> Optional[Dict[str, Any]]:
+def _client_event_timestamp(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _token_count_event(line: str) -> Optional[TokenCountEvent]:
     try:
         item = json.loads(line)
     except json.JSONDecodeError:
         return None
-    if not isinstance(item, dict):
+    if not isinstance(item, dict) or item.get("type") != "event_msg":
         return None
     payload = item.get("payload")
     if not isinstance(payload, dict) or payload.get("type") != "token_count":
         return None
-    return payload
+    return TokenCountEvent(
+        payload=payload,
+        client_event_at=_client_event_timestamp(item.get("timestamp")),
+    )
 
 
-def _latest_token_count_in_file(path: Path) -> Optional[Dict[str, Any]]:
-    latest: Optional[Dict[str, Any]] = None
+def _token_count_events_in_file(path: Path) -> list[TokenCountEvent]:
+    events: list[TokenCountEvent] = []
     try:
         with path.open("r", encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if "token_count" not in line:
                     continue
-                payload = _token_count_payload(line)
-                if payload is not None:
-                    latest = payload
+                event = _token_count_event(line)
+                if event is not None:
+                    events.append(event)
     except OSError:
-        return None
-    return latest
+        return []
+    return events
 
 
 def recent_rollout_files(codex_home: Optional[Path] = None, *, limit: int = 30) -> list[Path]:
@@ -98,16 +123,31 @@ def recent_rollout_files(codex_home: Optional[Path] = None, *, limit: int = 30) 
 
 def latest_token_count(files: Iterable[Path]) -> tuple[Optional[Dict[str, Any]], Optional[datetime], int]:
     checked = 0
+    latest: Optional[TokenCountEvent] = None
+    fallback: Optional[TokenCountEvent] = None
+    seen: set[tuple[str, str]] = set()
     for path in files:
         checked += 1
-        payload = _latest_token_count_in_file(path)
-        if payload is None:
+        events = _token_count_events_in_file(path)
+        if not events:
             continue
-        try:
-            observed_at = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).replace(microsecond=0)
-        except OSError:
-            observed_at = None
-        return payload, observed_at, checked
+        if fallback is None:
+            fallback = events[-1]
+        for event in events:
+            if event.client_event_at is None:
+                continue
+            event_at = event.client_event_at.isoformat()
+            payload_key = json.dumps(event.payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+            event_key = (event_at, payload_key)
+            if event_key in seen:
+                continue
+            seen.add(event_key)
+            if latest is None or event.client_event_at > latest.client_event_at:
+                latest = event
+    if latest is not None:
+        return latest.payload, latest.client_event_at, checked
+    if fallback is not None:
+        return fallback.payload, None, checked
     return None, None, checked
 
 
@@ -122,6 +162,7 @@ def usage_snapshot(
     base: Dict[str, Any] = {
         "available": False,
         "source": USAGE_SOURCE,
+        "source_adapter_revision": USAGE_SOURCE_ADAPTER_REVISION,
         "generated_at": generated_at or utc_now(),
         "checked_files": checked,
     }
@@ -130,7 +171,22 @@ def usage_snapshot(
 
     info = payload.get("info") if isinstance(payload.get("info"), dict) else {}
     rate_limits = payload.get("rate_limits") if isinstance(payload.get("rate_limits"), dict) else None
-    observed = observed_at.isoformat() if observed_at else None
+    client_event_at = observed_at.isoformat() if observed_at else None
+    event_time = {
+        "timestamp_provenance": (
+            CLIENT_EVENT_TIMESTAMP_PROVENANCE
+            if client_event_at is not None
+            else UNAVAILABLE_TIMESTAMP_PROVENANCE
+        )
+    }
+    if client_event_at is not None:
+        event_time.update(
+            {
+                "client_event_at": client_event_at,
+                "observed_at": client_event_at,
+                "observed_at_provenance": "client_event_at",
+            }
+        )
     token_usage = {
         "context_window": info.get("model_context_window"),
         "last_token_usage": info.get("last_token_usage") if isinstance(info.get("last_token_usage"), dict) else None,
@@ -139,7 +195,7 @@ def usage_snapshot(
     if rate_limits is None:
         return {
             **base,
-            "observed_at": observed,
+            **event_time,
             "reason": "rate_limits_unavailable",
             **token_usage,
         }
@@ -147,7 +203,7 @@ def usage_snapshot(
     return {
         **base,
         "available": True,
-        "observed_at": observed,
+        **event_time,
         "limit_id": rate_limits.get("limit_id"),
         "limit_name": rate_limits.get("limit_name"),
         "plan_type": rate_limits.get("plan_type"),

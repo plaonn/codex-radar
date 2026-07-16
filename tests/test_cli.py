@@ -385,6 +385,7 @@ class CliTests(unittest.TestCase):
             rollout.write_text(
                 json.dumps(
                     {
+                        "timestamp": "2026-07-06T00:01:02+00:00",
                         "type": "event_msg",
                         "payload": {
                             "type": "token_count",
@@ -415,6 +416,9 @@ class CliTests(unittest.TestCase):
 
             payload = json.loads(out.getvalue())
             self.assertEqual(True, payload["available"])
+            self.assertEqual("2026-07-06T00:01:02+00:00", payload["client_event_at"])
+            self.assertEqual("rollout-envelope-timestamp", payload["timestamp_provenance"])
+            self.assertEqual("codex-session-rollout-v2", payload["source_adapter_revision"])
             self.assertEqual(10.0, payload["primary"]["used_percent"])
             self.assertEqual({"total_tokens": 7}, payload["last_token_usage"])
             self.assertFalse(state_dir.exists())

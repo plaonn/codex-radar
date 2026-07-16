@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,9 +25,14 @@ class UsageTests(unittest.TestCase):
             write_rollout(
                 rollout,
                 [
-                    {"type": "event_msg", "payload": {"type": "token_count", "rate_limits": None}},
+                    {
+                        "timestamp": "2026-07-05T23:58:00Z",
+                        "type": "event_msg",
+                        "payload": {"type": "token_count", "rate_limits": None},
+                    },
                     "not json",
                     {
+                        "timestamp": "2026-07-06T00:01:02.123456+00:00",
                         "type": "event_msg",
                         "payload": {
                             "type": "token_count",
@@ -58,6 +64,11 @@ class UsageTests(unittest.TestCase):
 
         self.assertEqual(True, snapshot["available"])
         self.assertEqual("codex-session-rollout", snapshot["source"])
+        self.assertEqual("codex-session-rollout-v2", snapshot["source_adapter_revision"])
+        self.assertEqual("2026-07-06T00:01:02.123456+00:00", snapshot["client_event_at"])
+        self.assertEqual(snapshot["client_event_at"], snapshot["observed_at"])
+        self.assertEqual("client_event_at", snapshot["observed_at_provenance"])
+        self.assertEqual("rollout-envelope-timestamp", snapshot["timestamp_provenance"])
         self.assertEqual(71.0, snapshot["primary"]["used_percent"])
         self.assertEqual(29.0, snapshot["primary"]["remaining_percent"])
         self.assertEqual("2026-07-05T21:00:08+00:00", snapshot["primary"]["resets_at_iso"])
@@ -88,6 +99,7 @@ class UsageTests(unittest.TestCase):
                 codex_home / "sessions" / "2026" / "07" / "06" / "rollout-null.jsonl",
                 [
                     {
+                        "timestamp": "2026-07-06T00:01:02+00:00",
                         "type": "event_msg",
                         "payload": {
                             "type": "token_count",
@@ -103,6 +115,125 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(False, snapshot["available"])
         self.assertEqual("rate_limits_unavailable", snapshot["reason"])
         self.assertEqual(123, snapshot["context_window"])
+        self.assertEqual("2026-07-06T00:01:02+00:00", snapshot["client_event_at"])
+        self.assertEqual("rollout-envelope-timestamp", snapshot["timestamp_provenance"])
+
+    def test_usage_snapshot_does_not_invent_event_time_when_timestamp_is_missing_or_malformed(self) -> None:
+        for timestamp in (None, "not-a-timestamp", "2026-07-06T00:01:02"):
+            with self.subTest(timestamp=timestamp), tempfile.TemporaryDirectory() as tmp:
+                codex_home = Path(tmp)
+                item = {
+                    "type": "event_msg",
+                    "payload": {
+                        "type": "token_count",
+                        "rate_limits": {"primary": {"used_percent": 25, "window_minutes": 300}},
+                    },
+                }
+                if timestamp is not None:
+                    item["timestamp"] = timestamp
+                write_rollout(
+                    codex_home / "sessions" / "2026" / "07" / "06" / "rollout-no-time.jsonl",
+                    [item],
+                )
+
+                snapshot = usage_snapshot(codex_home, generated_at="2026-07-06T00:00:00+00:00")
+
+                self.assertEqual(True, snapshot["available"])
+                self.assertEqual("unavailable", snapshot["timestamp_provenance"])
+                self.assertNotIn("client_event_at", snapshot)
+                self.assertNotIn("observed_at", snapshot)
+                self.assertNotIn("observed_at_provenance", snapshot)
+
+    def test_usage_snapshot_selects_latest_valid_event_time_instead_of_file_mtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            codex_home = Path(tmp)
+            older_event = codex_home / "sessions" / "rollout-touched-later.jsonl"
+            newer_event = codex_home / "sessions" / "rollout-touched-earlier.jsonl"
+            write_rollout(
+                older_event,
+                [
+                    {
+                        "timestamp": "2026-07-06T00:00:00+00:00",
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "rate_limits": {"primary": {"used_percent": 10, "window_minutes": 300}},
+                        },
+                    }
+                ],
+            )
+            write_rollout(
+                newer_event,
+                [
+                    {
+                        "timestamp": "2026-07-06T01:00:00+00:00",
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "rate_limits": {"primary": {"used_percent": 80, "window_minutes": 300}},
+                        },
+                    }
+                ],
+            )
+            os.utime(newer_event, (1, 1))
+            os.utime(older_event, (2, 2))
+
+            snapshot = usage_snapshot(codex_home, generated_at="2026-07-06T02:00:00+00:00")
+
+        self.assertEqual("2026-07-06T01:00:00+00:00", snapshot["client_event_at"])
+        self.assertEqual(80.0, snapshot["primary"]["used_percent"])
+
+    def test_usage_snapshot_ignores_malformed_time_when_a_valid_event_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            codex_home = Path(tmp)
+            rollout = codex_home / "sessions" / "rollout-events.jsonl"
+            write_rollout(
+                rollout,
+                [
+                    {
+                        "timestamp": "2026-07-06T01:00:00+00:00",
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "rate_limits": {"primary": {"used_percent": 40, "window_minutes": 300}},
+                        },
+                    },
+                    {
+                        "timestamp": "malformed",
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "rate_limits": {"primary": {"used_percent": 90, "window_minutes": 300}},
+                        },
+                    },
+                ],
+            )
+
+            snapshot = usage_snapshot(codex_home)
+
+        self.assertEqual("2026-07-06T01:00:00+00:00", snapshot["client_event_at"])
+        self.assertEqual(40.0, snapshot["primary"]["used_percent"])
+
+    def test_usage_snapshot_collapses_duplicate_events_across_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            codex_home = Path(tmp)
+            event = {
+                "timestamp": "2026-07-06T01:00:00+00:00",
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "rate_limits": {"primary": {"used_percent": 55, "window_minutes": 300}},
+                },
+            }
+            write_rollout(codex_home / "sessions" / "rollout-a.jsonl", [event])
+            write_rollout(codex_home / "sessions" / "rollout-b.jsonl", [event])
+
+            snapshot = usage_snapshot(codex_home)
+
+        self.assertEqual(True, snapshot["available"])
+        self.assertEqual(2, snapshot["checked_files"])
+        self.assertEqual("2026-07-06T01:00:00+00:00", snapshot["client_event_at"])
+        self.assertEqual(55.0, snapshot["primary"]["used_percent"])
 
     def test_format_usage_snapshot_is_compact(self) -> None:
         text = format_usage_snapshot(
