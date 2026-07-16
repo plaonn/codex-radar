@@ -184,12 +184,18 @@ test("rejects unknown schema versions", () => {
 });
 
 test("resolves state directory like codex-radar core", () => {
-  assert.equal(defaultStateDir({ CODEX_RADAR_HOME: "~/radar" }, "/home/test"), "/home/test/radar");
+  assert.equal(
+    defaultStateDir({ CODEX_RADAR_HOME: "~/radar" }, "/home/test"),
+    path.resolve("/home/test/radar"),
+  );
   assert.equal(
     defaultStateDir({ XDG_STATE_HOME: "~/state" }, "/home/test"),
-    "/home/test/state/codex-radar",
+    path.join(path.resolve("/home/test/state"), "codex-radar"),
   );
-  assert.equal(defaultStateDir({}, "/home/test"), "/home/test/.local/state/codex-radar");
+  assert.equal(
+    defaultStateDir({}, "/home/test"),
+    path.join("/home/test", ".local", "state", "codex-radar"),
+  );
   assert.equal(
     defaultStateDir(
       { LOCALAPPDATA: "C:\\Users\\test\\AppData\\Local" },

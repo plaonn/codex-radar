@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -50,14 +51,14 @@ function fakeWatcher() {
 
 test("builds a sessions.json watch target inside the state directory", () => {
   assert.deepEqual(sessionCacheWatchTarget("/tmp/codex-radar"), {
-    base: "/tmp/codex-radar",
+    base: path.resolve("/tmp/codex-radar"),
     pattern: "sessions.json",
   });
 });
 
 test("builds an archived transcript watch target inside CODEX_HOME", () => {
   assert.deepEqual(archivedTranscriptWatchTarget("/tmp/codex-home"), {
-    base: "/tmp/codex-home",
+    base: path.resolve("/tmp/codex-home"),
     pattern: "archived_sessions/**/*.jsonl",
   });
 });

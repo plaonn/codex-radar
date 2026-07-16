@@ -24,8 +24,11 @@ function writeRollout(filePath, lines) {
 }
 
 test("resolves Codex home from extension host environment", () => {
-  assert.equal(defaultCodexHome({ CODEX_HOME: "~/codex-home" }, "/home/test"), "/home/test/codex-home");
-  assert.equal(defaultCodexHome({}, "/home/test"), "/home/test/.codex");
+  assert.equal(
+    defaultCodexHome({ CODEX_HOME: "~/codex-home" }, "/home/test"),
+    path.resolve("/home/test/codex-home"),
+  );
+  assert.equal(defaultCodexHome({}, "/home/test"), path.resolve("/home/test/.codex"));
 });
 
 test("loads latest token_count rate limits without exposing rollout path", () => {
