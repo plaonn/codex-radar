@@ -1,8 +1,12 @@
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+
+if os.name == "nt":
+    raise unittest.SkipTest("curses TUI is not available on native Windows")
 
 from codex_radar.tui import (
     _draw,

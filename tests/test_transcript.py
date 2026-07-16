@@ -59,7 +59,7 @@ class TranscriptTests(unittest.TestCase):
 
             output = format_skim(skim_transcript(path))
 
-            self.assertIn("~/private/transcript.jsonl", output)
+            self.assertIn(str(Path("~") / "private" / "transcript.jsonl"), output)
             self.assertNotIn(str(Path.home()), output)
 
     def test_skim_transcript_limit_returns_latest_previewable_entries(self) -> None:
