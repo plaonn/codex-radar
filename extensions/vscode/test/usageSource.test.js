@@ -24,11 +24,12 @@ function writeRollout(filePath, lines) {
 }
 
 test("resolves Codex home from extension host environment", () => {
+  const homeDir = path.join(path.parse(process.cwd()).root, "home", "test");
   assert.equal(
-    defaultCodexHome({ CODEX_HOME: "~/codex-home" }, "/home/test"),
-    path.resolve("/home/test/codex-home"),
+    defaultCodexHome({ CODEX_HOME: "~/codex-home" }, homeDir),
+    path.resolve(homeDir, "codex-home"),
   );
-  assert.equal(defaultCodexHome({}, "/home/test"), path.resolve("/home/test/.codex"));
+  assert.equal(defaultCodexHome({}, homeDir), path.join(homeDir, ".codex"));
 });
 
 test("loads latest token_count rate limits without exposing rollout path", () => {

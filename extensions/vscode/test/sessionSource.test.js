@@ -185,16 +185,16 @@ test("rejects unknown schema versions", () => {
 
 test("resolves state directory like codex-radar core", () => {
   assert.equal(
-    defaultStateDir({ CODEX_RADAR_HOME: "~/radar" }, "/home/test"),
-    path.resolve("/home/test/radar"),
+    defaultStateDir({ CODEX_RADAR_HOME: "~/radar" }, "/home/test", "linux"),
+    path.posix.resolve("/home/test/radar"),
   );
   assert.equal(
-    defaultStateDir({ XDG_STATE_HOME: "~/state" }, "/home/test"),
-    path.join(path.resolve("/home/test/state"), "codex-radar"),
+    defaultStateDir({ XDG_STATE_HOME: "~/state" }, "/home/test", "linux"),
+    path.posix.join(path.posix.resolve("/home/test/state"), "codex-radar"),
   );
   assert.equal(
-    defaultStateDir({}, "/home/test"),
-    path.join("/home/test", ".local", "state", "codex-radar"),
+    defaultStateDir({}, "/home/test", "linux"),
+    path.posix.join("/home/test", ".local", "state", "codex-radar"),
   );
   assert.equal(
     defaultStateDir(
@@ -202,11 +202,11 @@ test("resolves state directory like codex-radar core", () => {
       "C:\\Users\\test",
       "win32",
     ),
-    path.join("C:\\Users\\test\\AppData\\Local", "codex-radar", "state"),
+    path.win32.join("C:\\Users\\test\\AppData\\Local", "codex-radar", "state"),
   );
   assert.equal(
     defaultStateDir({}, "C:\\Users\\test", "win32"),
-    path.join("C:\\Users\\test", "AppData", "Local", "codex-radar", "state"),
+    path.win32.join("C:\\Users\\test", "AppData", "Local", "codex-radar", "state"),
   );
 });
 

@@ -29,16 +29,33 @@ function expandHome(value, homeDir = os.homedir()) {
 }
 
 function defaultStateDir(env = process.env, homeDir = os.homedir(), platform = process.platform) {
+  const pathApi = platform === "win32" ? path.win32 : path.posix;
+  const expandPlatformHome = (value) => {
+    if (!value) {
+      return value;
+    }
+    if (value === "~") {
+      return homeDir;
+    }
+    if (value.startsWith("~/")) {
+      return pathApi.join(homeDir, value.slice(2));
+    }
+    return value;
+  };
   if (env.CODEX_RADAR_HOME) {
-    return path.resolve(expandHome(env.CODEX_RADAR_HOME, homeDir));
+    return pathApi.resolve(expandPlatformHome(env.CODEX_RADAR_HOME));
   }
   if (platform === "win32") {
-    return path.join(env.LOCALAPPDATA || path.join(homeDir, "AppData", "Local"), "codex-radar", "state");
+    return pathApi.join(
+      env.LOCALAPPDATA || pathApi.join(homeDir, "AppData", "Local"),
+      "codex-radar",
+      "state",
+    );
   }
   if (env.XDG_STATE_HOME) {
-    return path.join(path.resolve(expandHome(env.XDG_STATE_HOME, homeDir)), "codex-radar");
+    return pathApi.join(pathApi.resolve(expandPlatformHome(env.XDG_STATE_HOME)), "codex-radar");
   }
-  return path.join(homeDir, ".local", "state", "codex-radar");
+  return pathApi.join(homeDir, ".local", "state", "codex-radar");
 }
 
 function sessionCachePath(stateDir) {
