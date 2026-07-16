@@ -59,13 +59,43 @@ function selectedKey() {
 }
 
 function sessionDomKey(session) {
-  return String(session.key || session.sessionId || session.shortSessionId || "");
+  return String(session.sessionId || session.key || session.shortSessionId || "");
+}
+
+function interactionTime() {
+  if (typeof performance !== "undefined" && Number.isFinite(performance.timeOrigin) && Number.isFinite(performance.now())) {
+    return performance.timeOrigin + performance.now();
+  }
+  return Date.now();
+}
+
+function sessionMessage(type, session, extra = {}) {
+  return {
+    type,
+    ...extra,
+    sessionId: String(session?.sessionId || ""),
+    key: String(session?.key || ""),
+    interactionAt: interactionTime(),
+  };
+}
+
+function cancelSessionClick(node) {
+  if (node?.codexRadarClickTimer) {
+    clearTimeout(node.codexRadarClickTimer);
+    node.codexRadarClickTimer = null;
+  }
+}
+
+function cancelPendingSessionClicks(container) {
+  for (const node of container?.querySelectorAll?.(".session") || []) {
+    cancelSessionClick(node);
+  }
 }
 
 function actionButton(label, action, session, className = "ghost") {
   return button(label, className, (event) => {
     event.stopPropagation();
-    send({ type: "sessionAction", action, key: session.key });
+    send(sessionMessage("sessionAction", session, { action }));
   });
 }
 
@@ -83,7 +113,7 @@ function showSessionContextMenu(event, session) {
 
   const menu = el("div", { className: "context-menu" }, [
     button("Copy Session ID", "", () => {
-      send({ type: "copySessionId", sessionId: session.sessionId });
+      send(sessionMessage("copySessionId", session));
       closeContextMenu();
     }),
   ]);
@@ -140,37 +170,33 @@ function sessionNode(session, options = {}) {
   node.setAttribute("role", "button");
   node.addEventListener("click", (event) => {
     if (!options.deferClickSelection) {
-      send({ type: "selectSession", key: node.dataset.sessionKey || "" });
+      send(sessionMessage("selectSession", node.codexRadarSession || {}));
       return;
     }
-    if (node.codexRadarClickTimer) {
-      clearTimeout(node.codexRadarClickTimer);
-      node.codexRadarClickTimer = null;
-    }
+    cancelSessionClick(node);
     if (event.detail > 1) {
       return;
     }
+    const message = sessionMessage("selectSession", node.codexRadarSession || {});
     node.codexRadarClickTimer = setTimeout(() => {
       node.codexRadarClickTimer = null;
-      send({ type: "selectSession", key: node.dataset.sessionKey || "" });
+      send(message);
     }, 220);
   });
   node.addEventListener("dblclick", () => {
-    if (node.codexRadarClickTimer) {
-      clearTimeout(node.codexRadarClickTimer);
-      node.codexRadarClickTimer = null;
-    }
+    cancelSessionClick(node);
     if (node.codexRadarSession?.actions?.canOpen) {
-      send({ type: "sessionAction", action: "open", key: node.dataset.sessionKey || "" });
+      send(sessionMessage("sessionAction", node.codexRadarSession, { action: "open" }));
     }
   });
   node.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      send({ type: "selectSession", key: node.dataset.sessionKey || "" });
+      send(sessionMessage("selectSession", node.codexRadarSession || {}));
     }
   });
   node.addEventListener("contextmenu", (event) => {
+    cancelSessionClick(node);
     showSessionContextMenu(event, node.codexRadarSession || {});
   });
   updateSessionNode(node, session, options);
@@ -179,7 +205,8 @@ function sessionNode(session, options = {}) {
 
 function sessionRenderSignature(session, options = {}) {
   return JSON.stringify({
-    key: sessionDomKey(session),
+    domKey: sessionDomKey(session),
+    stateKey: session.key,
     className: sessionClassName(session, options),
     status: session.status,
     statusText: session.statusText,
@@ -291,6 +318,7 @@ function patchSessionList(container, sessions, emptyText, options = {}) {
 
   for (const child of Array.from(container.children)) {
     if (!child.classList.contains("session") || !wanted.has(child.dataset.sessionKey)) {
+      cancelSessionClick(child);
       child.remove();
     }
   }
@@ -443,16 +471,16 @@ function inspectorPane(model) {
 
   const actions = el("div", { className: "actions" });
   actions.appendChild(button("Open in Codex", "", () => {
-    send({ type: "sessionAction", action: "open", key: session.key });
+    send(sessionMessage("sessionAction", session, { action: "open" }));
   }, !session.actions.canOpen));
   if (session.actions.canMarkRead) {
     actions.appendChild(button("Mark read", "secondary", () => {
-      send({ type: "sessionAction", action: "markRead", key: session.key });
+      send(sessionMessage("sessionAction", session, { action: "markRead" }));
     }));
   }
   if (session.actions.canMarkUnread) {
     actions.appendChild(button("Mark unread", "secondary", () => {
-      send({ type: "sessionAction", action: "markUnread", key: session.key });
+      send(sessionMessage("sessionAction", session, { action: "markUnread" }));
     }));
   }
   body.appendChild(actions);
@@ -577,6 +605,7 @@ function updateSidebarProjectNode(project, group, options = {}) {
   updateProjectHeader(project, group, collapsed);
   const sessions = projectSessionsNode(project);
   if (collapsed) {
+    cancelPendingSessionClicks(sessions);
     clear(sessions);
   } else {
     patchSessionList(sessions, group.sessions, "", {
@@ -679,6 +708,7 @@ function render() {
 
 window.addEventListener("message", (event) => {
   if (event.data?.type === "state") {
+    closeContextMenu();
     state = {
       error: event.data.error || "",
       model: event.data.model || null,

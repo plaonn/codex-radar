@@ -106,7 +106,8 @@ test("opens eligible sidebar sessions in Codex on double-click", () => {
   assert.match(js, /deferClickSelection/);
   assert.match(js, /clearTimeout\(node\.codexRadarClickTimer\)/);
   assert.match(js, /codexRadarSession\?\.actions\?\.canOpen/);
-  assert.match(js, /type:\s*"sessionAction", action:\s*"open"/);
+  assert.match(js, /sessionMessage\("sessionAction", node\.codexRadarSession, \{ action: "open" \}\)/);
+  assert.match(js, /return String\(session\.sessionId \|\| session\.key/);
 });
 
 test("routes workspace mismatches through a new-window handoff", () => {
@@ -210,11 +211,15 @@ test("wires preview Open in Codex action through the preview Webview", () => {
 
   assert.match(preview, /function renderOpenAction\(message\)/);
   assert.match(preview, /button\.disabled = !canOpen;/);
-  assert.match(preview, /type:\s*"sessionAction", action:\s*"open", key:\s*message\.key/);
+  assert.match(preview, /type:\s*"sessionAction"/);
+  assert.match(preview, /sessionId:\s*message\.sessionId/);
+  assert.match(preview, /interactionAt:/);
   assert.match(extension, /actions:\s*card\.actions/);
   assert.match(extension, /key:\s*card\.key/);
+  assert.match(extension, /sessionId:\s*card\.sessionId/);
   assert.match(extension, /handlePreviewMessage\(message\)/);
-  assert.match(extension, /await this\.handleSessionAction\(String\(message\.key \|\| ""\), String\(message\.action \|\| ""\)\);/);
+  assert.match(extension, /String\(message\.sessionId \|\| ""\)/);
+  assert.match(extension, /String\(message\.key \|\| ""\)/);
 });
 
 test("adds a Radar-native status bar item for attention and running counts", () => {
@@ -239,11 +244,11 @@ test("keeps preview ownership independent from dashboard selection fallback", ()
     /updatePreviewPanel\(\)\s*\{[\s\S]*?this\.sessionForKey\(this\.selectedKey\)/,
   );
   assert.match(extension, /const requestedKey = String\(message\.key \|\| ""\);/);
-  assert.match(extension, /const requestedSession = this\.sessionForKey\(requestedKey\);/);
+  assert.match(extension, /const requestedSession = this\.sessionForInteraction\(requestedSessionId, requestedKey\);/);
   assert.match(extension, /const requestedIdentity = previewSessionIdentity\(requestedSession\);/);
   assert.match(
     extension,
-    /this\.sessionForPreviewIdentity\(requestedIdentity\) \|\| this\.sessionForKey\(requestedKey\) \|\| requestedSession/,
+    /this\.sessionForPreviewIdentity\(requestedIdentity\) \|\| requestedSession/,
   );
 });
 

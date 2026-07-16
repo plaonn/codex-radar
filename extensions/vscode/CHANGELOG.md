@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.5
+
+### Fixed
+
+- Keep sidebar row identity stable across session activity refreshes so delayed selection, Open in Codex, and Copy Session ID interactions continue to target the session the user acted on.
+- Ignore an older delayed click after a newer sidebar interaction, cancel pending selection when opening a row context menu, and close stale context menus when new state arrives.
+
+### Boundaries
+
+- Keep timestamp-bearing state keys for read/unread version tracking while using the exact session id as the interaction identity.
+- Preserve the existing 220 ms single-click delay used to distinguish sidebar selection from double-click Open in Codex.
+
 ## 0.4.4
 
 ### Added

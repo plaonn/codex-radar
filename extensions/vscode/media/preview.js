@@ -105,7 +105,15 @@ function renderOpenAction(message) {
   button.title = canOpen ? "Open this session in Codex" : "This session cannot be opened in Codex";
   button.onclick = () => {
     if (canOpen) {
-      vscode.postMessage({ type: "sessionAction", action: "open", key: message.key || "" });
+      vscode.postMessage({
+        type: "sessionAction",
+        action: "open",
+        sessionId: message.sessionId || "",
+        key: message.key || "",
+        interactionAt: typeof performance !== "undefined"
+          ? performance.timeOrigin + performance.now()
+          : Date.now(),
+      });
     }
   };
 }

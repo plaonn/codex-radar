@@ -36,6 +36,7 @@ const {
   pruneReadDoneKeys,
   readStateFromValue,
   readStateToValue,
+  sessionStateKey,
 } = require("./readState");
 const {
   buildDashboardModel,
@@ -434,6 +435,7 @@ class RadarWebviewController {
     this.pendingPreviewState = null;
     this.codexThreadCatalog = emptyCodexThreadCatalog();
     this.refreshSerial = 0;
+    this.latestInteractionAt = 0;
     this.refresh();
   }
 
@@ -572,6 +574,24 @@ class RadarWebviewController {
     return this.sessions.find((session) => previewSessionIdentity(session) === target) || null;
   }
 
+  beginInteraction(message) {
+    const provided = Number(message?.interactionAt);
+    const interactionAt = Number.isFinite(provided) && provided > 0 ? provided : Date.now();
+    if (interactionAt < this.latestInteractionAt) {
+      return null;
+    }
+    this.latestInteractionAt = interactionAt;
+    return interactionAt;
+  }
+
+  isCurrentInteraction(interactionAt) {
+    return interactionAt >= this.latestInteractionAt;
+  }
+
+  sessionForInteraction(sessionId, key = "") {
+    return this.sessionForPreviewIdentity(sessionId) || this.sessionForKey(key);
+  }
+
   async previewModel(displaySession) {
     const mode = configuredReadSource();
     if (mode === "direct") {
@@ -635,6 +655,7 @@ class RadarWebviewController {
       model,
       actions: card.actions,
       key: card.key,
+      sessionId: card.sessionId,
       initialScrollToBottom: shouldScrollToBottom,
       sessionIdentity,
     };
@@ -651,7 +672,16 @@ class RadarWebviewController {
       return;
     }
     if (message.type === "sessionAction") {
-      await this.handleSessionAction(String(message.key || ""), String(message.action || ""));
+      const interactionAt = this.beginInteraction(message);
+      if (interactionAt === null) {
+        return;
+      }
+      await this.handleSessionAction(
+        String(message.sessionId || ""),
+        String(message.action || ""),
+        String(message.key || ""),
+        interactionAt,
+      );
     }
   }
 
@@ -680,8 +710,8 @@ class RadarWebviewController {
     await updateReadKeys(this.context.globalState, markDoneUnread(readKeys(this.context.globalState), session));
   }
 
-  async handleSessionAction(key, action) {
-    const session = this.sessionForKey(key);
+  async handleSessionAction(sessionId, action, key = "", interactionAt = Date.now()) {
+    const session = this.sessionForInteraction(sessionId, key);
     if (!session) {
       await vscode.window.showWarningMessage("Codex Radar session is no longer available.");
       await this.refresh();
@@ -701,8 +731,10 @@ class RadarWebviewController {
       await this.markSessionUnread(session);
     }
 
-    this.selectedKey = key;
-    this.selectedSessionIdentity = previewSessionIdentity(session);
+    if (this.isCurrentInteraction(interactionAt)) {
+      this.selectedKey = sessionStateKey(session);
+      this.selectedSessionIdentity = previewSessionIdentity(session);
+    }
     await this.refresh();
   }
 
@@ -732,24 +764,49 @@ class RadarWebviewController {
       return;
     }
     if (message.type === "selectSession") {
+      const interactionAt = this.beginInteraction(message);
+      if (interactionAt === null) {
+        return;
+      }
       const requestedKey = String(message.key || "");
-      const requestedSession = this.sessionForKey(requestedKey);
+      const requestedSessionId = String(message.sessionId || "");
+      const requestedSession = this.sessionForInteraction(requestedSessionId, requestedKey);
+      if (!requestedSession) {
+        await vscode.window.showWarningMessage("Codex Radar session is no longer available.");
+        await this.refresh();
+        return;
+      }
       const requestedIdentity = previewSessionIdentity(requestedSession);
-      this.selectedKey = requestedKey;
+      this.selectedKey = sessionStateKey(requestedSession);
       this.selectedSessionIdentity = requestedIdentity;
       await this.refresh({ updatePreview: false });
+      if (!this.isCurrentInteraction(interactionAt)) {
+        return;
+      }
       if (surface !== "dashboard") {
         await this.openPreview(
-          this.sessionForPreviewIdentity(requestedIdentity) || this.sessionForKey(requestedKey) || requestedSession,
+          this.sessionForPreviewIdentity(requestedIdentity) || requestedSession,
         );
       }
       return;
     }
     if (message.type === "sessionAction") {
-      await this.handleSessionAction(String(message.key || ""), String(message.action || ""));
+      const interactionAt = this.beginInteraction(message);
+      if (interactionAt === null) {
+        return;
+      }
+      await this.handleSessionAction(
+        String(message.sessionId || ""),
+        String(message.action || ""),
+        String(message.key || ""),
+        interactionAt,
+      );
       return;
     }
     if (message.type === "copySessionId") {
+      if (this.beginInteraction(message) === null) {
+        return;
+      }
       await this.copySessionId(message.sessionId);
     }
   }

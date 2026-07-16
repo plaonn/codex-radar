@@ -37,13 +37,13 @@ test.beforeEach(() => {
 
 test("copies the exact full session id received from the sidebar", async () => {
   const sessionId = "019f0000-1111-7222-8333-444444444444";
-  const receiver = {
-    copySessionId: RadarWebviewController.prototype.copySessionId,
-  };
+  const receiver = Object.create(RadarWebviewController.prototype);
+  receiver.latestInteractionAt = 0;
 
   await RadarWebviewController.prototype.handleMessage.call(receiver, "projects", {
     type: "copySessionId",
     sessionId,
+    interactionAt: 100,
   });
 
   assert.deepEqual(clipboardWrites, [sessionId]);
