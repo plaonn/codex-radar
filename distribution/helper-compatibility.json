@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
   "platforms": [
-    "posix"
+    "posix",
+    "windows"
   ],
   "python_requires": ">=3.9",
   "compatibility": {

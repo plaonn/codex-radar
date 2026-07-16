@@ -8,12 +8,12 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 import sys
 import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, Optional
-
 
 MANIFEST_NAME = "helper-manifest.json"
 MANIFEST_SCHEMA_VERSION = 1
@@ -34,11 +34,26 @@ class HelperError(RuntimeError):
     pass
 
 
+def is_windows() -> bool:
+    return os.name == "nt"
+
+
+def _windows_local_app_data() -> Path:
+    configured = os.environ.get("LOCALAPPDATA")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / "AppData" / "Local"
+
+
 def default_runtime_root() -> Path:
+    if is_windows():
+        return _windows_local_app_data() / "codex-radar" / "runtime"
     return Path.home() / ".local" / "share" / "codex-radar" / "runtime"
 
 
 def default_bin_dir() -> Path:
+    if is_windows():
+        return _windows_local_app_data() / "codex-radar" / "bin"
     return Path.home() / ".local" / "bin"
 
 
@@ -99,8 +114,14 @@ def _load_manifest(bundle_dir: Path) -> Dict[str, Any]:
     if not isinstance(manifest["runtime_version"], str) or not manifest["runtime_version"]:
         raise HelperError("bundle runtime_version must be a non-empty string")
     _safe_runtime_version(manifest["runtime_version"])
-    if manifest.get("platforms") != ["posix"]:
-        raise HelperError("helper bundle is not a supported POSIX bundle")
+    platforms = manifest.get("platforms")
+    if (
+        not isinstance(platforms, list)
+        or not platforms
+        or not all(isinstance(item, str) for item in platforms)
+        or not set(platforms) <= {"posix", "windows"}
+    ):
+        raise HelperError("helper bundle has unsupported platforms")
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
         raise HelperError("bundle manifest must list artifacts")
@@ -108,8 +129,9 @@ def _load_manifest(bundle_dir: Path) -> Dict[str, Any]:
 
 
 def _check_compatibility(manifest: Dict[str, Any]) -> None:
-    if os.name != "posix":
-        raise HelperError("this helper bundle supports POSIX hosts only")
+    current_platform = "windows" if is_windows() else "posix"
+    if current_platform not in manifest["platforms"]:
+        raise HelperError(f"this helper bundle does not support {current_platform} hosts")
     requirement = str(manifest["python_requires"])
     if not requirement.startswith(">="):
         raise HelperError(f"unsupported python_requires value: {requirement}")
@@ -191,9 +213,30 @@ def _launcher(python: Path, library: Path, module: str, prefix_args: Iterable[st
     return f"#!/bin/sh\nPYTHONPATH={shlex.quote(str(library))} exec {rendered}\n"
 
 
+def _windows_launcher(
+    python: Path,
+    library: Path,
+    module: str,
+    prefix_args: Iterable[str] = (),
+) -> str:
+    command = subprocess.list2cmdline(
+        [str(python), "-m", module, *prefix_args]
+    )
+    return (
+        "@echo off\r\n"
+        "setlocal\r\n"
+        f'set "PYTHONPATH={library}"\r\n'
+        f"{command} %*\r\n"
+        "exit /b %ERRORLEVEL%\r\n"
+    )
+
+
 def _write_launcher(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
-    path.chmod(0o755)
+    if is_windows():
+        path.write_bytes(content.encode("ascii"))
+    else:
+        path.write_text(content, encoding="utf-8")
+        path.chmod(0o755)
 
 
 def _atomic_json(path: Path, value: Any) -> None:
@@ -210,7 +253,25 @@ def _atomic_symlink(link: Path, target: str) -> None:
     os.replace(temporary, link)
 
 
+def _selector_path(root: Path) -> Path:
+    return root / "current.json"
+
+
 def _current_version(root: Path) -> Optional[str]:
+    if is_windows():
+        selector = _selector_path(root)
+        if not selector.exists():
+            return None
+        try:
+            value = json.loads(selector.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise HelperError(f"runtime current selector is invalid: {selector}") from exc
+        if not isinstance(value, dict) or value.get("schema_version") != STATE_SCHEMA_VERSION:
+            raise HelperError(f"runtime current selector is invalid: {selector}")
+        version = value.get("runtime_version")
+        if not isinstance(version, str):
+            raise HelperError(f"runtime current selector is invalid: {selector}")
+        return _safe_runtime_version(version)
     current = root / "current"
     if not current.is_symlink():
         if current.exists():
@@ -220,6 +281,22 @@ def _current_version(root: Path) -> Optional[str]:
     if target.parent != Path("versions"):
         raise HelperError(f"runtime current symlink has an unexpected target: {target}")
     return _safe_runtime_version(target.name)
+
+
+def _select_current(root: Path, version: str) -> None:
+    if is_windows():
+        _atomic_json(
+            _selector_path(root),
+            {"schema_version": STATE_SCHEMA_VERSION, "runtime_version": version},
+        )
+    else:
+        _atomic_symlink(root / "current", str(Path("versions") / version))
+
+
+def _remove_current(root: Path) -> None:
+    path = _selector_path(root) if is_windows() else root / "current"
+    if path.exists() or path.is_symlink():
+        path.unlink()
 
 
 def _load_state(root: Path) -> Dict[str, Any]:
@@ -251,10 +328,59 @@ def _record_switch(
     _atomic_json(root / "install-state.json", state)
 
 
+def _command_path(bin_dir: Path, name: str) -> Path:
+    return bin_dir / f"{name}.cmd" if is_windows() else bin_dir / name
+
+
+def _windows_stable_shim(root: Path, bin_dir: Path, name: str) -> str:
+    dispatcher = root / "current-dispatch.py"
+    python = Path(sys.executable).resolve()
+    command = subprocess.list2cmdline([str(python), str(dispatcher), name, str(bin_dir)])
+    return f"@echo off\r\n{command} %*\r\nexit /b %ERRORLEVEL%\r\n"
+
+
+def _windows_dispatcher() -> str:
+    return (
+        "from __future__ import annotations\n"
+        "import json\n"
+        "import os\n"
+        "import subprocess\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "MODULES = {\n"
+        "    'codex-radar': 'codex_radar.cli',\n"
+        "    'codex-radar-hook': 'codex_radar.hook',\n"
+        "    'codex-radar-helper': 'codex_radar.helper_manager',\n"
+        "}\n"
+        "root = Path(__file__).resolve().parent\n"
+        "bin_dir = Path(sys.argv[2])\n"
+        "selected = json.loads((root / 'current.json').read_text(encoding='utf-8'))['runtime_version']\n"
+        "library = root / 'versions' / selected / 'lib'\n"
+        "env = dict(os.environ)\n"
+        "env['PYTHONPATH'] = str(library)\n"
+        "args = [sys.executable, '-m', MODULES[sys.argv[1]]]\n"
+        "if sys.argv[1] == 'codex-radar-helper':\n"
+        "    args.extend(['--root', str(root), '--bin-dir', str(bin_dir)])\n"
+        "args.extend(sys.argv[3:])\n"
+        "raise SystemExit(subprocess.call(args, env=env))\n"
+    )
+
+
 def _preflight_shims(root: Path, bin_dir: Path) -> list[tuple[Path, str]]:
     missing: list[tuple[Path, str]] = []
     for name in ("codex-radar", "codex-radar-hook", "codex-radar-helper"):
-        link = bin_dir / name
+        link = _command_path(bin_dir, name)
+        if is_windows():
+            expected = _windows_stable_shim(root, bin_dir, name)
+            if link.exists():
+                try:
+                    if link.read_bytes() == expected.encode("ascii"):
+                        continue
+                except OSError:
+                    pass
+                raise HelperError(f"refusing to replace existing command shim: {link}")
+            missing.append((link, expected))
+            continue
         target = str(root / "current" / "bin" / name)
         if link.exists() and not link.is_symlink():
             raise HelperError(f"refusing to replace existing non-symlink: {link}")
@@ -267,9 +393,15 @@ def _preflight_shims(root: Path, bin_dir: Path) -> list[tuple[Path, str]]:
 
 
 def _cleanup_created_shims(created: Iterable[tuple[Path, str]]) -> None:
-    for link, target in reversed(list(created)):
+    for link, expected in reversed(list(created)):
         try:
-            if link.is_symlink() and os.readlink(link) == target:
+            if (
+                is_windows()
+                and link.is_file()
+                and link.read_bytes() == expected.encode("ascii")
+            ):
+                link.unlink()
+            elif link.is_symlink() and os.readlink(link) == expected:
                 link.unlink()
         except OSError:
             pass
@@ -280,9 +412,21 @@ def _ensure_shims(root: Path, bin_dir: Path) -> list[tuple[Path, str]]:
     created: list[tuple[Path, str]] = []
     try:
         bin_dir.mkdir(parents=True, exist_ok=True)
-        for link, target in missing:
-            link.symlink_to(target)
-            created.append((link, target))
+        if is_windows():
+            dispatcher = root / "current-dispatch.py"
+            expected_dispatcher = _windows_dispatcher()
+            if dispatcher.exists():
+                if dispatcher.read_bytes() != expected_dispatcher.encode("ascii"):
+                    raise HelperError(f"refusing to replace existing dispatcher: {dispatcher}")
+            else:
+                dispatcher.write_bytes(expected_dispatcher.encode("ascii"))
+            for link, content in missing:
+                link.write_bytes(content.encode("ascii"))
+                created.append((link, content))
+        else:
+            for link, target in missing:
+                link.symlink_to(target)
+                created.append((link, target))
     except OSError:
         _cleanup_created_shims(created)
         raise
@@ -290,14 +434,12 @@ def _ensure_shims(root: Path, bin_dir: Path) -> list[tuple[Path, str]]:
 
 
 def _restore_current(root: Path, selected: str, previous: Optional[str]) -> None:
-    current = root / "current"
-    expected = str(Path("versions") / selected)
-    if not current.is_symlink() or os.readlink(current) != expected:
+    if _current_version(root) != selected:
         raise HelperError("cannot safely restore runtime current after persistence failure")
     if previous is None:
-        current.unlink()
+        _remove_current(root)
     else:
-        _atomic_symlink(current, str(Path("versions") / previous))
+        _select_current(root, previous)
 
 
 def install_bundle(bundle_dir: Path, root: Path, bin_dir: Path) -> Dict[str, Any]:
@@ -339,17 +481,19 @@ def install_bundle(bundle_dir: Path, root: Path, bin_dir: Path) -> Dict[str, Any
             _safe_extract_wheel(wheel, library)
             _validate_extracted_runtime(library)
             python = Path(sys.executable).resolve()
+            launcher = _windows_launcher if is_windows() else _launcher
+            suffix = ".cmd" if is_windows() else ""
             _write_launcher(
-                binary / "codex-radar",
-                _launcher(python, installed_library, "codex_radar.cli"),
+                binary / f"codex-radar{suffix}",
+                launcher(python, installed_library, "codex_radar.cli"),
             )
             _write_launcher(
-                binary / "codex-radar-hook",
-                _launcher(python, installed_library, "codex_radar.hook"),
+                binary / f"codex-radar-hook{suffix}",
+                launcher(python, installed_library, "codex_radar.hook"),
             )
             _write_launcher(
-                binary / "codex-radar-helper",
-                _launcher(
+                binary / f"codex-radar-helper{suffix}",
+                launcher(
                     python,
                     installed_library,
                     "codex_radar.helper_manager",
@@ -372,7 +516,7 @@ def install_bundle(bundle_dir: Path, root: Path, bin_dir: Path) -> Dict[str, Any
 
     created_shims = _ensure_shims(root, bin_dir)
     try:
-        _atomic_symlink(root / "current", str(Path("versions") / version))
+        _select_current(root, version)
         try:
             _record_switch(root, version, previous, state)
         except BaseException:
@@ -386,7 +530,7 @@ def install_bundle(bundle_dir: Path, root: Path, bin_dir: Path) -> Dict[str, Any
         "runtime_version": version,
         "previous_version": previous,
         "runtime_root": str(root),
-        "hook_command": str(bin_dir / "codex-radar-hook"),
+        "hook_command": str(_command_path(bin_dir, "codex-radar-hook")),
         "compatibility": manifest["compatibility"],
     }
 
@@ -411,7 +555,7 @@ def rollback_runtime(root: Path, bin_dir: Path, version: Optional[str] = None) -
     _preflight_shims(root, bin_dir)
     created_shims = _ensure_shims(root, bin_dir)
     try:
-        _atomic_symlink(root / "current", str(Path("versions") / target))
+        _select_current(root, target)
         try:
             _record_switch(root, target, current, state)
         except BaseException:
@@ -439,7 +583,21 @@ def installed_status(root: Path) -> Dict[str, Any]:
 def _shim_diagnostics(root: Path, bin_dir: Path) -> Dict[str, str]:
     checks: Dict[str, str] = {}
     for name in ("codex-radar", "codex-radar-hook", "codex-radar-helper"):
-        link = bin_dir / name
+        link = _command_path(bin_dir, name)
+        if is_windows():
+            expected = _windows_stable_shim(root, bin_dir, name)
+            if not link.exists():
+                checks[name] = "missing"
+            else:
+                try:
+                    checks[name] = (
+                        "ready"
+                        if link.read_bytes() == expected.encode("ascii")
+                        else "wrong_content"
+                    )
+                except OSError:
+                    checks[name] = "unreadable"
+            continue
         expected = str(root / "current" / "bin" / name)
         if not link.is_symlink():
             checks[name] = "not_symlink" if link.exists() else "missing"
@@ -517,6 +675,13 @@ def _hook_entries(value: Any) -> Iterable[Dict[str, Any]]:
                 yield entry
 
 
+def _split_command(command: str) -> list[str]:
+    values = shlex.split(command, posix=not is_windows())
+    if is_windows():
+        return [value[1:-1] if len(value) >= 2 and value[0] == value[-1] == '"' else value for value in values]
+    return values
+
+
 def _hook_wiring_diagnostics(hooks_file: Path, hook_command: Path) -> Dict[str, Any]:
     if hooks_file.is_symlink():
         return {"code": "hooks_symlink", "events": {event: "unknown" for event in HOOK_EVENTS}}
@@ -529,7 +694,9 @@ def _hook_wiring_diagnostics(hooks_file: Path, hook_command: Path) -> Dict[str, 
     hooks = payload.get("hooks") if isinstance(payload, dict) else None
     if not isinstance(hooks, dict):
         return {"code": "hooks_invalid", "events": {event: "unknown" for event in HOOK_EVENTS}}
-    stable = shlex.split(hook_fragment(hook_command)["hooks"][HOOK_EVENTS[0]][0]["hooks"][0]["command"])
+    stable = _split_command(
+        hook_fragment(hook_command)["hooks"][HOOK_EVENTS[0]][0]["hooks"][0]["command"]
+    )
     event_checks: Dict[str, str] = {}
     for event in HOOK_EVENTS:
         commands = []
@@ -538,7 +705,7 @@ def _hook_wiring_diagnostics(hooks_file: Path, hook_command: Path) -> Dict[str, 
             if not isinstance(command, str):
                 continue
             try:
-                commands.append(shlex.split(command))
+                commands.append(_split_command(command))
             except ValueError:
                 commands.append([])
         if stable in commands:
@@ -576,7 +743,7 @@ def diagnose_helper(
     compatibility = _compatibility_diagnostics(marker)
     hook_wiring = _hook_wiring_diagnostics(
         selected_hooks,
-        bin_dir / "codex-radar-hook",
+        _command_path(bin_dir, "codex-radar-hook"),
     )
     ready = (
         runtime["code"] == "ready"
@@ -595,7 +762,8 @@ def diagnose_helper(
 
 
 def hook_fragment(hook_command: Path) -> Dict[str, Any]:
-    command = shlex.quote(str(hook_command.expanduser().resolve()))
+    resolved = str(hook_command.expanduser().resolve())
+    command = subprocess.list2cmdline([resolved]) if is_windows() else shlex.quote(resolved)
     hooks: Dict[str, Any] = {}
     for event in HOOK_EVENTS:
         entry: Dict[str, Any] = {"type": "command", "command": command, "timeout": 5}
@@ -626,7 +794,7 @@ def _merge_hook_config(existing: Dict[str, Any], fragment: Dict[str, Any]) -> Di
                     continue
                 command = str(entry.get("command", "")).strip()
                 try:
-                    same_stable_command = shlex.split(command) == shlex.split(stable_command)
+                    same_stable_command = _split_command(command) == _split_command(stable_command)
                 except ValueError:
                     same_stable_command = False
                 if command == "codex-radar hook" or same_stable_command:
@@ -702,7 +870,13 @@ def main(argv: Optional[list[str]] = None) -> int:
                 )
             )
         elif args.command == "hook-config":
-            print(hook_config_output(args.bin_dir / "codex-radar-hook", args.hooks_file), end="")
+            print(
+                hook_config_output(
+                    _command_path(args.bin_dir, "codex-radar-hook"),
+                    args.hooks_file,
+                ),
+                end="",
+            )
         return 0
     except (HelperError, OSError) as exc:
         print(f"codex-radar-helper: {exc}", file=sys.stderr)

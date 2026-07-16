@@ -24,6 +24,7 @@ from codex_radar.helper_manager import (
     main,
     rollback_runtime,
 )
+from codex_radar.platform_paths import windows_local_app_data
 
 
 def _sha256(path: Path) -> str:
@@ -61,7 +62,7 @@ def _fake_bundle(base: Path, version: str, *, marker: Optional[str] = None) -> P
         "schema_version": 1,
         "runtime_version": version,
         "python_requires": ">=3.9",
-        "platforms": ["posix"],
+        "platforms": ["posix", "windows"],
         "compatibility": {
             "vscode_extension": {"minimum": "0.4.3", "maximum_exclusive": "0.5.0"}
         },
@@ -73,6 +74,7 @@ def _fake_bundle(base: Path, version: str, *, marker: Optional[str] = None) -> P
     return bundle
 
 
+@unittest.skipIf(os.name == "nt", "POSIX helper lifecycle regression runs on ubuntu CI")
 class HelperManagerTests(unittest.TestCase):
     def test_install_upgrade_and_rollback_keep_stable_hook_shim(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -551,3 +553,102 @@ class HelperBundleBuilderTests(unittest.TestCase):
 
             self.assertEqual(first.read_bytes(), second.read_bytes())
             self.assertEqual(_sha256(first), _sha256(second))
+
+
+@unittest.skipIf(os.name == "nt", "simulation supplements native Windows CI")
+class WindowsFoundationSimulationTests(unittest.TestCase):
+    def test_windows_install_upgrade_and_rollback_use_cmd_and_json_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "runtime"
+            bin_dir = base / "bin"
+            with mock.patch("codex_radar.helper_manager.is_windows", return_value=True):
+                install_bundle(_fake_bundle(base, "1.0.0"), root, bin_dir)
+                stable = (bin_dir / "codex-radar-hook.cmd").read_bytes()
+                install_bundle(_fake_bundle(base, "1.1.0"), root, bin_dir)
+                self.assertEqual(
+                    "1.1.0",
+                    json.loads((root / "current.json").read_text(encoding="utf-8"))[
+                        "runtime_version"
+                    ],
+                )
+                self.assertEqual(stable, (bin_dir / "codex-radar-hook.cmd").read_bytes())
+                self.assertFalse((root / "current").exists())
+                rollback_runtime(root, bin_dir)
+                self.assertEqual(
+                    "1.0.0",
+                    json.loads((root / "current.json").read_text(encoding="utf-8"))[
+                        "runtime_version"
+                    ],
+                )
+
+
+@unittest.skipUnless(os.name == "nt", "native Windows helper test")
+class WindowsHelperManagerTests(unittest.TestCase):
+    def test_default_local_app_data_fallback(self) -> None:
+        self.assertEqual(
+            Path("C:/Users/example/AppData/Local"),
+            windows_local_app_data({}, home=Path("C:/Users/example")),
+        )
+
+    def test_install_upgrade_rollback_and_cmd_launchers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "runtime"
+            bin_dir = base / "bin"
+            first = _fake_bundle(base, "1.0.0")
+            second = _fake_bundle(base, "1.1.0")
+
+            install_bundle(first, root, bin_dir)
+            stable_hook = (bin_dir / "codex-radar-hook.cmd").read_bytes()
+            install_bundle(second, root, bin_dir)
+
+            current = json.loads((root / "current.json").read_text(encoding="utf-8"))
+            self.assertEqual("1.1.0", current["runtime_version"])
+            self.assertEqual(stable_hook, (bin_dir / "codex-radar-hook.cmd").read_bytes())
+            self.assertFalse((root / "current").exists())
+            self.assertTrue((root / "current-dispatch.py").is_file())
+
+            launched = subprocess.run(
+                ["cmd.exe", "/d", "/c", str(bin_dir / "codex-radar-hook.cmd")],
+                input=json.dumps(
+                    {
+                        "hook_event_name": "Stop",
+                        "session_id": "windows-smoke",
+                        "cwd": str(base / "repo"),
+                    }
+                ),
+                check=False,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "CODEX_RADAR_HOME": str(base / "state")},
+            )
+            self.assertEqual(0, launched.returncode, launched.stderr)
+            self.assertEqual("1.1.0", launched.stdout)
+
+            rollback_runtime(root, bin_dir)
+            selected = json.loads((root / "current.json").read_text(encoding="utf-8"))
+            self.assertEqual("1.0.0", selected["runtime_version"])
+            rolled_back = subprocess.run(
+                ["cmd.exe", "/d", "/c", str(bin_dir / "codex-radar-hook.cmd")],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, rolled_back.returncode, rolled_back.stderr)
+            self.assertEqual("1.0.0", rolled_back.stdout)
+
+    def test_hook_config_uses_stable_cmd_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            command = base / "bin" / "codex-radar-hook.cmd"
+            hooks_file = base / "hooks.json"
+            hooks_file.write_text('{"hooks": {}}\n', encoding="utf-8")
+
+            fragment = json.loads(hook_config_output(command))
+            rendered = fragment["hooks"]["Stop"][0]["hooks"][0]["command"]
+            self.assertIn("codex-radar-hook.cmd", rendered)
+            before = hooks_file.read_bytes()
+            diff = hook_config_output(command, hooks_file)
+            self.assertIn("proposed; not written", diff)
+            self.assertEqual(before, hooks_file.read_bytes())

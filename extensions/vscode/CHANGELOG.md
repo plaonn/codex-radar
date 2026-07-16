@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.6
+
+### Added
+
+- Document the native Windows state-directory default used by the shared Python runtime.
+- Package the extension alongside the native Windows helper foundation and `windows-latest` validation.
+
+### Boundaries
+
+- Native Windows Codex hook smoke remains required before Windows support is declared complete.
+- WSL2 remains outside the official validation scope for this milestone.
+
 ## 0.4.5
 
 ### Fixed

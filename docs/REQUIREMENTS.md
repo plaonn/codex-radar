@@ -171,6 +171,16 @@
 - Derived specs/tests: `codex-radar export state --json`, `codex-radar export preview <session-id> --limit <n>`, versioned display-state/preview schemas, golden parity fixtures, strict stdout/stderr separation, negative privacy tests, and VS Code direct-source fallback during the one-release migration.
 - Revisit when: raw `cwd`가 필요한 remote action을 protocol에 추가하거나, shared read state, RPC listener, background event delivery, remote write action이 active milestone이 될 때.
 
+#### R10c: native Windows runtime foundation
+
+- Status: confirmed direction, platform/helper foundation implemented, native Codex hook smoke pending
+- Requirement: Native Windows에서 관리자 권한이나 symlink 권한을 기본 전제로 삼지 않고 Codex lifecycle hook event를 동시성 안전하게 `sessions.json`으로 변환하고, VS Code extension이 같은 host-local state를 읽을 수 있어야 한다.
+- Rationale: POSIX helper의 symlink, XDG path, `fcntl`, eager `curses` import를 그대로 전제하면 Windows에서 hook producer와 기본 CLI가 시작되지 않거나 upgrade 경로가 불안정해진다.
+- Failure prevented: 동시 hook update의 session loss, Windows import failure, symlink 권한 때문에 설치가 막히는 문제, upgrade/rollback 중 stable hook command가 깨지는 문제, 실제 smoke 없이 Windows 지원 완료를 과장하는 문제.
+- Non-goals: WSL2 공식 지원 검증, installer가 `hooks.json`을 자동 수정하는 동작, 관리자 권한 요구, 실제 Windows Codex hook smoke 없이 support-complete 선언.
+- Derived specs/tests: `%LOCALAPPDATA%` state/runtime defaults, Windows byte-range file lock, lazy TUI import, stable `.cmd` shims, immutable runtime versions, atomic `current.json` selection, upgrade/rollback tests, `windows-latest` CI, Native Windows hook setup runbook, separate real-host smoke exit criterion.
+- Revisit when: Windows Codex hook command execution contract가 바뀌거나, signed installer/package-manager distribution 또는 WSL2 support가 active milestone이 될 때.
+
 ## Rationale
 
 VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.

@@ -6,7 +6,7 @@ This runbook connects a host-local Codex Radar helper to user-level Codex lifecy
 
 ### Requirements
 
-- POSIX host with Python 3.9 or later.
+- POSIX or Native Windows host with Python 3.9 or later.
 - A Codex Radar helper bundle from a GitHub Release, or a source installation for development.
 - Awareness that hook payloads and session transcripts may contain sensitive local data.
 
@@ -68,6 +68,59 @@ An explicit retained version may also be selected:
 ~/.local/bin/codex-radar-helper rollback <runtime-version>
 ```
 
+### Native Windows PowerShell Install
+
+Native Windows uses the same verified pure-Python bundle without requiring symlink or administrator privileges. WSL2 is not an officially validated substitute for this path.
+
+From PowerShell, verify and extract the release bundle:
+
+```powershell
+$Expected = (Get-Content .\codex-radar-helper-<version>.zip.sha256).Split()[0]
+$Actual = (Get-FileHash .\codex-radar-helper-<version>.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($Actual -ne $Expected.ToLowerInvariant()) { throw "checksum mismatch" }
+Expand-Archive .\codex-radar-helper-<version>.zip -DestinationPath .
+Set-Location .\codex-radar-helper-<version>
+py -3 .\install-helper.py install .
+```
+
+The default Windows layout is:
+
+```text
+%LOCALAPPDATA%\codex-radar\runtime\versions\<version>
+%LOCALAPPDATA%\codex-radar\runtime\current.json
+%LOCALAPPDATA%\codex-radar\bin\codex-radar-hook.cmd
+%LOCALAPPDATA%\codex-radar\state\sessions.json
+```
+
+The immutable version directories retain installed runtimes. `current.json` is replaced atomically during install, upgrade, and rollback. Stable `.cmd` shims dispatch through that selector and do not use Windows symlinks.
+
+Inspect, diagnose, upgrade by installing a newer bundle, or roll back:
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" status
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" diagnose
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" rollback
+```
+
+Print the exact Windows hook fragment, or a no-write diff:
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config --hooks-file "$HOME\.codex\hooks.json"
+```
+
+Review and manually merge the output into `$HOME\.codex\hooks.json`. Install, upgrade, and rollback never edit that file. The fragment uses the fixed absolute `codex-radar-hook.cmd` path, so selecting another runtime does not require another hook edit.
+
+After configuring the hook, run a Native Windows Codex turn and verify:
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar.cmd" sessions
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar.cmd" doctor
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar.cmd" path
+```
+
+Then open a local Windows VS Code window with the packaged extension and confirm the same session appears in the Codex Radar sidebar. This real Codex hook-to-sidebar smoke is the support-completion gate; CI and helper launcher tests alone do not complete Native Windows validation.
+
 ### Development Source Install
 
 The legacy `codex-radar hook` command remains compatible for the public-beta migration window. A source checkout can install the same dedicated `codex-radar-hook` entrypoint:
@@ -125,7 +178,7 @@ Bundle artifact paths and rollback runtime targets must not be symlinks. The man
 
 ### 요구 사항
 
-- Python 3.9 이상을 사용할 수 있는 POSIX 호스트가 필요합니다.
+- Python 3.9 이상을 사용할 수 있는 POSIX 또는 Native Windows 호스트가 필요합니다.
 - GitHub Release의 Codex Radar helper bundle 또는 개발용 source 설치가 필요합니다.
 - Hook payload와 session transcript에 민감한 로컬 데이터가 포함될 수 있음을 이해해야 합니다.
 
@@ -186,6 +239,59 @@ Upgrade 후 이전 runtime으로 원자적으로 rollback합니다.
 ```bash
 ~/.local/bin/codex-radar-helper rollback <runtime-version>
 ```
+
+### Native Windows PowerShell 설치
+
+Native Windows는 같은 검증된 pure-Python bundle을 사용하며 symlink 권한이나 관리자 권한을 요구하지 않습니다. WSL2는 이 경로를 대체하는 공식 검증 환경이 아닙니다.
+
+PowerShell에서 release bundle을 검증하고 압축을 풉니다.
+
+```powershell
+$Expected = (Get-Content .\codex-radar-helper-<version>.zip.sha256).Split()[0]
+$Actual = (Get-FileHash .\codex-radar-helper-<version>.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($Actual -ne $Expected.ToLowerInvariant()) { throw "checksum mismatch" }
+Expand-Archive .\codex-radar-helper-<version>.zip -DestinationPath .
+Set-Location .\codex-radar-helper-<version>
+py -3 .\install-helper.py install .
+```
+
+Windows 기본 경로는 다음과 같습니다.
+
+```text
+%LOCALAPPDATA%\codex-radar\runtime\versions\<version>
+%LOCALAPPDATA%\codex-radar\runtime\current.json
+%LOCALAPPDATA%\codex-radar\bin\codex-radar-hook.cmd
+%LOCALAPPDATA%\codex-radar\state\sessions.json
+```
+
+변경 불가능한 version directory에 runtime을 보존하고 install, upgrade, rollback 때 `current.json`을 원자적으로 교체합니다. Stable `.cmd` shim은 이 selector를 통해 실행되며 Windows symlink를 사용하지 않습니다.
+
+상태 확인, 진단, 새 bundle 설치를 통한 upgrade, rollback은 다음 명령으로 수행합니다.
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" status
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" diagnose
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" rollback
+```
+
+정확한 Windows hook fragment 또는 no-write diff를 출력합니다.
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config --hooks-file "$HOME\.codex\hooks.json"
+```
+
+출력을 검토하고 `$HOME\.codex\hooks.json`에 직접 병합합니다. Install, upgrade, rollback은 이 파일을 수정하지 않습니다. Fragment는 고정 절대 경로의 `codex-radar-hook.cmd`를 사용하므로 runtime 선택 변경만으로 hook을 다시 편집할 필요가 없습니다.
+
+Hook을 설정한 뒤 Native Windows Codex turn을 실행하고 확인합니다.
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar.cmd" sessions
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar.cmd" doctor
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar.cmd" path
+```
+
+그 다음 packaged extension을 설치한 local Windows VS Code에서 같은 session이 Codex Radar sidebar에 표시되는지 확인합니다. 실제 Codex hook-to-sidebar smoke가 지원 완료 gate이며 CI와 launcher test만으로 Native Windows 검증이 완료되지는 않습니다.
 
 ### 개발용 Source 설치
 

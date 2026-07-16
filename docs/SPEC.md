@@ -13,9 +13,9 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 
 - `codex-radar-hook`: stable helper bundle이 사용하는 전용 hook entrypoint다. stdin에서 hook payload 1개를 읽어 기록한다.
 - `codex-radar hook`: 공개 베타 migration 기간에 유지하는 legacy-compatible hook entrypoint다. 전용 entrypoint와 같은 producer path를 호출한다.
-- `codex-radar-helper install <bundle-dir>`: POSIX helper bundle을 검증하고 immutable runtime으로 설치한 뒤 stable shim과 `current` runtime을 연결한다. Codex hook config는 수정하지 않는다.
+- `codex-radar-helper install <bundle-dir>`: POSIX/Native Windows helper bundle을 검증하고 immutable runtime으로 설치한 뒤 platform-specific stable shim과 current runtime selector를 연결한다. Codex hook config는 수정하지 않는다.
 - `codex-radar-helper status`: current/retained helper runtime을 machine-readable JSON으로 출력한다.
-- `codex-radar-helper rollback [runtime-version]`: retained runtime으로 `current` symlink를 원자적으로 전환한다.
+- `codex-radar-helper rollback [runtime-version]`: retained runtime으로 POSIX `current` symlink 또는 Windows `current.json` selector를 원자적으로 전환한다.
 - `codex-radar-helper hook-config [--hooks-file <path>]`: fixed absolute hook shim을 사용하는 fragment 또는 no-write unified diff를 출력한다.
 - `codex-radar sessions`: 알려진 세션 목록을 출력한다. `--group-project`는 text output을 project header로 묶고 JSON output shape는 바꾸지 않는다.
 - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
@@ -61,8 +61,9 @@ runtime state 기본 위치:
 
 ```text
 $CODEX_RADAR_HOME
-or $XDG_STATE_HOME/codex-radar
-or ~/.local/state/codex-radar
+or %LOCALAPPDATA%\codex-radar\state (Native Windows)
+or $XDG_STATE_HOME/codex-radar (POSIX)
+or ~/.local/state/codex-radar (POSIX fallback)
 ```
 
 state directory 구성:
@@ -259,11 +260,13 @@ GUI privacy/action boundary v1:
 Distribution/setup boundary:
 
 - Current VS Code extension install alone does not create or update the `sessions.json` producer.
-- Source setup can invoke the legacy `codex-radar hook` command. A release helper bundle uses a fixed absolute `~/.local/bin/codex-radar-hook` shim, which resolves through the helper runtime's `current` symlink.
+- Source setup can invoke the legacy `codex-radar hook` command. A release helper bundle uses a fixed absolute hook shim: POSIX `~/.local/bin/codex-radar-hook` resolves through `current`, while Native Windows `%LOCALAPPDATA%\codex-radar\bin\codex-radar-hook.cmd` uses a stable Python dispatcher and atomic `current.json`.
 - Extension setup or diagnostics may explain missing runtime/indexer state, but current VS Code GUI does not automatically edit `~/.codex/hooks.json`.
-- The POSIX helper manager verifies a manifest and SHA-256 artifact checksums, rejects unsupported Python/platform constraints, extracts one pure-Python wheel into `runtime/versions/<version>`, retains earlier versions, and atomically switches `runtime/current`. An existing immutable version may be reused only when its manifest digest matches.
-- Stable user command paths are symlinks to `runtime/current/bin`. The manager refuses to overwrite an existing non-symlink at those paths.
-- Bundle compatibility metadata declares the supported POSIX/Python boundary and a VS Code extension version range. VSIX and helper runtime versions remain independent.
+- The helper manager verifies a manifest and SHA-256 artifact checksums, rejects unsupported Python/platform constraints, extracts one pure-Python wheel into `runtime/versions/<version>`, retains earlier versions, and atomically switches the platform selector. An existing immutable version may be reused only when its manifest digest matches.
+- POSIX stable user command paths are symlinks to `runtime/current/bin`. Native Windows stable user commands are managed `.cmd` files and do not require symlink or administrator privileges. The manager refuses to overwrite unrelated existing files at managed command paths.
+- Native Windows hook updates use a same-user byte-range file lock before reading and replacing `sessions.json`. POSIX retains `flock`.
+- `curses` is imported only when `codex-radar tui` is invoked, so hook, helper, `--help`, `sessions`, and other base CLI imports do not require curses on Windows.
+- Bundle compatibility metadata declares the supported POSIX/Windows/Python boundary and a VS Code extension version range. VSIX and helper runtime versions remain independent.
 - `codex-radar-helper hook-config` prints the exact fragment, or a unified diff against an existing file, but never writes `~/.codex/hooks.json`. Hook wiring changes remain explicit user-approved migrations.
 - `codex-radar doctor` remains a state/cache diagnostic. The helper manager's read-only `diagnose` command checks the local runtime, stable shims, compatibility metadata, and actual hook wiring, but it does not provide remote latest-release authority or change local configuration.
 - Bundle SHA-256 verification detects download or packaging corruption but is not an authenticity proof. Bootstrap trust comes from obtaining the installer, manifest, checksum, and bundle from the intended GitHub Release/account over trusted TLS.
@@ -278,7 +281,7 @@ Distribution/setup boundary:
 - server-side `codex-radar` config와 session index retention pruning.
 - 사용자가 transcript/TUI command를 실행했을 때 로컬 transcript 파일 읽기.
 - 사용자가 TUI에서 resumable row를 선택하고 Enter를 눌렀을 때 같은 terminal process를 `codex resume <session_id>`로 교체하기.
-- 사용자가 helper manager를 명시적으로 실행했을 때 user-selected runtime root와 bin directory 아래에 verified immutable runtime, stable symlink, install history를 생성하거나 원자적으로 전환하기.
+- 사용자가 helper manager를 명시적으로 실행했을 때 user-selected runtime root와 bin directory 아래에 verified immutable runtime, platform-specific stable shim, install history를 생성하거나 원자적으로 전환하기.
 - 사용자가 요청한 hook fragment 또는 existing hook config에 대한 no-write diff를 stdout으로 출력하기.
 
 금지:

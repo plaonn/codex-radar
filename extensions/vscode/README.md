@@ -11,6 +11,8 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
+The current source package version is `0.4.6`. It includes the Native Windows state-path foundation and is intended for local validation; Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+
 ## Current Scope
 
 - Provides a dedicated Codex Radar Activity Bar container.
@@ -90,7 +92,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.5.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.6.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

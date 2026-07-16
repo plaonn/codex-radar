@@ -28,9 +28,12 @@ function expandHome(value, homeDir = os.homedir()) {
   return value;
 }
 
-function defaultStateDir(env = process.env, homeDir = os.homedir()) {
+function defaultStateDir(env = process.env, homeDir = os.homedir(), platform = process.platform) {
   if (env.CODEX_RADAR_HOME) {
     return path.resolve(expandHome(env.CODEX_RADAR_HOME, homeDir));
+  }
+  if (platform === "win32") {
+    return path.join(env.LOCALAPPDATA || path.join(homeDir, "AppData", "Local"), "codex-radar", "state");
   }
   if (env.XDG_STATE_HOME) {
     return path.join(path.resolve(expandHome(env.XDG_STATE_HOME, homeDir)), "codex-radar");

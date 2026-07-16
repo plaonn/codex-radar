@@ -3,9 +3,12 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, Optional
+
+from .platform_paths import default_state_dir
 
 
 EVENT_STATUS = {
@@ -103,18 +106,6 @@ def session_seen_since(session: Dict[str, Any], since: datetime) -> bool:
 def display_state_for_status(status: Any) -> str:
     value = _string(status) or "unknown"
     return DISPLAY_STATE_BY_STATUS.get(value, value)
-
-
-def default_state_dir() -> Path:
-    explicit = os.environ.get("CODEX_RADAR_HOME")
-    if explicit:
-        return Path(explicit).expanduser()
-
-    xdg_state = os.environ.get("XDG_STATE_HOME")
-    if xdg_state:
-        return Path(xdg_state).expanduser() / "codex-radar"
-
-    return Path.home() / ".local" / "state" / "codex-radar"
 
 
 def state_dir_path(state_dir: Optional[Path] = None) -> Path:
@@ -244,12 +235,32 @@ def normalize_event(payload: Dict[str, Any], recorded_at: Optional[str] = None) 
 @contextlib.contextmanager
 def _state_lock(state_dir: Path) -> Iterator[None]:
     lock_path = state_dir / ".lock"
-    with lock_path.open("a+", encoding="utf-8") as lock_file:
-        try:
-            import fcntl
-        except ImportError:
-            yield
+    with lock_path.open("a+b") as lock_file:
+        if os.name == "nt":
+            import msvcrt
+
+            lock_file.seek(0, os.SEEK_END)
+            if lock_file.tell() == 0:
+                lock_file.write(b"\0")
+                lock_file.flush()
+            lock_file.seek(0)
+            deadline = time.monotonic() + 4.0
+            while True:
+                try:
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError as exc:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("timed out waiting for codex-radar state lock") from exc
+                    time.sleep(0.01)
+            try:
+                yield
+            finally:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
         else:
+            import fcntl
+
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             try:
                 yield

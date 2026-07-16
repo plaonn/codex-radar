@@ -46,6 +46,7 @@ Codex lifecycle 이벤트
 
 ```text
 $CODEX_RADAR_HOME
+%LOCALAPPDATA%\codex-radar\state (Native Windows)
 $XDG_STATE_HOME/codex-radar
 ~/.local/state/codex-radar
 ```
@@ -59,7 +60,7 @@ $XDG_STATE_HOME/codex-radar
 - 확장을 사용하려면 VS Code 1.90 이상이 필요합니다.
 - `Open in Codex` 연결을 사용하려면 공식 Codex 확장이 필요합니다.
 
-Remote SSH에서는 helper 설치, hook 설정, VSIX 설치를 모두 원격 확장 호스트에서 진행해야 합니다. Codex Radar는 해당 호스트의 상태와 transcript를 읽습니다. Native Windows 전용 배포는 현재 공개 베타의 문서화된 범위에 포함되지 않습니다. 워크스페이스 연결 시 WSL과 Dev Container의 URI authority는 유지하지만, 이 환경들이 Remote SSH 중심 워크플로를 대체한다고 보장하지는 않습니다.
+Remote SSH에서는 helper 설치, hook 설정, VSIX 설치를 모두 원격 확장 호스트에서 진행해야 합니다. Codex Radar는 해당 호스트의 상태와 transcript를 읽습니다. 현재 source tree에는 `%LOCALAPPDATA%`, stable `.cmd` shim, `windows-latest` CI를 사용하는 Native Windows helper foundation이 포함되어 있습니다. 실제 Codex hook-to-sidebar smoke가 성공하기 전에는 Native Windows 지원 완료로 선언하지 않습니다. WSL2는 이번 milestone의 공식 검증 범위에서 제외됩니다.
 
 ## Helper 설치
 
@@ -153,7 +154,8 @@ codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 ## 현재 제한 사항
 
 - 공개 베타는 GitHub Release로만 배포하며 VS Code Marketplace나 PyPI에서는 제공하지 않습니다.
-- Helper bundle은 POSIX Python 3.9+ host를 지원하며 native Windows package는 별도 milestone입니다.
+- Helper foundation은 POSIX와 Native Windows Python 3.9+ host를 지원합니다. Published `v0.4.4` bundle은 여전히 POSIX 전용이며, Native Windows 지원 완료에는 실제 Codex hook-to-sidebar smoke가 남아 있습니다.
+- WSL2는 Native Windows milestone의 공식 검증 범위에 포함되지 않습니다.
 - `codex-radar-helper diagnose`는 로컬 runtime, stable shim, compatibility metadata, hook wiring을 확인하지만 원격 최신 release 존재 여부는 조회하지 않습니다. `codex-radar doctor`는 Radar state/cache 진단에 집중합니다.
 - 확장을 사용하려면 별도의 host-local helper/indexer 설치와 명시적인 hook 설정이 필요합니다.
 - `Open in Codex`는 실험적인 로컬 URI 경로를 사용하므로 일부 세션에서는 사용할 수 없습니다.

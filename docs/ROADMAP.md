@@ -25,7 +25,7 @@
 
 ## VS Code Extension Release
 
-- 현재 distribution stage는 `0.4.4` public beta이며, GitHub Release에 POSIX helper bundle과 VSIX를 attached artifact로 배포한다.
+- 현재 published distribution stage는 `0.4.4` public beta다. Source tree에는 Native Windows helper foundation과 `windows-latest` CI가 추가됐지만, 실제 Windows Codex hook smoke 전에는 Windows support-complete 또는 Windows public release로 선언하지 않는다.
 - GitHub Release readiness와 Marketplace publish는 별도 milestone로 유지한다.
 - Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
 - GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.
@@ -35,14 +35,22 @@
 
 - 장기 배포 모델은 VS Code extension을 `codex-radar` runtime owner로 만들기보다, host-local `codex-radar` indexer/runtime을 core로 두고 VS Code extension, future Android app, TUI, CLI를 client surface로 분리하는 방향을 우선 검토한다.
 - Extension-only scan mode는 설치가 단순하더라도 `waiting_approval`, `tool_running`, `done` 같은 lifecycle-derived attention state의 source of truth가 약해지므로 primary architecture로 두지 않는다. 필요하면 lightweight history/preview fallback으로만 검토한다.
-- Windows local-only 배포를 다룰 때도 Python vs Node helper, extension-bundled helper, separate CLI package 같은 선택은 implementation/distribution choice로 남기고, requirement는 stable local runtime/indexer와 explicit setup/migration boundary로 둔다.
+- Native Windows foundation은 Python helper, `%LOCALAPPDATA%` defaults, `.cmd` stable shim, immutable version runtime, atomic JSON selector를 사용한다. Signed installer나 package-manager integration은 후속 distribution choice다.
 - Hook integration은 stable entrypoint/shim을 지향한다. Helper implementation 업데이트는 가능한 한 hook config 변경 없이 처리하고, event wiring이나 command contract 변경처럼 `hooks.json` migration이 필요한 경우에는 diff/preview와 사용자 승인을 요구한다.
 - Setup UX는 extension 하나를 설치한 사용자가 빈 dashboard만 보지 않도록 missing/outdated indexer, missing hook wiring, inaccessible state directory를 명확히 진단하는 방향으로 발전시킨다.
-- Public-beta helper의 첫 supported distribution은 GitHub Release의 POSIX helper bundle로 둔다. PyPI와 Windows package는 이 경로가 안정화된 뒤 별도 milestone로 미룬다.
+- Public-beta helper의 첫 supported distribution은 GitHub Release의 POSIX helper bundle이다. Native Windows helper bundle publication은 실제 Windows Codex hook smoke와 generated asset 검증 뒤 별도 release decision으로 둔다. PyPI는 계속 별도 milestone이다.
 - 첫 supported scope는 POSIX Python 3.9+ host와 VS Code Remote SSH다. Bundle은 checksum manifest를 제공하고 immutable version runtime, atomic `current` switch, retained previous runtime을 사용해 upgrade와 rollback을 분리한다.
 - `hooks.json`에는 checkout이나 shell `PATH`에 의존하지 않는 fixed absolute shim(기본 예: `~/.local/bin/codex-radar-hook`)을 등록한다. Shim은 current runtime의 dedicated hook entrypoint로 연결하고 helper upgrade만으로 hook config를 다시 쓰지 않는다.
 - Installer/manager는 필요한 `hooks.json` fragment 또는 diff를 출력할 수 있지만 global Codex config를 자동 수정하지 않는다. 기존 `codex-radar hook` entrypoint는 migration을 위해 최소 한 public-beta release 동안 호환 경로로 유지한다.
 - VSIX version과 helper/runtime version은 독립적으로 움직일 수 있으므로 release asset에는 명시적인 compatibility manifest를 포함한다.
+- WSL2는 Native Windows foundation의 대체 smoke surface가 아니며 이번 공식 검증 범위에서 제외한다.
+
+## Native Windows Validation Gate
+
+- `windows-latest` CI에서 Python unit tests, compileall, extension tests, Windows path/locking/`.cmd` launcher/install/upgrade/rollback lifecycle을 검증한다.
+- 실제 Native Windows 사용자 환경에서 Codex가 generated hook command를 실행하고 `%LOCALAPPDATA%\codex-radar\state\sessions.json`을 갱신하며 VS Code sidebar가 같은 session을 표시하는 end-to-end smoke가 남아 있다.
+- 이 smoke가 끝나기 전에는 foundation/CI-ready로만 보고하고 Windows 지원 완료, release-ready, officially validated라고 표현하지 않는다.
+- WSL2 smoke는 별도 future work이며 Native Windows smoke를 대체하지 않는다.
 
 ## Shared State / Export Direction
 

@@ -30,7 +30,6 @@ from .store import (
 )
 from .transcript import format_skim, skim_transcript
 from .transcript_preview import MAX_PREVIEW_LIMIT
-from .tui import run_tui
 from .usage import default_codex_home, format_usage_snapshot, usage_snapshot
 from .watch import run_watch
 
@@ -202,6 +201,16 @@ def cmd_transcript(args: argparse.Namespace) -> int:
 
 
 def cmd_tui(args: argparse.Namespace) -> int:
+    try:
+        from .tui import run_tui
+    except ImportError as exc:
+        if exc.name == "curses":
+            print(
+                "codex-radar tui: curses is unavailable on this host; use sessions or the VS Code extension",
+                file=sys.stderr,
+            )
+            return 2
+        raise
     return run_tui(
         _state_dir_arg(args.state_dir),
         refresh_seconds=args.refresh,

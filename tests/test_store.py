@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -21,6 +24,24 @@ from codex_radar.store import (
 
 
 class StoreTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "native Windows locking test")
+    def test_concurrent_windows_hook_updates_are_serialized(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            script = (
+                "from pathlib import Path\n"
+                "from codex_radar.store import record_hook_event\n"
+                f"state = Path({tmp!r})\n"
+                "for _ in range(20):\n"
+                "    record_hook_event({'hook_event_name':'UserPromptSubmit','session_id':'shared'}, state)\n"
+            )
+            env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+            workers = [
+                subprocess.Popen([sys.executable, "-c", script], env=env)
+                for _ in range(2)
+            ]
+            for worker in workers:
+                self.assertEqual(0, worker.wait(timeout=30))
+            self.assertEqual(40, load_sessions(Path(tmp))["shared"]["event_count"])
     def test_normalize_event_derives_project_and_status(self) -> None:
         event = normalize_event(
             {

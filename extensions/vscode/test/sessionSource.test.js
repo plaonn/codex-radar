@@ -190,6 +190,18 @@ test("resolves state directory like codex-radar core", () => {
     "/home/test/state/codex-radar",
   );
   assert.equal(defaultStateDir({}, "/home/test"), "/home/test/.local/state/codex-radar");
+  assert.equal(
+    defaultStateDir(
+      { LOCALAPPDATA: "C:\\Users\\test\\AppData\\Local" },
+      "C:\\Users\\test",
+      "win32",
+    ),
+    path.join("C:\\Users\\test\\AppData\\Local", "codex-radar", "state"),
+  );
+  assert.equal(
+    defaultStateDir({}, "C:\\Users\\test", "win32"),
+    path.join("C:\\Users\\test", "AppData", "Local", "codex-radar", "state"),
+  );
 });
 
 test("filters sessions by display status", () => {
