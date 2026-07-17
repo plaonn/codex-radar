@@ -5,13 +5,16 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  appServerUsageSnapshot,
   defaultCodexHome,
   formatDurationUntil,
   formatReset,
   loadUsageSnapshot,
+  loadUsageSnapshotWithAppServer,
   semanticRateWindows,
   usageStatusText,
   usageStatusTooltip,
+  usageSnapshotParity,
 } = require("../src/usageSource");
 
 function writeRollout(filePath, lines) {
@@ -90,6 +93,96 @@ test("returns unavailable when rate limits are missing", () => {
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test("normalizes app-server rate limits into the existing usage model", () => {
+  const snapshot = appServerUsageSnapshot({
+    rateLimits: {
+      limitId: "codex",
+      planType: "prolite",
+      primary: { usedPercent: 42, windowDurationMins: 10080, resetsAt: 1783872008 },
+      secondary: null,
+      credits: { hasCredits: true, unlimited: false, balance: "12.5" },
+    },
+  }, { generatedAt: "2026-07-17T04:00:00.000Z" });
+
+  assert.equal(snapshot.available, true);
+  assert.equal(snapshot.source, "codex-app-server");
+  assert.equal(snapshot.primary.used_percent, 42);
+  assert.equal(snapshot.primary.remaining_percent, 58);
+  assert.equal(snapshot.primary.window_minutes, 10080);
+  assert.equal(snapshot.primary.resets_at_iso, "2026-07-12T16:00:08.000Z");
+  assert.equal(snapshot.secondary, null);
+  assert.equal(snapshot.plan_type, "prolite");
+});
+
+test("fails closed on malformed app-server windows and ignores nullable fields", () => {
+  const unavailable = appServerUsageSnapshot({
+    rateLimits: { primary: { usedPercent: "invalid", windowDurationMins: 300 } },
+  });
+  const nullable = appServerUsageSnapshot({
+    rateLimits: { primary: { usedPercent: 12, windowDurationMins: null, resetsAt: null } },
+  });
+
+  assert.equal(unavailable.available, false);
+  assert.equal(unavailable.reason, "app_server_rate_limits_unavailable");
+  assert.deepEqual(nullable.primary, { used_percent: 12, remaining_percent: 88 });
+});
+
+test("uses app-server usage while observing matched rollout fallback parity", async () => {
+  const rolloutSnapshot = {
+    available: true,
+    source: "codex-session-rollout",
+    primary: { used_percent: 42, remaining_percent: 58, window_minutes: 10080, resets_at: 1783872008 },
+    secondary: null,
+  };
+  const snapshot = await loadUsageSnapshotWithAppServer({
+    readRateLimits: async () => ({
+      rateLimits: {
+        primary: { usedPercent: 42, windowDurationMins: 10080, resetsAt: 1783872008 },
+        secondary: null,
+      },
+    }),
+  }, {
+    fallbackLoader: () => rolloutSnapshot,
+    generatedAt: "2026-07-17T04:00:00.000Z",
+  });
+
+  assert.equal(snapshot.source, "codex-app-server");
+  assert.equal(snapshot.fallback_source, "codex-session-rollout");
+  assert.equal(snapshot.fallback_observation, "matched");
+  assert.match(usageStatusTooltip(snapshot), /Source: Codex app-server/);
+  assert.match(usageStatusTooltip(snapshot), /Rollout fallback parity: matched/);
+});
+
+test("falls back to rollout usage when app-server is unavailable", async () => {
+  const snapshot = await loadUsageSnapshotWithAppServer({
+    readRateLimits: async () => {
+      throw new Error("unavailable");
+    },
+  }, {
+    fallbackLoader: () => ({
+      available: true,
+      source: "codex-session-rollout",
+      primary: { remaining_percent: 76, window_minutes: 10080 },
+      secondary: null,
+    }),
+  });
+
+  assert.equal(snapshot.available, true);
+  assert.equal(snapshot.source, "codex-session-rollout");
+  assert.equal(snapshot.fallback_reason, "app_server_unavailable");
+  assert.match(usageStatusTooltip(snapshot), /Source: rollout fallback/);
+});
+
+test("detects semantic mismatch between app-server and rollout usage", () => {
+  assert.equal(usageSnapshotParity({
+    available: true,
+    primary: { remaining_percent: 58, window_minutes: 10080, resets_at: 1783872008 },
+  }, {
+    available: true,
+    primary: { remaining_percent: 57, window_minutes: 10080, resets_at: 1783872008 },
+  }), "mismatched");
 });
 
 test("formats status text as remaining primary and secondary percentages", () => {

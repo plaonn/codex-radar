@@ -1,6 +1,7 @@
 const childProcess = require("node:child_process");
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 2500;
+const DEFAULT_RATE_LIMITS_TIMEOUT_MS = 15000;
 const MAX_STDERR_LENGTH = 8192;
 
 function errorText(error) {
@@ -217,6 +218,14 @@ class CodexAppServerController {
     return { active, archived };
   }
 
+  async readRateLimits(options = {}) {
+    await this.ensureStarted();
+    return this.request("account/rateLimits/read", {}, {
+      ...options,
+      timeoutMs: options.timeoutMs ?? DEFAULT_RATE_LIMITS_TIMEOUT_MS,
+    });
+  }
+
   stopProcess(reason) {
     const proc = this.process;
     if (!proc) {
@@ -249,6 +258,7 @@ class CodexAppServerController {
 
 module.exports = {
   CodexAppServerController,
+  DEFAULT_RATE_LIMITS_TIMEOUT_MS,
   DEFAULT_REQUEST_TIMEOUT_MS,
   normalizeCommand,
   threadListParams,

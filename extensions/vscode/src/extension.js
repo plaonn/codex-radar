@@ -26,6 +26,7 @@ const {
 const {
   defaultCodexHome,
   loadUsageSnapshot,
+  loadUsageSnapshotWithAppServer,
   usageStatusText,
   usageStatusTooltip,
 } = require("./usageSource");
@@ -863,44 +864,65 @@ class SessionCacheWatcherManager extends WatcherSetManager {
 }
 
 class UsageStatusBar {
-  constructor() {
+  constructor(options = {}) {
+    this.appServerController = options.appServerController || null;
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.interval = null;
     this.watcher = null;
     this.snapshot = null;
+    this.refreshPromise = null;
+    this.refreshQueued = false;
     this.item.command = "codexRadar.showUsageDetails";
     this.reset();
   }
 
   reset() {
     this.disposeWatcher();
-    this.refresh();
-    this.interval = setInterval(() => this.refresh(), 5 * 60 * 1000);
+    void this.refresh();
+    this.interval = setInterval(() => void this.refresh(), 5 * 60 * 1000);
     const sessionsDir = path.join(defaultCodexHome(), "sessions");
     this.watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(path.resolve(sessionsDir), "**/rollout-*.jsonl"),
     );
-    const refreshHandlers = registerRefreshHandlers(this.watcher, () => this.refresh());
+    const refreshHandlers = registerRefreshHandlers(this.watcher, () => void this.refresh());
     this.watcherRefreshHandlers = refreshHandlers;
   }
 
-  refresh() {
-    let snapshot;
-    try {
-      snapshot = loadUsageSnapshot();
-    } catch (error) {
-      snapshot = {
-        available: false,
-        reason: error instanceof Error ? error.message : String(error),
-      };
+  async refresh() {
+    if (this.refreshPromise) {
+      this.refreshQueued = true;
+      return this.refreshPromise;
     }
-    this.snapshot = snapshot;
-    this.item.text = usageStatusText(snapshot);
-    this.item.tooltip = usageStatusTooltip(snapshot);
-    this.item.show();
+    this.refreshPromise = (async () => {
+      let snapshot;
+      try {
+        snapshot = this.appServerController
+          ? await loadUsageSnapshotWithAppServer(this.appServerController)
+          : loadUsageSnapshot();
+      } catch (error) {
+        snapshot = {
+          available: false,
+          reason: error instanceof Error ? error.message : String(error),
+        };
+      }
+      this.snapshot = snapshot;
+      this.item.text = usageStatusText(snapshot);
+      this.item.tooltip = usageStatusTooltip(snapshot);
+      this.item.show();
+    })().finally(() => {
+      this.refreshPromise = null;
+      if (this.refreshQueued) {
+        this.refreshQueued = false;
+        void this.refresh();
+      }
+    });
+    return this.refreshPromise;
   }
 
   async showDetails() {
+    if (!this.snapshot) {
+      await this.refresh();
+    }
     const snapshot = this.snapshot || loadUsageSnapshot();
     await vscode.window.showInformationMessage("Codex usage remaining", {
       modal: true,
@@ -958,7 +980,7 @@ async function activate(context) {
     onModelChange: (model) => radarStatusBar.refresh(model),
   });
   const watcherManager = new SessionCacheWatcherManager(() => controller.refresh());
-  const usageStatusBar = new UsageStatusBar();
+  const usageStatusBar = new UsageStatusBar({ appServerController });
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("codexRadar.attentionList", {
@@ -983,6 +1005,7 @@ async function activate(context) {
       } else if (event.affectsConfiguration("codexRadar.codexExecutable")) {
         appServerController.reset();
         controller.refresh();
+        void usageStatusBar.refresh();
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => controller.refresh()),

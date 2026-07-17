@@ -78,7 +78,7 @@ Legacy state:
 
 ## Usage Snapshot
 
-`codex-radar usage`는 experimental host-local Codex usage adapter다. VS Code Remote SSH, Dev Container, WSL, local window 모두에서 실행 중인 VS Code extension host 기준 `CODEX_HOME` 또는 `~/.codex`를 사용한다. Remote SSH window에서는 remote host의 Codex state를 읽고, local VS Code window에서는 local host의 Codex state를 읽는다.
+`codex-radar usage` CLI는 experimental host-local rollout usage adapter다. VS Code extension은 separately installed Codex CLI의 supported app-server `account/rateLimits/read`를 primary usage source로 사용하고, 이 rollout adapter를 one-release fallback과 local semantic parity observation source로 유지한다. 두 경로 모두 VS Code Remote SSH, Dev Container, WSL, local window에서 extension host 기준 state/account를 사용한다.
 
 Input:
 
@@ -99,11 +99,19 @@ Output:
 - `plan_type`, `context_window`, `last_token_usage`, `total_token_usage`: rollout event가 제공하는 요약 값.
 - `reason`: unavailable일 때 `token_count_unavailable` 또는 `rate_limits_unavailable`.
 
+VS Code app-server adapter:
+
+- `account/rateLimits/read`의 backward-compatible `rateLimits` snapshot을 읽는다.
+- `usedPercent`, `windowDurationMins`, `resetsAt`을 기존 `used_percent`, computed `remaining_percent`, `window_minutes`, `resets_at`, `resets_at_iso` model로 정규화한다.
+- Effective source는 `codex-app-server`다. 같은 refresh에서 rollout snapshot을 읽어 semantic 5h/7d window parity를 `matched`, `mismatched`, `unavailable`로 기록한다.
+- App-server initialize/request가 실패하거나 usable rate-limit window가 없으면 rollout snapshot을 effective fallback으로 사용한다.
+- Rollout file change refresh는 coalesce하여 app-server request가 중첩되지 않게 한다.
+
 Privacy and stability boundary:
 
 - 이 adapter는 Codex의 공식 stable usage API가 아니라 host-local rollout JSONL의 current observed shape를 읽는 experimental adapter다.
 - `client_event_at`, `limit_id`, `plan_type`은 authenticated account 또는 stable quota identity를 증명하지 않는다. Snapshot은 host-local advisory usage visibility이며 scheduling authority는 별도의 identity/mapping/policy contract를 요구한다.
-- `auth.json`을 읽지 않고, 서버 요청을 보내지 않고, Codex config/hook/session을 수정하지 않는다.
+- Rollout CLI adapter는 `auth.json`을 읽거나 서버 요청을 보내지 않는다. VS Code app-server adapter는 Codex가 제공하는 read-only account method만 호출하며 `auth.json`, Codex config, hook, session을 직접 읽거나 수정하지 않는다.
 - raw rollout line, raw transcript content, private rollout file path는 output model이나 Radar state에 저장하지 않는다.
 - `rate_limits`가 없으면 정상적인 unavailable snapshot으로 처리한다. Timestamp가 없거나 malformed이면 usage payload 자체는 advisory output에 유지할 수 있지만 `client_event_at`과 `observed_at`은 출력하지 않는다.
 
@@ -248,7 +256,7 @@ GUI display contract v1:
 GUI privacy/action boundary v1:
 
 - 첫 GUI milestone은 Codex/codex-radar runtime state에 대해 read-only dashboard다. Extension-local read/unread UI state는 허용하지만, `sessions.json`, transcript, Codex thread, hook config, server-side `config.json`은 수정하지 않는다.
-- GUI의 app-server `thread/list` 사용은 read-only metadata lookup으로 제한한다. GUI는 이 경로에서 `thread/list`만 호출하고 `turn/start`, `thread/name/set`, archive/delete/update 같은 Codex state-changing method는 호출하지 않는다.
+- GUI의 app-server 사용은 read-only `thread/list` metadata lookup과 `account/rateLimits/read` usage lookup으로 제한한다. GUI는 `turn/start`, `thread/name/set`, archive/delete/update 같은 Codex state-changing method를 호출하지 않는다.
 - `codexRadar.codexExecutable`은 extension host에 사용자가 별도로 설치한 Codex CLI executable을 지정한다. 빈 값은 extension host의 `PATH`에서 `codex`를 찾는다. Radar VSIX는 Codex binary나 별도 app-server implementation을 포함하지 않고, official Codex extension의 private bundled executable path를 탐색하거나 호출하지 않는다.
 - GUI usage status bar는 Codex rollout JSONL을 read-only로 읽을 수 있지만 `auth.json`을 읽거나 서버 요청을 보내지 않는다.
 - GUI는 `~/.codex/hooks.json`을 편집하지 않고, hook install을 자동화하지 않는다.

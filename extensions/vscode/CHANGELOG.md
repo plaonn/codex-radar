@@ -2,6 +2,20 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.9
+
+### Changed
+
+- Read Codex usage from the supported app-server `account/rateLimits/read` method through the reusable controller.
+- Normalize app-server `usedPercent`, `windowDurationMins`, and `resetsAt` into the existing semantic 5-hour/7-day remaining-usage model.
+- Fail closed on malformed usage windows and ignore nullable duration/reset fields instead of normalizing them as zero.
+- Keep the rollout adapter as a one-release fallback and local parity observation source.
+
+### Boundaries
+
+- Keep `sessions.json` as the lifecycle attention source; app-server usage support does not change the hook/helper requirement.
+- Coalesce usage refreshes so rollout file changes do not create overlapping app-server requests.
+
 ## 0.4.7
 
 ### Added

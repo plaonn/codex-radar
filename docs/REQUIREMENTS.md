@@ -123,13 +123,13 @@
 
 ### R8: host-local Codex usage visibility
 
-- Status: confirmed direction, experimental rollout-log adapter active
-- Requirement: VS Code extension host에서 접근 가능한 host-local Codex session rollout state를 read-only로 관찰해, 해당 VS Code window가 붙어 있는 실행 환경의 Codex rate-limit 사용률과 reset 시각을 빠르게 볼 수 있어야 한다.
+- Status: confirmed direction, supported app-server adapter with rollout fallback active
+- Requirement: VS Code extension host의 supported Codex app-server usage surface를 read-only로 조회해 rate-limit 사용률과 reset 시각을 빠르게 보여주고, migration 동안 host-local rollout adapter로 semantic parity를 관찰하며 실패 시 fallback할 수 있어야 한다.
 - Rationale: 원격 또는 로컬 개발 환경에서 Codex를 여러 thread/작업에 쓰는 경우, 사용량 한계에 가까운지 모르면 긴 작업이나 병렬 작업을 시작했다가 중단/지연될 수 있다.
 - Failure prevented: extension host의 Codex 사용량 상태를 모른 채 새 Codex 작업을 시작하는 문제.
-- Assumptions: Codex가 같은 extension host의 `CODEX_HOME` 또는 `~/.codex` 아래 `sessions/rollout-*.jsonl`에 `token_count`/`rate_limits` event를 남긴다. 이 rollout JSONL shape는 공식 stable API가 아니므로 experimental adapter로 취급한다.
+- Assumptions: separately installed compatible Codex CLI가 app-server `account/rateLimits/read`를 제공한다. Codex는 migration fallback을 위해 같은 extension host의 rollout JSONL에도 현재 rate-limit event를 남긴다.
 - Non-goals: local UI client machine의 별도 Codex state 읽기, `auth.json` 읽기, 서버 요청, 공식 Codex config/hook 수정, raw rollout line 저장.
-- Derived specs/tests: `codex-radar usage --json`, host-local VS Code status bar usage snapshot, `window_minutes`-based 5h/7d semantic pool placement, absent-pool placeholder, null/unavailable fallback, broken JSONL skip, same-line timezone-aware client event timestamp preservation, event-time-based multi-file selection, missing/malformed timestamp fail-closed provenance, duplicate event collapse, raw path/content exclusion.
+- Derived specs/tests: app-server `account/rateLimits/read`, used-to-remaining normalization, rollout parity observation/fallback, request coalescing, `codex-radar usage --json`, host-local VS Code status bar usage snapshot, `window_minutes`-based 5h/7d semantic pool placement, absent-pool placeholder, null/unavailable fallback, broken JSONL skip, event-time selection, raw path/content exclusion.
 - Revisit when: Codex가 공식 local usage API/export/status endpoint를 제공하거나 rollout schema가 사라질 때.
 
 ### R9: foreground mobile cockpit over SSH
@@ -183,13 +183,13 @@
 
 ### R11: Codex App Server Controller foundation
 
-- Status: confirmed direction, read-only controller foundation active
+- Status: confirmed direction, read-only thread catalog and usage controller active
 - Requirement: VS Code extension은 사용자가 별도로 설치한 compatible Codex CLI를 통해 `codex app-server`를 실행하고, extension host 안의 Codex App Server Controller가 process lifecycle, initialization, request routing, timeout, failure recovery를 관리할 수 있어야 한다.
 - Rationale: 기존 one-shot `thread/list` metadata lookup을 명시적인 controller boundary로 승격해야 같은 app-server process를 안전하게 재사용하고, 향후 supported event/session surface의 parity를 검증하면서 Python hook/helper 의존 제거 가능성을 판단할 수 있다.
 - Failure prevented: Radar가 Codex binary 또는 별도 app-server implementation을 소유·번들하는 것으로 굳어지는 문제, official Codex extension의 private executable path 의존, refresh마다 process를 생성하는 비용과 process leak, app-server parity 검증 전에 Python producer를 제거하는 문제.
 - Assumptions: compatible `codex` executable은 extension host에 사용자가 별도로 설치하며, stdio app-server surface를 제공한다. Radar가 실행한 app-server process는 다른 Codex client의 process와 독립적일 수 있지만 같은 host-local Codex state를 읽는다.
 - Non-goals: Codex binary 번들, official Codex extension 내부 runtime 재사용, `turn/start` 또는 Codex state-changing method 활성화, 현재 Python hook/helper 즉시 제거, app-server만으로 lifecycle attention parity가 확보됐다고 선언하기.
-- Derived specs/tests: `CodexAppServerController`, configurable executable path, lazy start and single-process reuse, initialize/initialized handshake, request id routing, timeout/exit rejection, reset/dispose cleanup, read-only active/archived `thread/list`, controller and catalog unit tests, packaged VSIX without a Codex binary.
+- Derived specs/tests: `CodexAppServerController`, configurable executable path, lazy start and single-process reuse, initialize/initialized handshake, request id routing, timeout/exit rejection, reset/dispose cleanup, read-only active/archived `thread/list`, read-only `account/rateLimits/read`, controller/catalog/usage unit tests, packaged VSIX without a Codex binary.
 - Revisit when: supported app-server event/status contract가 `waiting_approval`, `tool_running`, `done`, transcript preview, usage를 current producer와 동등하게 제공하거나, Codex CLI가 app-server lifecycle/distribution contract를 변경할 때.
 
 ## Rationale

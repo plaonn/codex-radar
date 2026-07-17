@@ -52,6 +52,15 @@ function successfulSpawn(calls) {
             id: message.id,
             result: { data: [{ id: `${kind}-${calls.length}`, cwd: "/repo" }] },
           });
+        } else if (message.method === "account/rateLimits/read") {
+          current.respond({
+            id: message.id,
+            result: {
+              rateLimits: {
+                primary: { usedPercent: 42, windowDurationMins: 10080 },
+              },
+            },
+          });
         }
       });
     });
@@ -108,6 +117,25 @@ test("initializes once and reuses one app-server process across catalog loads", 
 
   controller.dispose();
   assert.equal(calls[0].proc.killed, true);
+});
+
+test("reads supported rate limits through the reused app-server process", async () => {
+  const calls = [];
+  const controller = new CodexAppServerController({
+    requestTimeoutMs: 100,
+    spawn: successfulSpawn(calls),
+  });
+
+  await controller.listThreads(["/repo"]);
+  const response = await controller.readRateLimits({ timeoutMs: 100 });
+
+  assert.equal(calls.length, 1);
+  assert.equal(response.rateLimits.primary.usedPercent, 42);
+  assert.equal(
+    calls[0].proc.messages.filter((message) => message.method === "account/rateLimits/read").length,
+    1,
+  );
+  controller.dispose();
 });
 
 test("concurrent catalog loads wait for one initialization handshake", async () => {

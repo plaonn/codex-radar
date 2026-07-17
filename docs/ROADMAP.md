@@ -33,9 +33,9 @@
 
 ## Local Runtime / Distribution Direction
 
-- 현재 안정 경로는 host-local Python indexer/runtime과 client surface의 분리다. 동시에 VS Code extension의 Codex App Server Controller가 supported app-server state/event surface를 직접 다루는 migration path를 검증한다. Controller parity가 입증되기 전에는 extension을 lifecycle source of truth로 승격하거나 Python producer를 제거하지 않는다.
+- 현재 안정 경로는 host-local Python indexer/runtime과 client surface의 분리다. 별도 process app-server는 다른 CLI/App/VS Code client의 live lifecycle을 복원하지 못하므로 Python producer를 lifecycle source of truth로 유지한다. Codex App Server Controller는 supported auxiliary read surface를 단계적으로 맡는다.
 - Codex App Server Controller는 사용자가 별도로 설치한 compatible Codex CLI를 실행한다. Radar VSIX는 Codex binary나 별도 app-server implementation을 번들하지 않고, official Codex extension의 private bundled runtime path에도 의존하지 않는다.
-- Controller foundation 순서는 long-lived stdio lifecycle과 read-only `thread/list`, diagnostics/reconnect, lifecycle event/status parity, transcript/usage parity, migration decision 순이다. `turn/start`, message send, archive/name update 같은 write action은 별도 opt-in requirement와 사용자 승인 전까지 금지한다.
+- Controller foundation은 long-lived stdio lifecycle과 read-only `thread/list`, diagnostics/reconnect를 제공한다. Cross-process lifecycle parity는 실패했으며, supported `account/rateLimits/read` usage adapter가 rollout fallback/parity observation과 함께 다음 auxiliary read surface로 추가됐다. Transcript preview는 completed stored thread에 한해 별도 migration 후보로 남긴다. `turn/start`, message send, archive/name update 같은 write action은 별도 opt-in requirement와 사용자 승인 전까지 금지한다.
 - Extension-only scan mode는 설치가 단순하더라도 `waiting_approval`, `tool_running`, `done` 같은 lifecycle-derived attention state의 source of truth가 약해지므로 primary architecture로 두지 않는다. 필요하면 lightweight history/preview fallback으로만 검토한다.
 - Native Windows foundation은 Python helper, `%LOCALAPPDATA%` defaults, `.cmd` stable shim, immutable version runtime, atomic JSON selector를 사용한다. Signed installer나 package-manager integration은 후속 distribution choice다.
 - Hook integration은 stable entrypoint/shim을 지향한다. Helper implementation 업데이트는 가능한 한 hook config 변경 없이 처리하고, event wiring이나 command contract 변경처럼 `hooks.json` migration이 필요한 경우에는 diff/preview와 사용자 승인을 요구한다.

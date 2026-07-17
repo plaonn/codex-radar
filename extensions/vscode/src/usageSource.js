@@ -3,6 +3,7 @@ const os = require("node:os");
 const path = require("node:path");
 
 const USAGE_SOURCE = "codex-session-rollout";
+const APP_SERVER_USAGE_SOURCE = "codex-app-server";
 
 function expandHome(value, homeDir = os.homedir()) {
   if (!value) {
@@ -114,6 +115,58 @@ function rateWindow(value) {
   return window;
 }
 
+function appServerRateWindow(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const usedPercent = Number(value.usedPercent);
+  if (!Number.isFinite(usedPercent)) {
+    return null;
+  }
+  const window = {};
+  window.used_percent = usedPercent;
+  window.remaining_percent = Math.max(0, 100 - usedPercent);
+  if (value.windowDurationMins != null && Number.isFinite(Number(value.windowDurationMins))) {
+    window.window_minutes = Number(value.windowDurationMins);
+  }
+  if (value.resetsAt != null && Number.isFinite(Number(value.resetsAt))) {
+    window.resets_at = Number(value.resetsAt);
+    window.resets_at_iso = isoFromEpochSeconds(value.resetsAt);
+  }
+  return window;
+}
+
+function appServerUsageSnapshot(response, options = {}) {
+  const generatedAt = options.generatedAt || new Date().toISOString();
+  const rateLimits = response?.rateLimits;
+  const base = {
+    available: false,
+    source: APP_SERVER_USAGE_SOURCE,
+    generated_at: generatedAt,
+    observed_at: generatedAt,
+  };
+  if (!rateLimits || typeof rateLimits !== "object") {
+    return { ...base, reason: "app_server_rate_limits_unavailable" };
+  }
+  const primary = appServerRateWindow(rateLimits.primary);
+  const secondary = appServerRateWindow(rateLimits.secondary);
+  if (!primary && !secondary) {
+    return { ...base, reason: "app_server_rate_limits_unavailable" };
+  }
+  return {
+    ...base,
+    available: true,
+    limit_id: rateLimits.limitId,
+    limit_name: rateLimits.limitName,
+    plan_type: rateLimits.planType,
+    primary,
+    secondary,
+    credits: rateLimits.credits,
+    individual_limit: rateLimits.individualLimit,
+    rate_limit_reached_type: rateLimits.rateLimitReachedType,
+  };
+}
+
 function loadUsageSnapshot(options = {}) {
   const codexHome = options.codexHome || defaultCodexHome(options.env, options.homeDir);
   const files = recentRolloutFiles(codexHome, options.fileLimit || 30);
@@ -186,6 +239,75 @@ function semanticRateWindows(snapshot) {
     windows.sevenDay = snapshot.secondary;
   }
   return windows;
+}
+
+function comparableSemanticWindows(snapshot) {
+  const { fiveHour, sevenDay } = semanticRateWindows(snapshot);
+  const comparable = (window) => window ? {
+    remaining_percent: Number.isFinite(Number(window.remaining_percent))
+      ? Math.round(Number(window.remaining_percent))
+      : null,
+    resets_at: Number.isFinite(Number(window.resets_at)) ? Number(window.resets_at) : null,
+    window_minutes: Number.isFinite(Number(window.window_minutes)) ? Number(window.window_minutes) : null,
+  } : null;
+  return {
+    fiveHour: comparable(fiveHour),
+    sevenDay: comparable(sevenDay),
+  };
+}
+
+function usageSnapshotParity(appServerSnapshot, rolloutSnapshot) {
+  if (!rolloutSnapshot?.available) {
+    return "unavailable";
+  }
+  return JSON.stringify(comparableSemanticWindows(appServerSnapshot))
+    === JSON.stringify(comparableSemanticWindows(rolloutSnapshot))
+    ? "matched"
+    : "mismatched";
+}
+
+function unavailableRolloutSnapshot() {
+  return {
+    available: false,
+    source: USAGE_SOURCE,
+    reason: "rollout_usage_unavailable",
+  };
+}
+
+async function loadUsageSnapshotWithAppServer(appServerController, options = {}) {
+  const fallbackLoader = options.fallbackLoader || (() => loadUsageSnapshot(options));
+  let fallbackSnapshot;
+  const loadFallback = () => {
+    if (fallbackSnapshot) {
+      return fallbackSnapshot;
+    }
+    try {
+      fallbackSnapshot = fallbackLoader();
+    } catch {
+      fallbackSnapshot = unavailableRolloutSnapshot();
+    }
+    return fallbackSnapshot;
+  };
+
+  try {
+    const response = await appServerController.readRateLimits(options.appServerOptions || {});
+    const appServerSnapshot = appServerUsageSnapshot(response, options);
+    if (appServerSnapshot.available) {
+      const rolloutSnapshot = loadFallback();
+      return {
+        ...appServerSnapshot,
+        fallback_source: rolloutSnapshot.source,
+        fallback_observation: usageSnapshotParity(appServerSnapshot, rolloutSnapshot),
+      };
+    }
+  } catch {
+    // The rollout adapter remains the one-release fallback for app-server failures.
+  }
+
+  return {
+    ...loadFallback(),
+    fallback_reason: "app_server_unavailable",
+  };
 }
 
 function usageStatusText(snapshot) {
@@ -285,16 +407,28 @@ function usageStatusTooltip(snapshot, options = {}) {
   if (snapshot.plan_type) {
     lines.push(`Plan: ${snapshot.plan_type}`);
   }
+  if (snapshot.source === APP_SERVER_USAGE_SOURCE) {
+    lines.push("Source: Codex app-server");
+  } else if (snapshot.fallback_reason) {
+    lines.push("Source: rollout fallback");
+  }
+  if (snapshot.fallback_observation) {
+    lines.push(`Rollout fallback parity: ${snapshot.fallback_observation}`);
+  }
   return lines.join("\n");
 }
 
 module.exports = {
+  APP_SERVER_USAGE_SOURCE,
+  appServerUsageSnapshot,
   defaultCodexHome,
   formatDurationUntil,
   formatReset,
   loadUsageSnapshot,
+  loadUsageSnapshotWithAppServer,
   recentRolloutFiles,
   semanticRateWindows,
   usageStatusText,
   usageStatusTooltip,
+  usageSnapshotParity,
 };

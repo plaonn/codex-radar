@@ -11,7 +11,7 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.7`. It adds the read-only Codex App Server Controller foundation and remains intended for local validation. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.9`. It uses the read-only Codex App Server Controller for supported rate-limit usage reads while keeping the rollout adapter as a one-release fallback and parity observation source. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -32,6 +32,7 @@ The current source package version is `0.4.7`. It adds the read-only Codex App S
 - Shows `unknown` with a colored `!` indicator.
 - Prefixes rows/cards with a short session id when no readable thread title is available in `sessions.json`.
 - Shows the total unfiltered attention count in the sidebar view badge, dashboard top bar, and Radar status bar item. Attention means `waiting_approval` or unread `done`; the Radar status bar item also shows running and visible session counts.
+- Reads host-local Codex rate-limit usage through app-server `account/rateLimits/read`, normalizes semantic 5-hour/7-day pools, and keeps the rollout adapter as a local fallback/parity observation for this migration release.
 - Distinguishes unread/read done sessions in sidebar cards and the dashboard selected-session inspector.
 - Filters the sidebar project section or dashboard project list by display status with a temporary view-local filter.
 - Includes an `attention` filter for only attention-worthy sessions.
@@ -81,7 +82,7 @@ code --install-extension codex-radar-vscode-0.4.4.vsix --force
 
 The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development install](../../README.md#개발-설치) and [hook setup runbook](../../docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
 
-For optional thread title/archive enrichment, the extension starts `codex app-server` through a Codex App Server Controller on the extension host. Codex CLI must be installed separately. The VSIX does not bundle Codex and does not reuse the official Codex extension's private bundled executable path. Set `codexRadar.codexExecutable` only when `codex` is not available on the extension host `PATH`.
+For optional thread title/archive enrichment and supported rate-limit usage reads, the extension starts `codex app-server` through a Codex App Server Controller on the extension host. Codex CLI must be installed separately. The VSIX does not bundle Codex and does not reuse the official Codex extension's private bundled executable path. Set `codexRadar.codexExecutable` only when `codex` is not available on the extension host `PATH`.
 
 Maintainers can build the VSIX from the repository root:
 
@@ -94,7 +95,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.7.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.9.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
