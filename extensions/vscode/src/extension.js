@@ -2,6 +2,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vscode = require("vscode");
 
+const { CodexAppServerController } = require("./codexAppServerController");
+
 const { officialCodexThreadUriString } = require("./codexLink");
 const {
   STATUS_FILTER_VALUES,
@@ -74,6 +76,11 @@ function configuredOpenThreadBehavior() {
   return normalizeOpenThreadBehavior(
     vscode.workspace.getConfiguration("codexRadar").get("openThreadBehavior", "ask"),
   );
+}
+
+function configuredCodexExecutable() {
+  const configured = vscode.workspace.getConfiguration("codexRadar").get("codexExecutable", "");
+  return typeof configured === "string" && configured.trim() ? configured.trim() : "codex";
 }
 
 function configuredReadSource() {
@@ -421,6 +428,7 @@ class RadarWebviewController {
   constructor(context, options = {}) {
     this.context = context;
     this.onModelChange = typeof options.onModelChange === "function" ? options.onModelChange : null;
+    this.appServerController = options.appServerController || null;
     this.statusFilter = "";
     this.selectedKey = "";
     this.selectedSessionIdentity = "";
@@ -441,7 +449,10 @@ class RadarWebviewController {
 
   async loadCodexThreadCatalog(sessions) {
     const cwds = sessions.map((session) => session.cwd).filter(Boolean);
-    return loadCodexThreadCatalog({ cwds });
+    return loadCodexThreadCatalog({
+      appServerController: this.appServerController,
+      cwds,
+    });
   }
 
   async refresh(options = {}) {
@@ -938,7 +949,12 @@ class RadarStatusBar {
 
 async function activate(context) {
   const radarStatusBar = new RadarStatusBar();
+  const appServerController = new CodexAppServerController({
+    clientVersion: context.extension?.packageJSON?.version || "0.0.0",
+    codexCommandProvider: configuredCodexExecutable,
+  });
   const controller = new RadarWebviewController(context, {
+    appServerController,
     onModelChange: (model) => radarStatusBar.refresh(model),
   });
   const watcherManager = new SessionCacheWatcherManager(() => controller.refresh());
@@ -964,10 +980,14 @@ async function activate(context) {
         controller.refresh();
       } else if (event.affectsConfiguration("codexRadar.readSource")) {
         controller.refresh();
+      } else if (event.affectsConfiguration("codexRadar.codexExecutable")) {
+        appServerController.reset();
+        controller.refresh();
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => controller.refresh()),
     watcherManager,
+    appServerController,
     radarStatusBar,
     usageStatusBar,
   );
@@ -978,6 +998,7 @@ function deactivate() {}
 module.exports = {
   RadarWebviewController,
   activate,
+  configuredCodexExecutable,
   configuredStateDir,
   configuredReadSource,
   dashboardHtml,

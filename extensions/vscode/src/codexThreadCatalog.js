@@ -1,4 +1,4 @@
-const childProcess = require("node:child_process");
+const { CodexAppServerController, threadListParams } = require("./codexAppServerController");
 
 const DEFAULT_THREAD_LIMIT = 200;
 const DEFAULT_TIMEOUT_MS = 2500;
@@ -29,6 +29,9 @@ function threadUpdatedAt(thread) {
 }
 
 function threadArrayFromResult(result) {
+  if (Array.isArray(result)) {
+    return result;
+  }
   if (Array.isArray(result?.data)) {
     return result.data;
   }
@@ -94,142 +97,21 @@ function parseJsonLines(text) {
   return messages;
 }
 
-function threadListParams(cwds, archived, options = {}) {
-  const params = {
-    archived,
-    limit: options.limit ?? DEFAULT_THREAD_LIMIT,
-    sortKey: "updated_at",
-    sortDirection: "desc",
-    useStateDbOnly: false,
-  };
-  if (cwds.length === 1) {
-    params.cwd = cwds[0];
-  } else if (cwds.length > 1) {
-    params.cwd = cwds;
-  }
-  return params;
-}
-
-function initializeRequest() {
-  return {
-    id: 1,
-    method: "initialize",
-    params: {
-      clientInfo: {
-        name: "codex_radar_vscode",
-        title: "Codex Radar VS Code",
-        version: "0.0.0",
-      },
-      capabilities: { experimentalApi: true },
-    },
-  };
-}
-
-function threadListRequest(id, cwds, archived, options = {}) {
-  return {
-    id,
-    method: "thread/list",
-    params: threadListParams(cwds, archived, options),
-  };
-}
-
-function send(proc, message) {
-  proc.stdin.write(`${JSON.stringify(message)}\n`);
-}
-
-function runCodexAppServer(cwds, options = {}) {
-  return new Promise((resolve, reject) => {
-    const proc = childProcess.spawn(options.codexCommand || "codex", ["app-server"], {
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let buffer = "";
-    let stderr = "";
-    let active = null;
-    let archived = null;
-    let settled = false;
-
-    function settle(error, value) {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      try {
-        proc.stdin.end();
-      } catch {
-        // Process may already be gone.
-      }
-      setTimeout(() => {
-        if (!proc.killed) {
-          proc.kill("SIGTERM");
-        }
-      }, 50);
-      if (error) {
-        reject(error);
-      } else {
-        resolve(value);
-      }
-    }
-
-    const timer = setTimeout(() => {
-      settle(new Error(stderr.trim() || "codex app-server thread/list timed out"));
-    }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-
-    proc.on("error", (error) => settle(error));
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    proc.stdout.on("data", (chunk) => {
-      buffer += chunk.toString();
-      for (;;) {
-        const newline = buffer.indexOf("\n");
-        if (newline < 0) {
-          break;
-        }
-        const line = buffer.slice(0, newline).trim();
-        buffer = buffer.slice(newline + 1);
-        if (!line) {
-          continue;
-        }
-        let message;
-        try {
-          message = JSON.parse(line);
-        } catch {
-          continue;
-        }
-        if (message.id === 1) {
-          if (message.error) {
-            settle(new Error(JSON.stringify(message.error)));
-            return;
-          }
-          send(proc, { method: "initialized", params: {} });
-          send(proc, threadListRequest(2, cwds, false, options));
-          send(proc, threadListRequest(3, cwds, true, options));
-          continue;
-        }
-        if (message.id === 2) {
-          if (message.error) {
-            settle(new Error(JSON.stringify(message.error)));
-            return;
-          }
-          active = threadArrayFromResult(message.result);
-        }
-        if (message.id === 3) {
-          if (message.error) {
-            settle(new Error(JSON.stringify(message.error)));
-            return;
-          }
-          archived = threadArrayFromResult(message.result);
-        }
-        if (active && archived) {
-          settle(null, { active, archived });
-          return;
-        }
-      }
-    });
-
-    send(proc, initializeRequest());
+async function runCodexAppServer(cwds, options = {}) {
+  const controller = new CodexAppServerController({
+    codexCommand: options.codexCommand,
+    clientVersion: options.clientVersion,
+    requestTimeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    spawn: options.spawn,
   });
+  try {
+    return await controller.listThreads(cwds, {
+      limit: options.limit ?? DEFAULT_THREAD_LIMIT,
+      timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    });
+  } finally {
+    controller.dispose();
+  }
 }
 
 async function loadCodexThreadCatalog(options = {}) {
@@ -241,7 +123,17 @@ async function loadCodexThreadCatalog(options = {}) {
     return emptyCodexThreadCatalog();
   }
   try {
-    return catalogFromThreadLists(await (options.runCodexAppServer || runCodexAppServer)(cwds, options));
+    const load = options.appServerController
+      ? (filteredCwds, loadOptions) => options.appServerController.listThreads(filteredCwds, loadOptions)
+      : (options.runCodexAppServer || runCodexAppServer);
+    const lists = await load(cwds, {
+      ...options,
+      limit: options.limit ?? DEFAULT_THREAD_LIMIT,
+    });
+    return catalogFromThreadLists({
+      active: threadArrayFromResult(lists?.active),
+      archived: threadArrayFromResult(lists?.archived),
+    });
   } catch (error) {
     return emptyCodexThreadCatalog(error instanceof Error ? error.message : String(error));
   }

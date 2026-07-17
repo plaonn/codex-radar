@@ -86,6 +86,28 @@ test("loads catalog through injectable app-server runner", async () => {
   assert.equal(isArchivedByCodexThreadCatalog({ session_id: "archived-1", cwd: "/repo" }, catalog), true);
 });
 
+test("loads catalog through a reusable App Server Controller", async () => {
+  let calls = 0;
+  const catalog = await loadCodexThreadCatalog({
+    appServerController: {
+      listThreads: async (cwds, options) => {
+        calls += 1;
+        assert.deepEqual(cwds, ["C:\\repo"]);
+        assert.equal(options.limit, 7);
+        return {
+          active: { data: [{ id: "active-1", title: "Controller title", cwd: "C:\\repo" }] },
+          archived: { data: [] },
+        };
+      },
+    },
+    cwds: ["C:\\repo"],
+    limit: 7,
+  });
+
+  assert.equal(calls, 1);
+  assert.equal(catalogTitleForSession({ session_id: "active-1", cwd: "C:\\repo" }, catalog), "Controller title");
+});
+
 test("does not call app-server without a cwd filter", async () => {
   const catalog = await loadCodexThreadCatalog({
     cwds: [],

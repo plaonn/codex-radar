@@ -33,6 +33,8 @@ The public beta is distributed through the [v0.4.4 GitHub Release](https://githu
 
 Codex Radar has two host-local parts. The helper/indexer receives explicitly configured Codex lifecycle hook events and maintains the latest known state for each thread. The VS Code extension is a read-only client of that local index; it is not an extension-only product and does not create the index by itself.
 
+The source extension also contains a read-only Codex App Server Controller foundation for optional thread title/archive enrichment. It starts a compatible Codex CLI that the user installed separately; the VSIX does not bundle Codex or reuse the official Codex extension's private runtime path. The Python helper/indexer remains required until app-server lifecycle parity and real-host migration smoke are complete.
+
 ```text
 Codex lifecycle events
   -> ~/.local/bin/codex-radar-hook

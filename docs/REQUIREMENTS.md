@@ -181,6 +181,17 @@
 - Derived specs/tests: `%LOCALAPPDATA%` state/runtime defaults, Windows byte-range file lock, lazy TUI import, stable `.cmd` shims, immutable runtime versions, atomic `current.json` selection, upgrade/rollback tests, `windows-latest` CI, Native Windows hook setup runbook, separate real-host smoke exit criterion.
 - Revisit when: Windows Codex hook command execution contract가 바뀌거나, signed installer/package-manager distribution 또는 WSL2 support가 active milestone이 될 때.
 
+### R11: Codex App Server Controller foundation
+
+- Status: confirmed direction, read-only controller foundation active
+- Requirement: VS Code extension은 사용자가 별도로 설치한 compatible Codex CLI를 통해 `codex app-server`를 실행하고, extension host 안의 Codex App Server Controller가 process lifecycle, initialization, request routing, timeout, failure recovery를 관리할 수 있어야 한다.
+- Rationale: 기존 one-shot `thread/list` metadata lookup을 명시적인 controller boundary로 승격해야 같은 app-server process를 안전하게 재사용하고, 향후 supported event/session surface의 parity를 검증하면서 Python hook/helper 의존 제거 가능성을 판단할 수 있다.
+- Failure prevented: Radar가 Codex binary 또는 별도 app-server implementation을 소유·번들하는 것으로 굳어지는 문제, official Codex extension의 private executable path 의존, refresh마다 process를 생성하는 비용과 process leak, app-server parity 검증 전에 Python producer를 제거하는 문제.
+- Assumptions: compatible `codex` executable은 extension host에 사용자가 별도로 설치하며, stdio app-server surface를 제공한다. Radar가 실행한 app-server process는 다른 Codex client의 process와 독립적일 수 있지만 같은 host-local Codex state를 읽는다.
+- Non-goals: Codex binary 번들, official Codex extension 내부 runtime 재사용, `turn/start` 또는 Codex state-changing method 활성화, 현재 Python hook/helper 즉시 제거, app-server만으로 lifecycle attention parity가 확보됐다고 선언하기.
+- Derived specs/tests: `CodexAppServerController`, configurable executable path, lazy start and single-process reuse, initialize/initialized handshake, request id routing, timeout/exit rejection, reset/dispose cleanup, read-only active/archived `thread/list`, controller and catalog unit tests, packaged VSIX without a Codex binary.
+- Revisit when: supported app-server event/status contract가 `waiting_approval`, `tool_running`, `done`, transcript preview, usage를 current producer와 동등하게 제공하거나, Codex CLI가 app-server lifecycle/distribution contract를 변경할 때.
+
 ## Rationale
 
 VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.

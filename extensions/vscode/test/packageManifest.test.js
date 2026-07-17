@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.4.6");
+  assert.equal(manifest.version, "0.4.7");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -151,6 +151,15 @@ test("configures workspace mismatch behavior for Open in Codex", () => {
   assert.equal(setting.default, "ask");
   assert.deepEqual(setting.enum, ["ask", "openWorkspace", "openHere"]);
   assert.equal(setting.enumDescriptions.length, 3);
+});
+
+test("configures a separately installed Codex executable without a bundled default", () => {
+  const manifest = readManifest();
+  const setting = manifest.contributes.configuration.properties["codexRadar.codexExecutable"];
+
+  assert.equal(setting.default, "");
+  assert.match(setting.description, /separately installed Codex CLI/);
+  assert.match(setting.description, /does not bundle Codex/);
 });
 
 test("keeps shared export in observation mode before a default-source switch", () => {

@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.7
+
+### Added
+
+- Add a Codex App Server Controller that lazily starts and reuses a separately installed `codex app-server` process for read-only thread catalog requests.
+- Add an optional `codexRadar.codexExecutable` setting for extension-host installations where `codex` is not on `PATH`.
+
+### Boundaries
+
+- Do not bundle a Codex binary or depend on the official Codex extension's private runtime path.
+- Keep app-server access limited to `thread/list`; the Python hook/helper remains the lifecycle state producer until parity and real-host migration smoke are complete.
+
 ## 0.4.6
 
 ### Added

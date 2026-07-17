@@ -11,7 +11,7 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.6`. It includes the Native Windows state-path foundation and is intended for local validation; Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.7`. It adds the read-only Codex App Server Controller foundation and remains intended for local validation. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -81,6 +81,8 @@ code --install-extension codex-radar-vscode-0.4.4.vsix --force
 
 The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development install](../../README.md#개발-설치) and [hook setup runbook](../../docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
 
+For optional thread title/archive enrichment, the extension starts `codex app-server` through a Codex App Server Controller on the extension host. Codex CLI must be installed separately. The VSIX does not bundle Codex and does not reuse the official Codex extension's private bundled executable path. Set `codexRadar.codexExecutable` only when `codex` is not available on the extension host `PATH`.
+
 Maintainers can build the VSIX from the repository root:
 
 ```bash
@@ -92,7 +94,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.6.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.7.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

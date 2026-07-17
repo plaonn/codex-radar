@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "Project-grouped Codex thread radar for VS Code.",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -66,6 +66,11 @@
           "type": "string",
           "default": "",
           "description": "Override codex-radar state directory. Empty uses CODEX_RADAR_HOME, %LOCALAPPDATA%/codex-radar/state on Windows, or XDG_STATE_HOME/codex-radar and ~/.local/state/codex-radar on POSIX."
+        },
+        "codexRadar.codexExecutable": {
+          "type": "string",
+          "default": "",
+          "description": "Path or command name for a separately installed Codex CLI on the extension host. Empty uses codex from PATH. Codex Radar does not bundle Codex."
         },
         "codexRadar.readSource": {
           "type": "string",
