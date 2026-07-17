@@ -129,6 +129,14 @@ codex-radar usage
 
 `codex-radar usage --json` preserves a valid timezone-aware timestamp from the same rollout event as `client_event_at` and labels its experimental provenance. File modification time and scan time are not reported as the usage observation time. This host-local snapshot remains advisory and does not establish account or quota identity.
 
+An opt-in experimental thread host is also available for local or SSH clients that need a persistent bidirectional Codex app-server connection:
+
+```bash
+codex-radar thread rpc --codex-command /path/to/codex
+```
+
+It reads one JSON request per stdin line and writes one JSON response per stdout line. Supported methods are `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/send`, and `shutdown`. Threads started through this host receive bounded `create_thread`, `list_threads`, `read_thread`, and `send_message_to_thread` dynamic tools. The host does not open a network listener, install a daemon, edit Codex configuration, or auto-approve command/file/permission requests.
+
 Retention applies only to Radar's session index and defaults to seven days. It does not delete Codex transcripts, official threads, or archive state.
 
 ```bash

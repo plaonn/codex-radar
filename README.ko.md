@@ -129,6 +129,14 @@ codex-radar usage
 
 보존 기간은 Radar 세션 인덱스에만 적용되며 기본값은 7일입니다. Codex transcript, 공식 스레드, 보관 상태는 삭제하지 않습니다.
 
+장기 실행 양방향 Codex app-server connection이 필요한 로컬 또는 SSH client를 위해 opt-in 실험적 thread host도 제공합니다.
+
+```bash
+codex-radar thread rpc --codex-command /path/to/codex
+```
+
+stdin에서 한 줄에 JSON request 하나를 읽고 stdout에 JSON response 하나를 출력합니다. 지원 method는 `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/send`, `shutdown`입니다. 이 host가 시작한 thread에는 bounded `create_thread`, `list_threads`, `read_thread`, `send_message_to_thread` dynamic tool이 주입됩니다. Network listener나 daemon을 설치하지 않고 Codex config를 수정하지 않으며 command/file/permission request를 자동 승인하지 않습니다.
+
 ```bash
 codex-radar config get retention_days
 codex-radar config set retention_days 14

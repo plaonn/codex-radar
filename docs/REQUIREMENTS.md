@@ -192,6 +192,18 @@
 - Derived specs/tests: `CodexAppServerController`, configurable executable path, lazy start and single-process reuse, initialize/initialized handshake, request id routing, timeout/exit rejection, reset/dispose cleanup, read-only active/archived `thread/list`, read-only `account/rateLimits/read`, controller/catalog/usage unit tests, packaged VSIX without a Codex binary.
 - Revisit when: supported app-server event/status contract가 `waiting_approval`, `tool_running`, `done`, transcript preview, usage를 current producer와 동등하게 제공하거나, Codex CLI가 app-server lifecycle/distribution contract를 변경할 때.
 
+### R12: opt-in Codex thread orchestration host
+
+- Status: confirmed direction, experimental stdio RPC foundation active
+- Requirement: Radar는 host-local stdio boundary에서 사용자가 별도로 설치한 compatible Codex app-server를 소유하고, Radar가 시작한 thread에 bounded `create_thread`, `list_threads`, `read_thread`, `send_message_to_thread` dynamic tools를 주입해 같은 connection에서 server request를 처리할 수 있어야 한다.
+- Rationale: Codex client별 thread-tool injection이 다를 때도 VS Code, future Android/SSH client, CLI automation이 하나의 Radar-owned orchestration contract를 재사용해야 한다. 이는 monitoring source of truth를 VS Code extension에 묶지 않으면서 opt-in write capability를 별도 boundary로 둔다.
+- Failure prevented: client 생성 경로에 따라 coordinator thread의 tool surface가 사라지는 문제, UI client마다 app-server JSON-RPC와 dynamic tool dispatcher를 다시 구현하는 문제, stdout reader 안에서 nested request handler를 await해 self-deadlock이 발생하는 문제.
+- Automation boundary: `codex-radar thread rpc`를 명시적으로 실행한 동안에만 활성화한다. Global Codex config를 수정하지 않고 network listener를 열지 않으며 command/file/permission approval을 자동 승인하지 않는다.
+- Safety limits: canonical tagged dynamic tool spec, thread-scoped recursion/child limits, bounded message/tool output, unknown server request decline, separate handler worker를 요구한다.
+- Non-goals: 기존 ChatGPT Remote thread의 tool inventory를 사후 수정하기, Codex App의 모든 private tool을 복제하기, Codex binary 번들, background daemon 자동 설치, Python lifecycle indexer 제거, user approval 없이 archive/delete/config mutation 활성화.
+- Derived specs/tests: bidirectional JSONL request routing, `thread/start/list/read/resume`, `turn/start`, `item/tool/call`, same-id response, nested request deadlock regression, recursion/output/message bounds, JSONL RPC stdout purity, local bundled Codex integration smoke.
+- Revisit when: app-server dynamic tools가 stable API가 되거나 official Remote가 동일 thread tool surface를 제공하거나 Android/VS Code client가 RPC lifecycle ownership을 요구할 때.
+
 ## Rationale
 
 VS Code Remote SSH로 원격 환경에서 개발하면서 remote environment 안의 Codex를 함께 사용하는 경우, VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread 전환이 어렵고, thread 알림과 상태 가시성만으로는 어떤 thread가 대기/완료/승인요청 상태인지 놓치기 쉽다. Codex App과 VS Code extension은 client surface가 다르므로, client별 내부 저장소나 UI 구조를 직접 읽는 방식은 공통 감시 방법으로 안정적이지 않다. Codex hook은 이미 session과 transcript metadata를 노출하는 host-local lifecycle 관측면이므로, private client 내부 구현에 의존하지 않고 host-local 인덱서로 visibility 문제를 먼저 해결할 수 있다.

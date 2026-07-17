@@ -30,6 +30,7 @@ from .store import (
 )
 from .transcript import format_skim, skim_transcript
 from .transcript_preview import MAX_PREVIEW_LIMIT
+from .thread_rpc import run_thread_rpc
 from .usage import default_codex_home, format_usage_snapshot, usage_snapshot
 from .watch import run_watch
 
@@ -264,6 +265,12 @@ def cmd_usage(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_thread(args: argparse.Namespace) -> int:
+    if args.thread_command == "rpc":
+        return run_thread_rpc(codex_command=args.codex_command)
+    raise SystemExit("expected thread command")
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     state_dir = _state_dir_arg(args.state_dir)
     try:
@@ -380,6 +387,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum recent rollout files to scan. Default: 30",
     )
     usage.set_defaults(func=cmd_usage)
+
+    thread = subparsers.add_parser("thread", help="Run the experimental Codex thread host")
+    thread_subparsers = thread.add_subparsers(dest="thread_command", required=True)
+    thread_rpc = thread_subparsers.add_parser(
+        "rpc",
+        help="Serve the local thread orchestration JSONL protocol on stdin/stdout",
+    )
+    thread_rpc.add_argument(
+        "--codex-command",
+        default="codex",
+        help="Compatible Codex executable to launch. Default: codex",
+    )
+    thread_rpc.set_defaults(func=cmd_thread)
 
     export = subparsers.add_parser("export", help="Export sanitized machine-readable state")
     export_subparsers = export.add_subparsers(dest="export_command", required=True)

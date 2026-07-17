@@ -7,6 +7,8 @@ This document defines the current terminal MVP behavior, data model, and local a
 
 현재 spec은 local-only hook indexer, latest-state session index, server-side retention config/pruning, project-aware session list/filtering, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 통합하는 것을 지향하지만, 현재 spec은 terminal MVP/fallback contract를 정의한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
 
+Experimental thread orchestration is exposed separately through `codex-radar thread rpc`. It owns one compatible `codex app-server --stdio` process and provides a strict JSONL stdin/stdout control protocol. Requests are `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/send`, and `shutdown`. Threads started by this host receive canonical dynamic function specs named `create_thread`, `list_threads`, `read_thread`, and `send_message_to_thread`. The host handles `item/tool/call` on a separate worker so a tool may issue nested requests on the same app-server connection without blocking the sole stdout reader. This opt-in write surface does not replace the hook-owned lifecycle index, does not open a network listener, and declines unsupported server requests rather than auto-approving command, file, or permission changes.
+
 Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아니라 마지막으로 관측한 lifecycle event와 display-only 추론이다. `waiting_approval`과 `done`은 각각 `PermissionRequest`, `Stop`/`SubagentStop` event를 관측했음을 뜻하고, `stale`은 `active`, `running`, `tool_running` 상태에서 일정 시간 새 hook event가 없었다는 표시다.
 
 현재 terminal MVP command contract:

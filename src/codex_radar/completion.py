@@ -12,6 +12,7 @@ COMMANDS = (
     "path",
     "doctor",
     "usage",
+    "thread",
     "export",
     "config",
     "prune",
@@ -24,6 +25,7 @@ WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-exi
 PRUNE_OPTIONS = ("--retention-days", "--dry-run")
 USAGE_OPTIONS = ("--codex-home", "--file-limit")
 EXPORT_COMMANDS = ("state", "preview")
+THREAD_COMMANDS = ("rpc",)
 
 
 def bash_completion() -> str:
@@ -39,6 +41,7 @@ def bash_completion() -> str:
             *PRUNE_OPTIONS,
             *USAGE_OPTIONS,
             *EXPORT_COMMANDS,
+            *THREAD_COMMANDS,
             "get",
             "set",
             "retention_days",
@@ -69,6 +72,14 @@ _codex_radar() {{
       state) _arguments '--json[print versioned JSON contract]' ;;
       preview) _arguments '--limit=[maximum messages]:limit:' ;;
     esac
+    return
+  fi
+  if [[ $words[2] == thread ]]; then
+    if (( CURRENT == 3 )); then
+      _values 'thread command' rpc
+      return
+    fi
+    _arguments '--codex-command=[compatible Codex executable]:path:'
     return
   fi
   _arguments '*::arg:->args'
@@ -103,6 +114,8 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from export; and not __fish_seen_subcommand_from state preview' -a 'state preview'",
         "complete -c codex-radar -n '__fish_seen_subcommand_from export; and __fish_seen_subcommand_from state' -l json",
         "complete -c codex-radar -n '__fish_seen_subcommand_from export; and __fish_seen_subcommand_from preview' -l limit -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from thread; and not __fish_seen_subcommand_from rpc' -a 'rpc'",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from rpc' -l codex-command -r",
     ]
     return "\n".join(lines) + "\n"
 
