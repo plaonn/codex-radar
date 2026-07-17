@@ -472,6 +472,65 @@ class CodexThreadHost:
         return {"success": True, "contentItems": [{"type": "inputText", "text": text}]}
 
 
+def run_thread_action(
+    action: Callable[[CodexThreadHost, Dict[str, Any]], Any],
+    *,
+    codex_command: str = "codex",
+    client_factory: Callable[[str], AppServerClient] = AppServerClient,
+) -> Any:
+    """Run one foreground action through the canonical Radar app-server host."""
+    client = client_factory(codex_command)
+    host = CodexThreadHost(client)
+    try:
+        initialize = client.start()
+        return action(host, initialize if isinstance(initialize, dict) else {})
+    finally:
+        client.close()
+
+
+def diagnose_app_server(
+    *,
+    codex_command: str = "codex",
+    client_factory: Callable[[str], AppServerClient] = AppServerClient,
+) -> Dict[str, Any]:
+    """Check the configured executable with the same initialize path as the host."""
+    try:
+        version = subprocess.run(
+            [codex_command, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {"status": "unavailable", "code": "codex_command_unavailable"}
+
+    version_text = (version.stdout or version.stderr).strip()
+    if version.returncode != 0:
+        return {"status": "unavailable", "code": "codex_version_failed", "version": version_text}
+
+    try:
+        initialize = run_thread_action(
+            lambda _host, result: result,
+            codex_command=codex_command,
+            client_factory=client_factory,
+        )
+    except ThreadRpcError as exc:
+        return {"status": "incompatible", "code": exc.code, "version": version_text}
+    except (OSError, subprocess.SubprocessError):
+        return {"status": "incompatible", "code": "app_server_start_failed", "version": version_text}
+
+    return {
+        "status": "compatible",
+        "version": version_text,
+        "appServer": {
+            key: initialize[key]
+            for key in ("userAgent", "platformFamily", "platformOs")
+            if key in initialize
+        },
+    }
+
+
 def run_thread_rpc(
     *,
     codex_command: str = "codex",

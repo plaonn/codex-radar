@@ -2,8 +2,16 @@ import io
 import json
 import threading
 import unittest
+from unittest.mock import patch
 
-from codex_radar.thread_rpc import AppServerClient, CodexThreadHost, ThreadRpcError, run_thread_rpc
+from codex_radar.thread_rpc import (
+    AppServerClient,
+    CodexThreadHost,
+    ThreadRpcError,
+    diagnose_app_server,
+    run_thread_action,
+    run_thread_rpc,
+)
 
 
 class FakeClient:
@@ -182,4 +190,34 @@ class ThreadRpcTests(unittest.TestCase):
         self.assertEqual([1, 2, 3], [message["id"] for message in messages])
         self.assertNotIn("codexHome", messages[0]["result"]["appServer"])
         self.assertTrue(client.started)
+        self.assertTrue(client.closed)
+
+    def test_one_shot_action_uses_the_same_host_lifecycle(self) -> None:
+        client = FakeClient()
+
+        result = run_thread_action(
+            lambda host, initialize: {
+                "userAgent": initialize["userAgent"],
+                "threads": host.list_threads(1),
+            },
+            client_factory=lambda _command: client,
+        )
+
+        self.assertEqual("fake", result["userAgent"])
+        self.assertEqual([{"id": "thread-1"}], result["threads"]["active"])
+        self.assertTrue(client.started)
+        self.assertTrue(client.closed)
+
+    def test_diagnostic_reports_initialize_compatibility_without_thread_write(self) -> None:
+        client = FakeClient()
+
+        with patch("codex_radar.thread_rpc.subprocess.run") as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = "codex-cli 0.145.0"
+            run.return_value.stderr = ""
+            result = diagnose_app_server(client_factory=lambda _command: client)
+
+        self.assertEqual("compatible", result["status"])
+        self.assertEqual("codex-cli 0.145.0", result["version"])
+        self.assertEqual([], client.calls)
         self.assertTrue(client.closed)

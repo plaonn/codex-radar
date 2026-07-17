@@ -25,7 +25,7 @@ WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-exi
 PRUNE_OPTIONS = ("--retention-days", "--dry-run")
 USAGE_OPTIONS = ("--codex-home", "--file-limit")
 EXPORT_COMMANDS = ("state", "preview")
-THREAD_COMMANDS = ("rpc",)
+THREAD_COMMANDS = ("rpc", "doctor", "start", "list", "read", "send")
 
 
 def bash_completion() -> str:
@@ -76,10 +76,14 @@ _codex_radar() {{
   fi
   if [[ $words[2] == thread ]]; then
     if (( CURRENT == 3 )); then
-      _values 'thread command' rpc
+      _values 'thread command' rpc doctor start list read send
       return
     fi
-    _arguments '--codex-command=[compatible Codex executable]:path:'
+    case $words[3] in
+      rpc|doctor|start|list|read|send)
+        _arguments '--codex-command=[compatible Codex executable]:path:' '--cwd=[thread working directory]:directory:' '--model=[model override]:string:' '--effort=[reasoning effort]:string:' '--limit=[maximum threads]:integer:' '--turn-limit=[maximum turns]:integer:'
+        ;;
+    esac
     return
   fi
   _arguments '*::arg:->args'
@@ -114,8 +118,13 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from export; and not __fish_seen_subcommand_from state preview' -a 'state preview'",
         "complete -c codex-radar -n '__fish_seen_subcommand_from export; and __fish_seen_subcommand_from state' -l json",
         "complete -c codex-radar -n '__fish_seen_subcommand_from export; and __fish_seen_subcommand_from preview' -l limit -r",
-        "complete -c codex-radar -n '__fish_seen_subcommand_from thread; and not __fish_seen_subcommand_from rpc' -a 'rpc'",
-        "complete -c codex-radar -n '__fish_seen_subcommand_from rpc' -l codex-command -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from thread; and not __fish_seen_subcommand_from rpc doctor start list read send' -a 'rpc doctor start list read send'",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from rpc doctor start list read send' -l codex-command -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from start' -l cwd -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from start' -l model -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from start' -l effort -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from list' -l limit -r",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from read' -l turn-limit -r",
     ]
     return "\n".join(lines) + "\n"
 

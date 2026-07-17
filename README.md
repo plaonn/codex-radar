@@ -135,6 +135,16 @@ An opt-in experimental thread host is also available for local or SSH clients th
 codex-radar thread rpc --codex-command /path/to/codex
 ```
 
+For a foreground terminal workflow, first check the separately installed executable, then use the one-shot commands. Each command reuses the same Radar-owned host implementation; it does not start a daemon or alter Codex configuration.
+
+```bash
+codex-radar thread doctor --codex-command /path/to/codex
+codex-radar thread start "Summarize this repository" --cwd "$PWD"
+codex-radar thread list
+codex-radar thread read THREAD_ID --turn-limit 8
+codex-radar thread send THREAD_ID "Continue with the next safe step."
+```
+
 It reads one JSON request per stdin line and writes one JSON response per stdout line. Supported methods are `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/send`, and `shutdown`. Threads started through this host receive bounded `create_thread`, `list_threads`, `read_thread`, and `send_message_to_thread` dynamic tools. The host does not open a network listener, install a daemon, edit Codex configuration, or auto-approve command/file/permission requests.
 
 Retention applies only to Radar's session index and defaults to seven days. It does not delete Codex transcripts, official threads, or archive state.

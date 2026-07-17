@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import shutil
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -30,7 +31,7 @@ from .store import (
 )
 from .transcript import format_skim, skim_transcript
 from .transcript_preview import MAX_PREVIEW_LIMIT
-from .thread_rpc import run_thread_rpc
+from .thread_rpc import ThreadRpcError, diagnose_app_server, run_thread_action, run_thread_rpc
 from .usage import default_codex_home, format_usage_snapshot, usage_snapshot
 from .watch import run_watch
 
@@ -268,7 +269,49 @@ def cmd_usage(args: argparse.Namespace) -> int:
 def cmd_thread(args: argparse.Namespace) -> int:
     if args.thread_command == "rpc":
         return run_thread_rpc(codex_command=args.codex_command)
-    raise SystemExit("expected thread command")
+    if args.thread_command == "doctor":
+        result = diagnose_app_server(codex_command=args.codex_command)
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        if result["status"] != "compatible":
+            print(f"codex-radar thread doctor: {result['code']}", file=sys.stderr)
+            return 2
+        return 0
+
+    try:
+        if args.thread_command == "start":
+            result = run_thread_action(
+                lambda host, _initialize: host.start_thread(
+                    prompt=args.prompt,
+                    cwd=args.cwd,
+                    model=args.model,
+                    effort=args.effort,
+                ),
+                codex_command=args.codex_command,
+            )
+        elif args.thread_command == "list":
+            result = run_thread_action(
+                lambda host, _initialize: host.list_threads(args.limit),
+                codex_command=args.codex_command,
+            )
+        elif args.thread_command == "read":
+            result = run_thread_action(
+                lambda host, _initialize: host.read_thread(args.thread_id, args.turn_limit),
+                codex_command=args.codex_command,
+            )
+        elif args.thread_command == "send":
+            result = run_thread_action(
+                lambda host, _initialize: host.send_message(args.thread_id, args.prompt),
+                codex_command=args.codex_command,
+            )
+        else:
+            raise SystemExit("expected thread command")
+    except (ThreadRpcError, OSError, subprocess.SubprocessError) as exc:
+        code = exc.code if isinstance(exc, ThreadRpcError) else "app_server_start_failed"
+        print(f"codex-radar thread {args.thread_command}: {code}", file=sys.stderr)
+        return 2
+
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
 
 
 def cmd_export(args: argparse.Namespace) -> int:
@@ -388,7 +431,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     usage.set_defaults(func=cmd_usage)
 
-    thread = subparsers.add_parser("thread", help="Run the experimental Codex thread host")
+    thread = subparsers.add_parser("thread", help="Use the experimental Codex thread host")
     thread_subparsers = thread.add_subparsers(dest="thread_command", required=True)
     thread_rpc = thread_subparsers.add_parser(
         "rpc",
@@ -400,6 +443,58 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compatible Codex executable to launch. Default: codex",
     )
     thread_rpc.set_defaults(func=cmd_thread)
+
+    thread_doctor = thread_subparsers.add_parser(
+        "doctor",
+        help="Check that a configured Codex executable supports the Radar thread host",
+    )
+    thread_doctor.add_argument(
+        "--codex-command",
+        default="codex",
+        help="Compatible Codex executable to inspect. Default: codex",
+    )
+    thread_doctor.set_defaults(func=cmd_thread)
+
+    thread_start = thread_subparsers.add_parser("start", help="Start one Radar-hosted Codex thread")
+    thread_start.add_argument("prompt", help="Initial message for the new thread")
+    thread_start.add_argument("--cwd", help="Working directory for the thread")
+    thread_start.add_argument("--model", help="Optional model override")
+    thread_start.add_argument("--effort", help="Optional reasoning effort")
+    thread_start.add_argument(
+        "--codex-command",
+        default="codex",
+        help="Compatible Codex executable to launch. Default: codex",
+    )
+    thread_start.set_defaults(func=cmd_thread)
+
+    thread_list = thread_subparsers.add_parser("list", help="List active and archived Codex threads")
+    thread_list.add_argument("--limit", type=int, default=20, help="Maximum threads per section")
+    thread_list.add_argument(
+        "--codex-command",
+        default="codex",
+        help="Compatible Codex executable to launch. Default: codex",
+    )
+    thread_list.set_defaults(func=cmd_thread)
+
+    thread_read = thread_subparsers.add_parser("read", help="Read one Codex thread")
+    thread_read.add_argument("thread_id", help="Codex thread identifier")
+    thread_read.add_argument("--turn-limit", type=int, default=8, help="Maximum recent turns")
+    thread_read.add_argument(
+        "--codex-command",
+        default="codex",
+        help="Compatible Codex executable to launch. Default: codex",
+    )
+    thread_read.set_defaults(func=cmd_thread)
+
+    thread_send = thread_subparsers.add_parser("send", help="Send one follow-up message to a Codex thread")
+    thread_send.add_argument("thread_id", help="Codex thread identifier")
+    thread_send.add_argument("prompt", help="Follow-up message")
+    thread_send.add_argument(
+        "--codex-command",
+        default="codex",
+        help="Compatible Codex executable to launch. Default: codex",
+    )
+    thread_send.set_defaults(func=cmd_thread)
 
     export = subparsers.add_parser("export", help="Export sanitized machine-readable state")
     export_subparsers = export.add_subparsers(dest="export_command", required=True)

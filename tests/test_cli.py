@@ -9,7 +9,7 @@ from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from codex_radar.cli import main
+from codex_radar.cli import build_parser, main
 
 
 class CliTests(unittest.TestCase):
@@ -486,6 +486,30 @@ class CliTests(unittest.TestCase):
                 self.assertIn("preview", output)
                 self.assertIn("json", output)
                 self.assertIn("limit", output)
+
+    def test_thread_one_shot_commands_accept_documented_arguments(self) -> None:
+        parser = build_parser()
+        cases = [
+            (["thread", "doctor"], "doctor"),
+            (["thread", "start", "hello", "--cwd", "/repo", "--model", "gpt-test"], "start"),
+            (["thread", "list", "--limit", "3"], "list"),
+            (["thread", "read", "thread-1", "--turn-limit", "2"], "read"),
+            (["thread", "send", "thread-1", "follow up"], "send"),
+        ]
+
+        for argv, command in cases:
+            with self.subTest(argv=argv):
+                self.assertEqual(command, parser.parse_args(argv).thread_command)
+
+    def test_thread_completion_lists_one_shot_commands(self) -> None:
+        for shell in ("bash", "zsh", "fish"):
+            with self.subTest(shell=shell):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    main(["completion", shell])
+                output = out.getvalue()
+                for command in ("doctor", "start", "list", "read", "send"):
+                    self.assertIn(command, output)
 
 
 if __name__ == "__main__":

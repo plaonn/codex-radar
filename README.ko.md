@@ -135,6 +135,16 @@ codex-radar usage
 codex-radar thread rpc --codex-command /path/to/codex
 ```
 
+foreground terminal workflow에서는 먼저 별도 설치한 실행 파일을 점검한 뒤 one-shot command를 사용합니다. 각 command는 같은 Radar-owned host 구현을 재사용하며 daemon을 시작하거나 Codex config를 변경하지 않습니다.
+
+```bash
+codex-radar thread doctor --codex-command /path/to/codex
+codex-radar thread start "이 저장소를 요약해줘" --cwd "$PWD"
+codex-radar thread list
+codex-radar thread read THREAD_ID --turn-limit 8
+codex-radar thread send THREAD_ID "다음 안전한 단계로 계속 진행해줘."
+```
+
 stdin에서 한 줄에 JSON request 하나를 읽고 stdout에 JSON response 하나를 출력합니다. 지원 method는 `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/send`, `shutdown`입니다. 이 host가 시작한 thread에는 bounded `create_thread`, `list_threads`, `read_thread`, `send_message_to_thread` dynamic tool이 주입됩니다. Network listener나 daemon을 설치하지 않고 Codex config를 수정하지 않으며 command/file/permission request를 자동 승인하지 않습니다.
 
 ```bash

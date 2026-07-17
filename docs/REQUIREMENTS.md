@@ -201,7 +201,7 @@
 - Automation boundary: `codex-radar thread rpc`를 명시적으로 실행한 동안에만 활성화한다. Global Codex config를 수정하지 않고 network listener를 열지 않으며 command/file/permission approval을 자동 승인하지 않는다.
 - Safety limits: canonical tagged dynamic tool spec, thread-scoped recursion/child limits, bounded message/tool output, unknown server request decline, separate handler worker를 요구한다.
 - Non-goals: 기존 ChatGPT Remote thread의 tool inventory를 사후 수정하기, Codex App의 모든 private tool을 복제하기, Codex binary 번들, background daemon 자동 설치, Python lifecycle indexer 제거, user approval 없이 archive/delete/config mutation 활성화.
-- Derived specs/tests: bidirectional JSONL request routing, `thread/start/list/read/resume`, `turn/start`, `item/tool/call`, same-id response, nested request deadlock regression, recursion/output/message bounds, JSONL RPC stdout purity, local bundled Codex integration smoke.
+- Derived specs/tests: bidirectional JSONL request routing, `thread/start/list/read/resume`, `turn/start`, `item/tool/call`, same-id response, nested request deadlock regression, recursion/output/message bounds, JSONL RPC stdout purity, `codex-radar thread doctor` compatibility handshake, foreground one-shot `thread start/list/read/send` commands that reuse the same host, and local user-installed Codex integration smoke.
 - Revisit when: app-server dynamic tools가 stable API가 되거나 official Remote가 동일 thread tool surface를 제공하거나 Android/VS Code client가 RPC lifecycle ownership을 요구할 때.
 
 ## Rationale
