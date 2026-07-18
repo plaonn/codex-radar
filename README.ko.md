@@ -42,7 +42,7 @@ Codex lifecycle 이벤트
   -> VS Code 확장 / CLI / TUI
 ```
 
-인덱스는 권위 있는 실시간 프로세스 상태가 아니라 관측된 lifecycle 상태를 기록합니다. 예를 들어 `waiting_approval`은 Radar가 권한 요청을 관측했다는 뜻이고, `done`은 중지 이벤트를 관측했다는 뜻입니다. `stale`은 활성 상태로 보이지만 최근 hook 갱신이 없는 세션에 표시되는 상태입니다.
+인덱스는 권위 있는 실시간 프로세스 상태가 아니라 관측된 lifecycle 상태를 기록합니다. 예를 들어 `waiting_approval`은 Radar가 권한 요청을 관측했다는 뜻이고, `done`은 중지 이벤트 또는 더 최신인 persisted rollout turn-completion event를 관측했다는 뜻입니다. `stale`은 활성 상태로 보이지만 최근 lifecycle evidence가 없는 세션에 표시되는 상태입니다. Turn 종료는 모든 작업 요구사항이나 검증 단계가 성공했다는 증거가 아닙니다.
 
 상태는 다음 중 우선 적용되는 위치에 저장됩니다.
 
@@ -123,6 +123,7 @@ codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
 codex-radar transcript <session-id>
 codex-radar tui --project codex-radar --since 1d
+codex-radar reconcile --dry-run
 codex-radar watch
 codex-radar usage
 ```
@@ -182,7 +183,7 @@ codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 - 보관된 세션은 Codex 연결로 열 수 없습니다.
 - 대화 미리보기 범위는 제한되어 있으며 Codex의 native transcript 보기를 대체하지 않습니다.
 - OS 알림이나 외부 알림은 제공하지 않습니다. VS Code의 attention 보기와 사용자가 직접 실행하는 터미널 watcher를 사용할 수 있습니다.
-- Lifecycle 상태는 지속적인 프로세스 감시가 아니라 마지막으로 관측한 hook 이벤트를 기준으로 합니다.
+- Lifecycle 상태는 지속적인 프로세스 감시가 아니라 관측된 hook과 더 최신인 persisted rollout terminal event의 bounded reconciliation을 기준으로 합니다.
 
 ## 개발 및 테스트
 

@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, TextIO
 
+from .reconcile import reconcile_sessions
 from .store import iter_sessions, session_display_status
 
 
@@ -88,6 +89,7 @@ def run_watch(
     output = out or sys.stdout
     seen: SeenState = {}
     watch_statuses = _normalize_statuses(statuses)
+    reconcile_sessions(state_dir)
     initial_sessions = list(iter_sessions(state_dir))
     if announce:
         print(format_watch_start(initial_sessions, watch_statuses), file=output, flush=True)
@@ -95,6 +97,7 @@ def run_watch(
         seed_seen(initial_sessions, seen, watch_statuses)
     try:
         while True:
+            reconcile_sessions(state_dir)
             alerts = watch_alerts(iter_sessions(state_dir), seen, watch_statuses)
             for session in alerts:
                 if bell:

@@ -16,6 +16,7 @@ COMMANDS = (
     "export",
     "config",
     "prune",
+    "reconcile",
     "completion",
 )
 GLOBAL_OPTIONS = ("--state-dir", "-h", "--help")
@@ -23,6 +24,7 @@ SESSION_FILTER_OPTIONS = ("--project", "--status", "--model", "--since")
 SESSION_TEXT_OPTIONS = ("--group-project",)
 WATCH_OPTIONS = ("--interval", "--status", "--once", "--no-bell", "--include-existing", "--quiet-start")
 PRUNE_OPTIONS = ("--retention-days", "--dry-run")
+RECONCILE_OPTIONS = ("--dry-run",)
 USAGE_OPTIONS = ("--codex-home", "--file-limit")
 EXPORT_COMMANDS = ("state", "preview")
 THREAD_COMMANDS = ("rpc", "doctor", "start", "list", "read", "send")
@@ -39,6 +41,7 @@ def bash_completion() -> str:
             *SESSION_TEXT_OPTIONS,
             *WATCH_OPTIONS,
             *PRUNE_OPTIONS,
+            *RECONCILE_OPTIONS,
             *USAGE_OPTIONS,
             *EXPORT_COMMANDS,
             *THREAD_COMMANDS,
@@ -112,6 +115,7 @@ def fish_completion() -> str:
         "complete -c codex-radar -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set' -a 'retention_days'",
         "complete -c codex-radar -n '__fish_seen_subcommand_from prune' -l retention-days -r",
         "complete -c codex-radar -n '__fish_seen_subcommand_from prune' -l dry-run",
+        "complete -c codex-radar -n '__fish_seen_subcommand_from reconcile' -l dry-run",
         "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l json",
         "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l codex-home -r",
         "complete -c codex-radar -n '__fish_seen_subcommand_from usage' -l file-limit -r",

@@ -181,6 +181,16 @@
 - Derived specs/tests: `%LOCALAPPDATA%` state/runtime defaults, Windows byte-range file lock, lazy TUI import, stable `.cmd` shims, immutable runtime versions, atomic `current.json` selection, upgrade/rollback tests, `windows-latest` CI, Native Windows hook setup runbook, separate real-host smoke exit criterion.
 - Revisit when: Windows Codex hook command execution contract가 바뀌거나, signed installer/package-manager distribution 또는 WSL2 support가 active milestone이 될 때.
 
+#### R10d: persisted terminal-state reconciliation
+
+- Status: confirmed direction, bounded reconciler and foreground watch integration implemented
+- Requirement: lifecycle Stop hook이 유실되더라도 cache에 연결된 Codex rollout의 latest turn terminal event가 더 최신이면 host-local runtime이 active-looking session을 terminal state로 교정할 수 있어야 한다.
+- Rationale: hook delivery와 client summary는 지연되거나 유실될 수 있으므로 `sessions.json`의 마지막 hook event만으로는 이미 끝난 turn이 계속 `running` 또는 `tool_running`으로 남을 수 있다.
+- Failure prevented: 완료된 turn이 stale-running으로 남아 사용자가 직접 transcript/thread를 다시 열어 종료 여부를 확인해야 하는 문제, 중단된 turn이 계속 실행 중으로 표시되는 문제.
+- Safety boundary: exact cached session identity가 filename에 포함된 regular non-symlink rollout만 bounded tail scan한다. Latest lifecycle event가 terminal이고 cache보다 최신일 때만 교정하며, latest turn이 진행 중이면 이전 완료 event를 적용하지 않는다. `task_complete`는 turn 종료를 뜻하며 요구사항·검증 성공 판정으로 사용하지 않는다.
+- Derived specs/tests: `codex-radar reconcile`, `--dry-run`, foreground `watch` polling reconciliation, latest-turn ordering, completed/interrupted mapping, stale-evidence rejection, transcript identity boundary tests.
+- Revisit when: supported cross-client terminal event API가 rollout scan을 대체하거나 interrupted/failed를 별도 public lifecycle status로 승격할 때.
+
 ### R11: Codex App Server Controller foundation
 
 - Status: confirmed direction, read-only thread catalog and usage controller active

@@ -42,7 +42,7 @@ Codex lifecycle events
   -> VS Code extension / CLI / TUI
 ```
 
-The index records observed lifecycle state rather than an authoritative live process state. For example, `waiting_approval` means Radar observed a permission request, `done` means it observed a stop event, and `stale` is a display status for an active-looking session with no recent hook update.
+The index records observed lifecycle state rather than an authoritative live process state. For example, `waiting_approval` means Radar observed a permission request, `done` means it observed a stop or a newer persisted rollout turn-completion event, and `stale` is a display status for an active-looking session with no recent lifecycle evidence. A completed turn does not prove that every task requirement or validation step succeeded.
 
 State is stored in the first applicable location:
 
@@ -123,6 +123,7 @@ codex-radar sessions --model gpt-5 --since 2h
 codex-radar sessions --status stale
 codex-radar transcript <session-id>
 codex-radar tui --project codex-radar --since 1d
+codex-radar reconcile --dry-run
 codex-radar watch
 codex-radar usage
 ```
@@ -184,7 +185,7 @@ codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 - Archived sessions cannot be opened through the Codex handoff.
 - Conversation previews are bounded and do not replace Codex's native transcript view.
 - There are no OS or external notifications. The VS Code attention views and opt-in terminal watcher are the available cues.
-- Lifecycle status is based on the most recently observed hook event, not continuous process monitoring.
+- Lifecycle status is based on observed hooks plus bounded reconciliation of newer persisted rollout terminal events, not continuous process monitoring.
 
 ## Development and Testing
 

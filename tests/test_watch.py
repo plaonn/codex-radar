@@ -167,6 +167,57 @@ class WatchTests(unittest.TestCase):
                 out.getvalue(),
             )
 
+    def test_run_watch_reconciles_rollout_completion_before_alerting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "state"
+            state_dir.mkdir()
+            rollout = Path(tmp) / "rollout-session-1.jsonl"
+            rollout.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-07-17T00:02:00Z",
+                        "type": "event_msg",
+                        "payload": {"type": "task_complete", "turn_id": "turn-1"},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "sessions": {
+                            "session-1": {
+                                "session_id": "session-1",
+                                "status": "running",
+                                "project": "project-a",
+                                "last_event_name": "PostToolUse",
+                                "last_seen_at": "2026-07-17T00:01:00+00:00",
+                                "transcript_path": str(rollout),
+                                "event_count": 2,
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            out = io.StringIO()
+            result = run_watch(
+                state_dir,
+                once=True,
+                bell=False,
+                include_existing=True,
+                announce=False,
+                out=out,
+            )
+
+            self.assertEqual(0, result)
+            self.assertEqual(
+                "codex-radar: done project=project-a event=RolloutTaskComplete\n",
+                out.getvalue(),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

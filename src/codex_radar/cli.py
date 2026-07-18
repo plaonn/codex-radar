@@ -17,6 +17,7 @@ from .export_adapter import (
     export_transcript_preview,
 )
 from .hook import run_hook
+from .reconcile import reconcile_sessions
 from .store import (
     DEFAULT_RETENTION_DAYS,
     default_state_dir,
@@ -247,6 +248,15 @@ def cmd_watch(args: argparse.Namespace) -> int:
         include_existing=args.include_existing,
         announce=not args.quiet_start,
     )
+
+
+def cmd_reconcile(args: argparse.Namespace) -> int:
+    result = reconcile_sessions(
+        _state_dir_arg(args.state_dir),
+        dry_run=args.dry_run,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
 
 
 def cmd_completion(args: argparse.Namespace) -> int:
@@ -541,6 +551,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prune.add_argument("--dry-run", action="store_true", help="Show what would be pruned")
     prune.set_defaults(func=cmd_prune)
+
+    reconcile = subparsers.add_parser(
+        "reconcile",
+        help="Repair stale active-looking sessions from persisted rollout terminal events",
+    )
+    reconcile.add_argument("--dry-run", action="store_true", help="Show updates without writing sessions.json")
+    reconcile.set_defaults(func=cmd_reconcile)
 
     watch = subparsers.add_parser("watch", help="Watch for local session status changes")
     watch.add_argument("--interval", type=float, default=2.0)

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from codex_radar.cli import build_parser, main
+from codex_radar.store import load_sessions
 
 
 class CliTests(unittest.TestCase):
@@ -356,6 +357,42 @@ class CliTests(unittest.TestCase):
                 "codex-radar: waiting_approval project=project-a event=PermissionRequest\n",
                 out.getvalue(),
             )
+
+    def test_reconcile_dry_run_reports_terminal_update_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "state"
+            state_dir.mkdir()
+            rollout = Path(tmp) / "rollout-session-1.jsonl"
+            rollout.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-07-17T00:02:00Z",
+                        "type": "event_msg",
+                        "payload": {"type": "task_complete", "turn_id": "turn-1"},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            original = {
+                "sessions": {
+                    "session-1": {
+                        "session_id": "session-1",
+                        "status": "running",
+                        "last_seen_at": "2026-07-17T00:01:00+00:00",
+                        "transcript_path": str(rollout),
+                        "event_count": 1,
+                    }
+                }
+            }
+            (state_dir / "sessions.json").write_text(json.dumps(original), encoding="utf-8")
+
+            out = io.StringIO()
+            with redirect_stdout(out):
+                main(["--state-dir", str(state_dir), "reconcile", "--dry-run"])
+
+            self.assertEqual(1, json.loads(out.getvalue())["updated_count"])
+            self.assertEqual(original["sessions"], load_sessions(state_dir))
 
     def test_config_get_and_set_retention_days(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -11,7 +11,7 @@ Experimental thread orchestration is exposed separately through `codex-radar thr
 
 For terminal dogfooding, `codex-radar thread doctor` performs a version check and the same app-server initialize handshake without creating a thread. `codex-radar thread start`, `list`, `read`, and `send` each open one foreground host connection, invoke the canonical `CodexThreadHost` operation, print a JSON result, and close it. They are not a daemon or a second app-server dispatcher; clients that need one persistent bidirectional connection continue to use `thread rpc`. Command errors are emitted on stderr, so `thread rpc` remains a stdout-pure JSONL protocol.
 
-Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아니라 마지막으로 관측한 lifecycle event와 display-only 추론이다. `waiting_approval`과 `done`은 각각 `PermissionRequest`, `Stop`/`SubagentStop` event를 관측했음을 뜻하고, `stale`은 `active`, `running`, `tool_running` 상태에서 일정 시간 새 hook event가 없었다는 표시다.
+Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아니라 마지막으로 관측한 lifecycle event와 display-only 추론이다. `waiting_approval`은 `PermissionRequest`를 관측했음을 뜻한다. `done`은 `Stop`/`SubagentStop` hook 또는 cache보다 최신인 persisted rollout `task_complete`를 관측했음을 뜻하며 task 요구사항이나 검증 성공 판정은 아니다. `stale`은 `active`, `running`, `tool_running` 상태에서 일정 시간 새 lifecycle evidence가 없었다는 표시다.
 
 현재 terminal MVP command contract:
 
@@ -25,6 +25,7 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
 - `codex-radar tui`: 가벼운 session dashboard를 연다.
 - `codex-radar watch`: foreground watcher를 실행해 새 `done` session을 기본으로 terminal bell과 최소 metadata line으로 알린다. `--status`를 반복 지정해 `waiting_approval` 같은 다른 display status도 볼 수 있다.
+- `codex-radar reconcile`: cache에 연결된 rollout tail의 latest turn lifecycle을 bounded read해 stale active-looking session을 교정한다. `--dry-run`은 변경 후보만 JSON으로 출력하고 `sessions.json`을 쓰지 않는다.
 - `codex-radar path`: active state directory를 출력한다. 이 command는 directory를 생성하지 않는 no-write discovery surface다.
 - `codex-radar doctor`: 짧은 로컬 진단을 출력한다.
 - `codex-radar usage`: host-local Codex rollout JSONL에서 최신 `token_count` usage snapshot을 read-only로 읽는다. `--json`은 VS Code와 automation이 사용하기 쉬운 JSON contract를 출력한다.
@@ -311,7 +312,7 @@ Distribution/setup boundary:
 
 `codex-radar watch`는 명시적으로 실행했을 때만 동작하는 opt-in local watcher다.
 
-- `sessions.json`을 polling한다.
+- 각 poll 전에 bounded terminal-state reconciliation을 실행한 뒤 `sessions.json`을 읽는다.
 - 기본으로 새 `done` session만 alert한다.
 - `--status <display-status>`를 반복 지정하면 `done`, `waiting_approval` 같은 여러 display status를 watch할 수 있다.
 - 시작 시 현재 session 수와 matching session 수를 한 줄로 출력해 watcher가 살아 있는지 보여준다.
@@ -323,6 +324,18 @@ Distribution/setup boundary:
 - `--quiet-start`를 지정하면 시작 summary line을 출력하지 않는다.
 - hook path에서는 notification이나 bell을 직접 보내지 않는다.
 - 이 watcher는 terminal에서 직접 켜두는 MVP/fallback 알림 표면이며, 향후 VS Code extension 같은 GUI 통합 요구사항을 대체하지 않는다.
+
+## Terminal-State Reconciliation
+
+`codex-radar reconcile`은 Stop hook 유실 뒤 active-looking cache가 남는 경우를 위한 deterministic recovery path다.
+
+- 대상은 cache status가 `active`, `running`, `tool_running`인 session이다.
+- cached `transcript_path`가 exact `session_id`를 filename에 포함한 regular non-symlink file일 때만 읽는다.
+- file 전체가 아니라 끝부분을 bounded scan하며 `task_started`, `task_complete`, `turn_aborted`의 file order로 latest turn lifecycle을 판정한다.
+- latest lifecycle이 `task_complete`면 `done`, `turn_aborted`면 기존 v1 status contract의 `unknown`으로 교정한다.
+- latest lifecycle이 `task_started`이면 진행 중일 수 있으므로 이전 terminal event를 적용하지 않는다.
+- terminal event timestamp가 cache `last_seen_at`보다 최신일 때만 cache를 갱신한다.
+- 이 판정은 turn lifecycle reconciliation이며 task 완료 조건, 구현 성공, 테스트 통과를 판정하지 않는다.
 
 ## Privacy Boundary
 
