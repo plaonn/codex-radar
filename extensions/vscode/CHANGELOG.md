@@ -2,6 +2,19 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.11
+
+### Changed
+
+- Package the current app-server usage adapter, reusable controller, and source documentation as the next GitHub Release candidate.
+- Keep shared display-state export in observation mode until a current installed helper and VSIX provide live extension-host parity evidence.
+- Document the Native Windows foundation without claiming support completion before the real hook-to-sidebar smoke.
+
+### Boundaries
+
+- Keep GitHub Release publication separate from candidate preparation and validation.
+- Do not publish to the VS Code Marketplace or treat Windows CI as a substitute for the real-host smoke.
+
 ## 0.4.9
 
 ### Changed

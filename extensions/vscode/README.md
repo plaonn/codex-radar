@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="media/codex-radar.png" width="112" alt="Codex Radar icon">
+  <img src="https://raw.githubusercontent.com/plaonn/codex-radar/main/extensions/vscode/media/codex-radar.png" width="112" alt="Codex Radar icon">
 </p>
 
 <h1 align="center">Codex Radar</h1>
@@ -11,7 +11,7 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.9`. It uses the read-only Codex App Server Controller for supported rate-limit usage reads while keeping the rollout adapter as a one-release fallback and parity observation source. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.11`. It uses the read-only Codex App Server Controller for supported rate-limit usage reads while keeping the rollout adapter as a one-release fallback and parity observation source. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -69,7 +69,7 @@ The extension preserves the current local, Remote SSH, WSL, or Dev Container URI
 - `package.json` version is the VSIX version.
 - `test/packageManifest.test.js` intentionally pins the current manual testing version so release packaging does not happen accidentally after a silent version drift.
 - Bump the version for each user-distributed VSIX.
-- Keep [CHANGELOG.md](CHANGELOG.md) updated for each packaged version.
+- Keep the [extension changelog](https://github.com/plaonn/codex-radar/blob/main/extensions/vscode/CHANGELOG.md) updated for each packaged version.
 - Marketplace publication is a separate release milestone and requires explicit publisher/namespace, account, and asset decisions.
 
 ## Install From VSIX
@@ -80,7 +80,7 @@ After the `0.4.4` package is published to a GitHub Release, download `codex-rada
 code --install-extension codex-radar-vscode-0.4.4.vsix --force
 ```
 
-The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development install](../../README.md#개발-설치) and [hook setup runbook](../../docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
+The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development and testing guide](https://github.com/plaonn/codex-radar#development-and-testing) and [hook setup runbook](https://github.com/plaonn/codex-radar/blob/main/docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
 
 For optional thread title/archive enrichment and supported rate-limit usage reads, the extension starts `codex app-server` through a Codex App Server Controller on the extension host. Codex CLI must be installed separately. The VSIX does not bundle Codex and does not reuse the official Codex extension's private bundled executable path. Set `codexRadar.codexExecutable` only when `codex` is not available on the extension host `PATH`.
 
@@ -95,7 +95,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.9.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.11.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
