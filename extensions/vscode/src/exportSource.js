@@ -5,6 +5,7 @@ const { inspectSessionCache, loadSessionCache } = require("./sessionSource");
 const DISPLAY_STATE_CONTRACT = "codex-radar.display-state";
 const TRANSCRIPT_PREVIEW_CONTRACT = "codex-radar.transcript-preview";
 const EXPORT_CONTRACT_VERSION = 1;
+const TRANSCRIPT_PREVIEW_CONTRACT_VERSION = 2;
 const DEFAULT_PREVIEW_LIMIT = 120;
 const READ_SOURCE_MODES = Object.freeze(["direct", "observe", "export"]);
 const DEFAULT_READ_SOURCE_MODE = "export";
@@ -248,11 +249,11 @@ function validateDisplayState(payload) {
 }
 
 function validateTranscriptPreview(payload, expectedSessionId, expectedLimit) {
-  const messageKeys = new Set(["role", "text"]);
+  const messageKeys = new Set(["role", "text", "recorded_at"]);
   if (!isObject(payload)
       || !hasOnlyKeys(payload, PREVIEW_KEYS)
       || payload.contract !== TRANSCRIPT_PREVIEW_CONTRACT
-      || payload.version !== EXPORT_CONTRACT_VERSION
+      || payload.version !== TRANSCRIPT_PREVIEW_CONTRACT_VERSION
       || !isIsoTimestamp(payload.generated_at)
       || payload.session_id !== expectedSessionId
       || !SESSION_ID_PATTERN.test(payload.session_id)
@@ -268,6 +269,7 @@ function validateTranscriptPreview(payload, expectedSessionId, expectedLimit) {
         && typeof message.text === "string"
         && message.text.length > 0
         && message.text.length <= 20000
+        && (!("recorded_at" in message) || isIsoTimestamp(message.recorded_at))
       ))) {
     throw new ExportSourceError("transcript_preview_schema_mismatch");
   }
@@ -293,6 +295,8 @@ async function loadExportPreview(stateDir, sessionId, options = {}) {
       String(sessionId || ""),
       "--limit",
       String(limit),
+      "--contract-version",
+      String(TRANSCRIPT_PREVIEW_CONTRACT_VERSION),
     ],
     options,
   );
@@ -505,6 +509,7 @@ module.exports = {
   ExportSourceError,
   READ_SOURCE_MODES,
   TRANSCRIPT_PREVIEW_CONTRACT,
+  TRANSCRIPT_PREVIEW_CONTRACT_VERSION,
   loadExportPreview,
   loadExportState,
   loadSessionState,

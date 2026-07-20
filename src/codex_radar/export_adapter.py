@@ -201,6 +201,7 @@ def export_transcript_preview(
     session_id: str,
     *,
     limit: int,
+    contract_version: int = 1,
     state_dir: Optional[Path] = None,
     codex_home: Optional[Path] = None,
 ) -> Dict[str, Any]:
@@ -225,6 +226,9 @@ def export_transcript_preview(
             safe_session_id,
             iter_jsonl(candidate.path),
             limit=limit,
+            contract_version=contract_version,
         )
+    except ValueError:
+        raise ExportAdapterError("unsupported_preview_version") from None
     except (OSError, UnicodeError):
         raise ExportAdapterError("transcript_unreadable") from None

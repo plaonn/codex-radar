@@ -333,6 +333,7 @@ def cmd_export(args: argparse.Namespace) -> int:
             payload = export_transcript_preview(
                 args.session_id,
                 limit=args.limit,
+                contract_version=args.contract_version,
                 state_dir=state_dir,
             )
         else:
@@ -526,6 +527,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=_preview_limit_arg,
         required=True,
         help=f"Maximum messages to return (1-{MAX_PREVIEW_LIMIT})",
+    )
+    export_preview.add_argument(
+        "--contract-version",
+        type=int,
+        choices=(1, 2),
+        default=1,
+        help="Transcript preview contract version. Default: 1",
     )
     export_preview.set_defaults(func=cmd_export)
 

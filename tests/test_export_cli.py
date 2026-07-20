@@ -184,6 +184,64 @@ class ExportCliTests(unittest.TestCase):
             )
             self.assertNotIn("/private/tool-output", stdout.getvalue())
 
+    def test_export_preview_v2_requires_explicit_negotiation_and_emits_timestamps(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_dir = root / "state"
+            codex_home = root / "codex-home"
+            transcript = codex_home / "sessions" / "rollout-session-1.jsonl"
+            state_dir.mkdir()
+            transcript.parent.mkdir(parents=True)
+            transcript.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-07-14T09:00:00+09:00",
+                        "role": "assistant",
+                        "content": "finished",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (state_dir / "sessions.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "sessions": {
+                            "session-1": {
+                                "session_id": "session-1",
+                                "status": "done",
+                                "transcript_path": str(transcript),
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with mock.patch.dict(
+                os.environ, {"CODEX_HOME": str(codex_home)}
+            ), redirect_stdout(stdout):
+                result = main(
+                    [
+                        "--state-dir",
+                        str(state_dir),
+                        "export",
+                        "preview",
+                        "session-1",
+                        "--limit",
+                        "1",
+                        "--contract-version",
+                        "2",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(0, result)
+            self.assertEqual(2, payload["version"])
+            self.assertEqual("2026-07-14T00:00:00+00:00", payload["messages"][0]["recorded_at"])
+
     def test_export_preview_failure_has_empty_stdout_and_safe_stderr(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

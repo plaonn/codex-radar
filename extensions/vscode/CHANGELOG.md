@@ -2,6 +2,19 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.14
+
+### Added
+
+- Show locale-aware recorded times and local-calendar date separators in the transcript Preview when valid rollout timestamps are available.
+- Negotiate transcript-preview v2 explicitly while retaining the immutable v1 contract for existing clients.
+
+### Boundaries
+
+- Read message time only from a timezone-aware top-level rollout timestamp; do not infer it from nested payload fields, file metadata, or session cache time.
+- Omit time/date UI when the source timestamp is missing or malformed.
+- Keep direct, observe, and export preview adapters aligned, including adjacent duplicate timestamp merging.
+
 ## 0.4.13
 
 ### Changed

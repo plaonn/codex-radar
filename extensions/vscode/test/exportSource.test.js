@@ -7,12 +7,14 @@ const test = require("node:test");
 const {
   DEFAULT_READ_SOURCE_MODE,
   ExportSourceError,
+  TRANSCRIPT_PREVIEW_CONTRACT_VERSION,
   loadExportPreview,
   loadSessionState,
   normalizeReadSourceMode,
   semanticParity,
   sessionsFromDisplayState,
   validateDisplayState,
+  validateTranscriptPreview,
 } = require("../src/exportSource");
 
 const fixtureRoot = path.resolve(__dirname, "..", "..", "..", "tests", "fixtures");
@@ -222,7 +224,7 @@ test("observe mode keeps direct as effective source and records parity", async (
 });
 
 test("preview adapter invokes only the explicit bounded export command", async () => {
-  const payload = fixture("transcript-preview-v1.json");
+  const payload = fixture("transcript-preview-v2.json");
   let observedArgs = null;
   const result = await loadExportPreview("/state", "session-1", {
     limit: 2,
@@ -240,6 +242,23 @@ test("preview adapter invokes only the explicit bounded export command", async (
     "session-1",
     "--limit",
     "2",
+    "--contract-version",
+    "2",
   ]);
   assert.deepEqual(result.messages, payload.messages);
+  assert.equal(TRANSCRIPT_PREVIEW_CONTRACT_VERSION, 2);
+});
+
+test("preview adapter fails closed on unnegotiated v1 or malformed v2 timestamps", () => {
+  assert.throws(
+    () => validateTranscriptPreview(fixture("transcript-preview-v1.json"), "session-1", 2),
+    (error) => error instanceof ExportSourceError && error.code === "transcript_preview_schema_mismatch",
+  );
+
+  const payload = fixture("transcript-preview-v2.json");
+  payload.messages[0].recorded_at = "2026-07-14T00:00:00";
+  assert.throws(
+    () => validateTranscriptPreview(payload, "session-1", 2),
+    (error) => error instanceof ExportSourceError && error.code === "transcript_preview_schema_mismatch",
+  );
 });

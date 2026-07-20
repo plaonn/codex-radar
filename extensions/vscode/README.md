@@ -11,7 +11,7 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.13`. It uses the shared sanitized Python export as the default list source, the read-only Codex App Server Controller for supported rate-limit usage reads, and classifies Codex memory-maintenance sessions outside ordinary repository groups. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.14`. It uses the shared sanitized Python export as the default list source, shows locale-aware recorded times and date separators in transcript previews, uses the read-only Codex App Server Controller for supported rate-limit usage reads, and classifies Codex memory-maintenance sessions outside ordinary repository groups. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -25,7 +25,7 @@ The current source package version is `0.4.13`. It uses the shared sanitized Pyt
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Routes host-local Codex archived sessions to the sidebar `Archived` section and dashboard archived list.
 - Also uses Codex local thread state as a direct archived-thread fallback when the Codex thread id matches the Radar session id.
-- Opens a single-session editor preview when a sidebar session item is selected. In export mode this explicit action invokes `codex-radar export preview <session-id> --limit 120`; direct transcript preview remains the fallback. The preview shows bounded redacted user/Codex messages with safe Markdown rendering.
+- Opens a single-session editor preview when a sidebar session item is selected. In export mode this explicit action invokes `codex-radar export preview <session-id> --limit 120 --contract-version 2`; direct transcript preview remains the fallback. The preview shows bounded redacted user/Codex messages with safe Markdown rendering, locale-aware message times, and local-calendar date separators when valid rollout timestamps are available.
 - Separates lifecycle status, done read state, and archived state in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator plus muted row treatment.
@@ -95,7 +95,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.13.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.14.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

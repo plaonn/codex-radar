@@ -231,8 +231,17 @@ function collectConversationTexts(message, options = {}) {
   return found;
 }
 
+function normalizeRolloutTimestamp(value) {
+  if (typeof value !== "string" || !/(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    return "";
+  }
+  const milliseconds = Date.parse(value);
+  return Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : "";
+}
+
 function conversationEntriesFromItem(item, options = {}) {
   const entries = [];
+  const recordedAt = normalizeRolloutTimestamp(item?.timestamp);
   for (const candidate of candidateMessages(item)) {
     const role = normalizeConversationRole(findRole(candidate));
     if (!role) {
@@ -245,6 +254,7 @@ function conversationEntriesFromItem(item, options = {}) {
         label: role === "assistant" ? "Codex" : "You",
         text,
         html: markdownToSafeHtml(text),
+        ...(recordedAt ? { recordedAt } : {}),
       });
     }
     if (entries.length) {
@@ -281,6 +291,14 @@ function dedupeAdjacentEntries(entries) {
     const key = `${entry.role}\n${entry.text}`;
     if (key !== previousKey) {
       deduped.push(entry);
+    } else {
+      const previous = deduped[deduped.length - 1];
+      const previousMs = Date.parse(previous.recordedAt || "");
+      const currentMs = Date.parse(entry.recordedAt || "");
+      if (Number.isFinite(currentMs)
+          && (!Number.isFinite(previousMs) || currentMs < previousMs)) {
+        previous.recordedAt = entry.recordedAt;
+      }
     }
     previousKey = key;
   }
@@ -676,6 +694,7 @@ function buildSessionPreviewModelFromExport(session, payload, options = {}) {
     text: message.text,
     html: markdownToSafeHtml(message.text),
     source: "shared-export",
+    ...(message.recorded_at ? { recordedAt: message.recorded_at } : {}),
   }));
   return buildSessionPreviewModelFromEntries(session, entries, options);
 }
@@ -693,6 +712,7 @@ module.exports = {
   escapeHtml,
   findRole,
   markdownToSafeHtml,
+  normalizeRolloutTimestamp,
   readTranscriptEntries,
   resolveTranscriptPath,
   resolveTranscriptPathInfo,

@@ -6,10 +6,12 @@ const test = require("node:test");
 
 const {
   buildSessionPreviewModel,
+  buildSessionPreviewModelFromExport,
   buildSessionDisplayFields,
   DEFAULT_PREVIEW_ENTRY_LIMIT,
   dedupeAdjacentEntries,
   markdownToSafeHtml,
+  normalizeRolloutTimestamp,
   resolveTranscriptPathInfo,
   resolveTranscriptPath,
   sessionDisplayFieldsFromEntries,
@@ -147,6 +149,80 @@ test("dedupes adjacent duplicated user and Codex transcript entries", () => {
     { role: "user", text: "same prompt" },
     { role: "assistant", text: "same prompt" },
   ]);
+});
+
+test("keeps the earliest valid top-level timestamp when duplicate wrappers merge", () => {
+  const text = [
+    JSON.stringify({
+      timestamp: "invalid",
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "same prompt",
+      },
+    }),
+    JSON.stringify({
+      timestamp: "2026-07-14T09:02:00+09:00",
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "same prompt",
+        timestamp: "2020-01-01T00:00:00Z",
+      },
+    }),
+    JSON.stringify({
+      timestamp: "2026-07-14T08:59:00+09:00",
+      role: "user",
+      content: "same prompt",
+    }),
+  ].join("\n");
+
+  const entries = skimTranscriptText(text, { limit: 0 });
+
+  assert.equal(normalizeRolloutTimestamp("2026-07-14T08:59:00+09:00"), "2026-07-13T23:59:00.000Z");
+  assert.deepEqual(entries.map(({ role, text: entryText, recordedAt }) => ({
+    role,
+    text: entryText,
+    recordedAt,
+  })), [{
+    role: "user",
+    text: "same prompt",
+    recordedAt: "2026-07-13T23:59:00.000Z",
+  }]);
+});
+
+test("keeps direct and shared-export preview timestamp semantics aligned", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-preview-time-parity-"));
+  try {
+    const transcriptPath = path.join(tmp, "rollout-session-1.jsonl");
+    fs.writeFileSync(transcriptPath, JSON.stringify({
+      timestamp: "2026-07-14T09:00:00+09:00",
+      role: "assistant",
+      content: "finished",
+    }));
+    const session = {
+      session_id: "session-1",
+      transcript_path: transcriptPath,
+      display_status: "done",
+    };
+
+    const direct = buildSessionPreviewModel(session);
+    const exported = buildSessionPreviewModelFromExport(session, {
+      messages: [{
+        role: "assistant",
+        text: "finished",
+        recorded_at: "2026-07-14T00:00:00+00:00",
+      }],
+    });
+
+    assert.equal(direct.transcriptEntries[0].text, exported.transcriptEntries[0].text);
+    assert.equal(
+      Date.parse(direct.transcriptEntries[0].recordedAt),
+      Date.parse(exported.transcriptEntries[0].recordedAt),
+    );
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 test("derives display title from user request before first Codex message and snippet from last activity", () => {

@@ -58,7 +58,7 @@
 - Requirement: 사용자가 전체 transcript를 열지 않고도 최근 맥락을 훑을 수 있어야 하며, transcript skim output은 secret-like token과 home path를 best-effort로 redact해야 한다.
 - Rationale: 최근 context 확인 비용을 줄이되 transcript와 hook payload가 민감한 로컬 데이터라는 전제를 유지해야 한다.
 - Failure prevented: 최근 context를 확인하려고 매번 전체 transcript를 열거나, skim 과정에서 민감 정보가 부주의하게 노출되는 문제.
-- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code redacted cached snippet display, explicit VS Code editor preview, transcript redaction tests.
+- Derived specs/tests: `codex-radar transcript`, TUI preview, VS Code redacted cached snippet display, explicit VS Code editor preview with locale-aware message time/date grouping, transcript redaction tests.
 - Revisit when: transcript format이나 redaction threat model이 바뀔 때.
 
 ### R6: privacy and automation boundary
@@ -168,7 +168,7 @@
 - Failure prevented: 같은 thread가 client마다 다른 status/archive/usage 상태로 보이는 문제, raw path/content가 범용 export에 섞이는 문제, mobile/RPC 구현 전에 불안정한 UI-specific model이 protocol로 고착되는 문제.
 - Privacy boundary: 기본 sanitized state는 raw `cwd`, transcript path, rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다. `session_id`는 사용자가 선택한 host-local 또는 명시적 SSH trust boundary 안의 navigation identity로만 사용할 수 있다.
 - Assumptions: v1 read/unread는 client-local 파생 상태로 유지한다. Archive state는 불확실성을 숨기지 않고 `active`, `archived`, `unknown`을 구분한다. 기존 VS Code handoff는 export contract와 분리된 trusted host-local adapter를 migration 기간 동안 사용할 수 있다.
-- Derived specs/tests: `codex-radar export state --json`, `codex-radar export preview <session-id> --limit <n>`, versioned display-state/preview schemas, golden parity fixtures, strict stdout/stderr separation, negative privacy tests, and VS Code direct-source fallback during the one-release migration.
+- Derived specs/tests: `codex-radar export state --json`, explicitly negotiated `codex-radar export preview <session-id> --limit <n> --contract-version <version>`, immutable versioned display-state/preview schemas, v1-compatible and timestamped v2 golden parity fixtures, top-level timezone-aware rollout timestamp sanitization, adjacent duplicate timestamp merge, strict stdout/stderr separation, negative privacy tests, and VS Code direct-source fallback during the one-release migration.
 - Revisit when: raw `cwd`가 필요한 remote action을 protocol에 추가하거나, shared read state, RPC listener, background event delivery, remote write action이 active milestone이 될 때.
 
 #### R10c: native Windows runtime foundation

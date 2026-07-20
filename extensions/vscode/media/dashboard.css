@@ -783,6 +783,23 @@ select {
   background: var(--vscode-sideBar-background);
 }
 
+.preview-date-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+}
+
+.preview-date-separator::before,
+.preview-date-separator::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
 .preview-entry {
   display: flex;
   flex-direction: column;
@@ -806,6 +823,12 @@ select {
   padding: 0 4px;
   color: var(--vscode-descriptionForeground);
   font-size: 11px;
+}
+
+.preview-time {
+  padding: 0 4px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 10px;
 }
 
 .preview-bubble {

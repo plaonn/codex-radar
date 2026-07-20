@@ -118,6 +118,56 @@ function renderOpenAction(message) {
   };
 }
 
+function timestampParts(value) {
+  const date = new Date(String(value || ""));
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+  return {
+    dateKey: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
+    dateText: date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
+    timeText: date.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    accessibleText: date.toLocaleString(undefined, {
+      dateStyle: "long",
+      timeStyle: "short",
+    }),
+  };
+}
+
+function dateSeparator(parts) {
+  const separator = el("div", { className: "preview-date-separator" }, [
+    el("span", { text: parts.dateText }),
+  ]);
+  separator.setAttribute("role", "separator");
+  separator.setAttribute("aria-label", parts.dateText);
+  return separator;
+}
+
+function transcriptEntry(entry, timestamp) {
+  const article = el("article", { className: `preview-entry ${entry.role || ""}` }, [
+    el("div", { className: "preview-role", text: entry.label || entry.role || "" }),
+    el("div", { className: "preview-bubble", html: entry.html || "" }),
+  ]);
+  if (timestamp) {
+    const time = el("time", {
+      className: "preview-time",
+      text: timestamp.timeText,
+    });
+    time.dateTime = entry.recordedAt;
+    time.title = timestamp.accessibleText;
+    time.setAttribute("aria-label", `Recorded ${timestamp.accessibleText}`);
+    article.appendChild(time);
+  }
+  return article;
+}
+
 function renderTranscript(model) {
   const transcript = byId("preview-transcript");
   if (!transcript) {
@@ -131,11 +181,14 @@ function renderTranscript(model) {
 
   const list = el("div", { className: "preview-list" });
   if (model.transcriptEntries?.length) {
+    let previousDateKey = "";
     for (const entry of model.transcriptEntries) {
-      list.appendChild(el("article", { className: `preview-entry ${entry.role || ""}` }, [
-        el("div", { className: "preview-role", text: entry.label || entry.role || "" }),
-        el("div", { className: "preview-bubble", html: entry.html || "" }),
-      ]));
+      const timestamp = timestampParts(entry.recordedAt);
+      if (timestamp && timestamp.dateKey !== previousDateKey) {
+        list.appendChild(dateSeparator(timestamp));
+        previousDateKey = timestamp.dateKey;
+      }
+      list.appendChild(transcriptEntry(entry, timestamp));
     }
   } else {
     list.appendChild(el("div", {

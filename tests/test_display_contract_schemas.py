@@ -6,6 +6,7 @@ from pathlib import Path
 
 from codex_radar.display_state import DISPLAY_STATE_CONTRACT, DISPLAY_STATE_VERSION
 from codex_radar.transcript_preview import (
+    LATEST_TRANSCRIPT_PREVIEW_VERSION,
     MAX_PREVIEW_LIMIT,
     TRANSCRIPT_PREVIEW_CONTRACT,
     TRANSCRIPT_PREVIEW_VERSION,
@@ -54,22 +55,27 @@ class DisplayContractSchemaTests(unittest.TestCase):
         )
 
     def test_preview_schema_and_fixture_match_versioned_contract(self) -> None:
-        schema = json.loads(
-            (ROOT / "docs" / "schemas" / "transcript-preview-v1.schema.json").read_text(encoding="utf-8")
-        )
-        fixture = json.loads(
-            (ROOT / "tests" / "fixtures" / "transcript-preview-v1.json").read_text(encoding="utf-8")
-        )
+        for version in (TRANSCRIPT_PREVIEW_VERSION, LATEST_TRANSCRIPT_PREVIEW_VERSION):
+            with self.subTest(version=version):
+                schema = json.loads(
+                    (ROOT / "docs" / "schemas" / f"transcript-preview-v{version}.schema.json").read_text(encoding="utf-8")
+                )
+                fixture = json.loads(
+                    (ROOT / "tests" / "fixtures" / f"transcript-preview-v{version}.json").read_text(encoding="utf-8")
+                )
 
-        self.assertEqual(TRANSCRIPT_PREVIEW_CONTRACT, schema["properties"]["contract"]["const"])
-        self.assertEqual(TRANSCRIPT_PREVIEW_VERSION, schema["properties"]["version"]["const"])
-        self.assertEqual(MAX_PREVIEW_LIMIT, schema["properties"]["limit"]["maximum"])
-        self.assertEqual(TRANSCRIPT_PREVIEW_CONTRACT, fixture["contract"])
-        self.assertEqual(TRANSCRIPT_PREVIEW_VERSION, fixture["version"])
-        self.assertFalse(schema["additionalProperties"])
-        self.assertFalse(schema["$defs"]["message"]["additionalProperties"])
-        self.assert_datetime(fixture["generated_at"])
-        self.assert_identity(fixture["session_id"], schema["properties"]["session_id"])
+                self.assertEqual(TRANSCRIPT_PREVIEW_CONTRACT, schema["properties"]["contract"]["const"])
+                self.assertEqual(version, schema["properties"]["version"]["const"])
+                self.assertEqual(MAX_PREVIEW_LIMIT, schema["properties"]["limit"]["maximum"])
+                self.assertEqual(TRANSCRIPT_PREVIEW_CONTRACT, fixture["contract"])
+                self.assertEqual(version, fixture["version"])
+                self.assertFalse(schema["additionalProperties"])
+                self.assertFalse(schema["$defs"]["message"]["additionalProperties"])
+                self.assert_datetime(fixture["generated_at"])
+                self.assert_identity(fixture["session_id"], schema["properties"]["session_id"])
+                for message in fixture["messages"]:
+                    if "recorded_at" in message:
+                        self.assert_datetime(message["recorded_at"])
 
     def test_schema_constraints_reject_empty_identity_and_malformed_timestamp(self) -> None:
         display_schema = json.loads(

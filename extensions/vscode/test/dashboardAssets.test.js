@@ -222,6 +222,21 @@ test("wires preview Open in Codex action through the preview Webview", () => {
   assert.match(extension, /String\(message\.key \|\| ""\)/);
 });
 
+test("renders locale-aware preview timestamps with date separators and accessibility metadata", () => {
+  const css = readDashboardCss();
+  const preview = readPreviewJs();
+
+  assert.match(preview, /date\.toLocaleDateString\(undefined,/);
+  assert.match(preview, /date\.toLocaleTimeString\(undefined,/);
+  assert.match(preview, /className:\s*"preview-date-separator"/);
+  assert.match(preview, /separator\.setAttribute\("role", "separator"\)/);
+  assert.match(preview, /time\.dateTime = entry\.recordedAt/);
+  assert.match(preview, /time\.setAttribute\("aria-label", `Recorded \$\{timestamp\.accessibleText\}`\)/);
+  assert.match(preview, /const timestamp = timestampParts\(entry\.recordedAt\)/);
+  assert.match(css, /\.preview-date-separator\s*\{/);
+  assert.match(css, /\.preview-time\s*\{/);
+});
+
 test("adds a Radar-native status bar item for attention and running counts", () => {
   const extension = fs.readFileSync(path.join(__dirname, "..", "src", "extension.js"), "utf8");
 
