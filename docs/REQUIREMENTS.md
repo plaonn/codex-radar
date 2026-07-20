@@ -121,6 +121,16 @@
 - Assumptions: current session cache의 `cwd`는 thread가 사용한 working directory를 나타내지만, 과거 saved `.code-workspace` 또는 multi-root workspace identity까지 복원하지는 않는다.
 - Derived specs/tests: current-workspace path containment check, mismatch modal, `ask`/`openWorkspace`/`openHere` setting, cross-workspace open stops after opening the destination window, same-workspace explicit second action opens the Codex thread, Remote SSH URI authority preservation, missing/unavailable cwd fallback.
 
+#### R7f: explicit Codex CLI resume
+
+- Status: confirmed direction, VS Code integrated-terminal action active
+- Requirement: 사용자가 Radar에서 선택한 thread를 별도 `Open in Codex CLI` action으로 명시적으로 재개할 때, extension host의 user-visible integrated terminal에서 configured Codex executable을 정확한 `resume`, session id argv와 함께 실행하고, 알려진 session working directory를 사용해야 한다.
+- Rationale: 공식 Codex extension URI handoff와 독립적으로 local/Remote SSH extension host의 Codex CLI를 재개할 수 있는 예측 가능한 fallback이 필요하다.
+- Failure prevented: shell string quoting으로 session identity나 executable path가 손실되는 문제, remote session을 UI client host에서 잘못 실행하는 문제, session cwd가 있는데 unrelated directory에서 재개하는 문제.
+- Assumptions: `codexRadar.codexExecutable`은 extension host에서 실행 가능한 command name 또는 executable path다. Session cache에 `cwd`가 없으면 VS Code terminal default working directory로 fallback한다.
+- Non-goals: official `Open in Codex` workspace mismatch semantics 변경, status/client 추론, 자동 fork, lock, warning state, background process 실행.
+- Derived specs/tests: distinct sidebar/dashboard/preview CLI action, VS Code `createTerminal` structured `shellPath`/`shellArgs`, exact `["resume", session_id]` argv, raw session cwd use, missing cwd fallback, local/Remote SSH extension-host ownership.
+
 ### R8: host-local Codex usage visibility
 
 - Status: confirmed direction, supported app-server adapter with rollout fallback active

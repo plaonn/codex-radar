@@ -118,6 +118,29 @@ function renderOpenAction(message) {
       });
     }
   };
+
+  const cliButton = byId("preview-open-cli");
+  if (!cliButton) {
+    return;
+  }
+  const canOpenCli = Boolean(message.actions?.canOpenCli);
+  cliButton.disabled = !canOpenCli;
+  cliButton.title = canOpenCli
+    ? "Resume this session with Codex CLI in an integrated terminal"
+    : "This session cannot be resumed with Codex CLI";
+  cliButton.onclick = () => {
+    if (canOpenCli) {
+      vscode.postMessage({
+        type: "sessionAction",
+        action: "openCli",
+        sessionId: message.sessionId || "",
+        key: message.key || "",
+        interactionAt: typeof performance !== "undefined"
+          ? performance.timeOrigin + performance.now()
+          : Date.now(),
+      });
+    }
+  };
 }
 
 function timestampParts(value) {

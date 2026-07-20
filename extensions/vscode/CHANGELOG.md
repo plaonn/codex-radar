@@ -2,6 +2,19 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.15
+
+### Added
+
+- Add a distinct **Open in Codex CLI** action to Radar sidebar, dashboard, and Preview sessions.
+- Resume the exact selected session in a user-visible VS Code integrated terminal using the configured Codex executable and the available raw session working directory.
+
+### Boundaries
+
+- Pass `resume` and the session id as structured terminal argv instead of composing a shell command string.
+- Fall back to the integrated terminal's default working directory when Radar has no session `cwd`.
+- Keep the existing official **Open in Codex** URI and workspace-mismatch behavior unchanged; do not infer client/status, auto-fork, or run in the background.
+
 ## 0.4.14
 
 ### Added

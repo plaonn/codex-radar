@@ -361,10 +361,13 @@ test("builds session action state for Webview buttons", () => {
   assert.equal(sessionCard(readDone).actions.canMarkRead, false);
   assert.equal(sessionCard(readDone).actions.canMarkUnread, true);
   assert.equal(sessionCard(unreadDone, { resolveTranscriptPathInfo: activeTranscriptResolver }).actions.canOpen, true);
+  assert.equal(sessionCard(unreadDone, { resolveTranscriptPathInfo: activeTranscriptResolver }).actions.canOpenCli, true);
   assert.equal(sessionCard(unreadDone, { resolveTranscriptPathInfo: emptyArchiveResolver }).actions.canOpen, false);
   assert.equal(sessionCard(archived, { resolveTranscriptPathInfo: archiveResolver }).actions.canOpen, false);
+  assert.equal(sessionCard(archived, { resolveTranscriptPathInfo: archiveResolver }).actions.canOpenCli, true);
   assert.equal(sessionCard(archived, { resolveTranscriptPathInfo: archiveResolver }).isArchived, true);
   assert.equal(sessionCard({ ...unreadDone, session_id: "unknown" }, { resolveTranscriptPathInfo: activeTranscriptResolver }).actions.canOpen, false);
+  assert.equal(sessionCard({ ...unreadDone, session_id: "unknown" }).actions.canOpenCli, false);
 });
 
 test("keeps lifecycle display status and detects archived sessions separately", () => {

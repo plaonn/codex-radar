@@ -19,7 +19,7 @@
 - GUI implementation은 read adapter를 통해 state source를 캡슐화한다. Schema evolution, computed field, archive/usage normalization, transcript redaction policy가 이미 여러 surface에서 중복되기 시작했으므로 shared sanitized export contract로 전환하는 조건은 충족된 것으로 본다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `tool_running`, `done`, `unknown`)와 Codex archived state를 navigation 안에서 구분해야 한다.
 - 첫 GUI notification surface는 sidebar section badge와 dashboard count/highlight 같은 in-surface cue로 제한한다.
-- 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard/sidebar다. Extension-local read/unread UI state는 허용하지만 VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
+- GUI의 Codex/codex-radar runtime state는 read-only로 유지한다. Extension-local read/unread UI state와 사용자가 명시적으로 실행하는 user-visible integrated-terminal `codex resume` action은 active scope다. VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
 - Shared export를 GUI list의 기본 source로 사용하고, command/source/schema failure에는 direct `sessions.json` adapter로 fallback한다. Raw host-local action metadata는 sanitized contract 밖의 trusted adapter boundary에 유지한다.
 
@@ -82,6 +82,6 @@
 - stdlib MVP가 유용하다는 것이 확인된 뒤 Rich/Textual TUI 검토. 다만 TUI는 primary product surface가 아니라 SSH-only/headless fallback으로 제한한다.
 - 과거 `~/.codex/sessions` metadata optional import.
 - worktree 또는 nested repository용 project alias.
-- Sectioned Webview sidebar, editor preview, editor dashboard가 Remote SSH에서 안정화된 뒤 command-copy, terminal handoff, 또는 retention controls를 별도 opt-in milestone로 검토.
+- Sectioned Webview sidebar, editor preview, editor dashboard가 Remote SSH에서 안정화된 뒤 command-copy 또는 retention controls를 별도 opt-in milestone로 검토.
 - Editor preview transcript에서 latest bounded window를 넘어 과거 메시지를 볼 수 있도록 lazy loading, `Load older`, 또는 full transcript mode를 검토. 구현 전에는 scroll anchoring, privacy/redaction boundary, large transcript DOM cost를 함께 설계한다.
 - terminal CLI/TUI용 `stale_after_minutes` 같은 stale freshness threshold config를 검토. 기본값은 현재 30분이다.

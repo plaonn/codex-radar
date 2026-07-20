@@ -727,6 +727,14 @@ select {
   max-width: 1120px;
 }
 
+.preview-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .preview-open {
   flex: 0 0 auto;
 }

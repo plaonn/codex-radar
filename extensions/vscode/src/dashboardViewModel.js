@@ -19,6 +19,7 @@ const {
   sessionWithCatalogTitle,
 } = require("./codexThreadCatalog");
 const { buildSessionDisplayFields, resolveTranscriptPathInfo } = require("./transcriptPreview");
+const { resumableSessionId } = require("./codexCliTerminal");
 
 function baseDisplayStatus(session) {
   return String(session.display_status || session.status || "unknown");
@@ -124,6 +125,7 @@ function sessionActionState(session, options = {}) {
     canOpen: !isArchived
       && hasResolvableRollout
       && Boolean(session.session_id && session.session_id !== "unknown" && !String(session.session_id).startsWith("unknown:")),
+    canOpenCli: Boolean(resumableSessionId(session)),
     canMarkRead: isDoneSession(session) && session.is_unread_done,
     canMarkUnread: isDoneSession(session) && session.is_done_read,
   };

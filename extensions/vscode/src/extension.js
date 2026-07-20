@@ -3,6 +3,7 @@ const path = require("node:path");
 const vscode = require("vscode");
 
 const { CodexAppServerController } = require("./codexAppServerController");
+const { codexResumeTerminalOptions } = require("./codexCliTerminal");
 
 const { officialCodexThreadUriString } = require("./codexLink");
 const {
@@ -249,6 +250,22 @@ async function openOfficialCodexThread(target, options = {}) {
   return { opened, handedOff: false };
 }
 
+async function openCodexCliTerminal(target, options = {}) {
+  const session = sessionFromTarget(target);
+  const terminalOptions = codexResumeTerminalOptions(
+    session,
+    options.codexExecutable || configuredCodexExecutable(),
+  );
+  if (!terminalOptions) {
+    await vscode.window.showWarningMessage("Codex session id is not available for this session.");
+    return { opened: false };
+  }
+
+  const terminal = vscode.window.createTerminal(terminalOptions);
+  terminal.show();
+  return { opened: true, terminal };
+}
+
 function webviewNonce() {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let value = "";
@@ -301,7 +318,10 @@ function previewHtml(webview, extensionUri) {
           <h1 id="preview-title"></h1>
           <div id="preview-meta" class="preview-meta"></div>
         </div>
-        <button id="preview-open" class="preview-open" type="button">Open in Codex</button>
+        <div class="preview-actions">
+          <button id="preview-open" class="preview-open" type="button">Open in Codex</button>
+          <button id="preview-open-cli" class="preview-open" type="button">Open in Codex CLI</button>
+        </div>
       </div>
       <dl id="preview-details" class="details preview-details"></dl>
     </header>
@@ -733,6 +753,8 @@ class RadarWebviewController {
       if (result.opened && isDoneSession(session)) {
         await this.markSessionRead(session);
       }
+    } else if (action === "openCli") {
+      await openCodexCliTerminal(session);
     } else if (action === "markRead") {
       await this.markSessionRead(session);
     } else if (action === "markUnread") {
@@ -1023,6 +1045,7 @@ module.exports = {
   dashboardHtml,
   deactivate,
   officialCodexThreadUri,
+  openCodexCliTerminal,
   openOfficialCodexThread,
   previewHtml,
   radarStatusText,

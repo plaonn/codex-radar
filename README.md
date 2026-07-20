@@ -25,6 +25,7 @@ The public beta is distributed through the [v0.4.4 GitHub Release](https://githu
 - Project-grouped navigation with clear running, approval, done/read, unknown, stale, and archived states.
 - Bounded, redacted transcript previews with a cached-summary fallback.
 - Workspace-aware `Open in Codex` handoff for eligible threads, including Remote SSH windows.
+- Explicit `Open in Codex CLI` resume in a user-visible integrated terminal with the exact selected session and available session working directory.
 - Setup diagnostics for missing, empty, stale, invalid, or unsupported local indexes.
 - Dependency-free Python CLI and TUI for terminal and headless workflows.
 - Configurable local retention and an opt-in foreground terminal watcher.
@@ -112,7 +113,7 @@ For Remote SSH, connect to the remote window before installing the VSIX so the w
 
 ## Usage
 
-The VS Code sidebar keeps attention-worthy work and project groups visible. Use **Codex Radar: Open Dashboard** for the larger dashboard, select a session for its preview, and use **Open in Codex** for eligible non-archived threads. When a thread belongs to another workspace, the default `codexRadar.openThreadBehavior` setting asks whether to open that project in a new window or continue in the current window.
+The VS Code sidebar keeps attention-worthy work and project groups visible. Use **Codex Radar: Open Dashboard** for the larger dashboard, select a session for its preview, and use **Open in Codex** for the official extension handoff or **Open in Codex CLI** to run the exact session in a user-visible integrated terminal. When an official handoff thread belongs to another workspace, the default `codexRadar.openThreadBehavior` setting asks whether to open that project in a new window or continue in the current window.
 
 The terminal interface provides the same local index as a fallback:
 

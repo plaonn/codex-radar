@@ -11,7 +11,7 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.14`. It uses the shared sanitized Python export as the default list source, shows locale-aware recorded times and date separators in transcript previews, uses the read-only Codex App Server Controller for supported rate-limit usage reads, and classifies Codex memory-maintenance sessions outside ordinary repository groups. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.15`. It adds an explicit integrated-terminal **Open in Codex CLI** action, uses the shared sanitized Python export as the default list source, shows locale-aware recorded times and date separators in transcript previews, uses the read-only Codex App Server Controller for supported rate-limit usage reads, and classifies Codex memory-maintenance sessions outside ordinary repository groups. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -45,7 +45,7 @@ The current source package version is `0.4.14`. It uses the shared sanitized Pyt
 
 - Does not edit `~/.codex/hooks.json`.
 - Does not install hooks.
-- Does not execute `codex resume`.
+- Does not execute `codex resume` automatically or in the background; the CLI resume path runs only after the user selects **Open in Codex CLI**.
 - Does not edit `config.json` directly.
 - Does not expose retention or prune controls in the current VS Code surface; use the terminal `codex-radar config` and `codex-radar prune` commands for those operations.
 - Treats a successful experimental Codex handoff for a done session as a local read acknowledgement only.
@@ -63,6 +63,10 @@ The current source package version is `0.4.14`. It uses the shared sanitized Pyt
 - `openHere`: resume in the current window even when the workspace differs.
 
 The extension preserves the current local, Remote SSH, WSL, or Dev Container URI authority when opening the destination window. Session state records only `cwd`, so this does not reconstruct a historical saved `.code-workspace` or multi-root layout.
+
+## Open in Codex CLI
+
+**Open in Codex CLI** is a separate explicit action in sidebar rows, the dashboard inspector, and the Preview header. It creates a user-visible integrated terminal on the extension host with `codexRadar.codexExecutable` and exact `resume`, session-id arguments. When Radar has a raw session `cwd`, the terminal starts there; otherwise VS Code selects the terminal's default working directory. This action does not use or change the official handoff's workspace-mismatch behavior.
 
 ## Version Policy
 
@@ -95,7 +99,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.14.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.15.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.
@@ -124,11 +128,12 @@ For Remote SSH, install the VSIX while connected to the remote window so the ext
 14. On a done session, mark read and unread from either sidebar card actions or the dashboard inspector.
 15. Archive and unarchive a Codex session and confirm it moves into and out of `Archived` automatically without pressing Refresh. Confirm archived sessions are excluded from `Attention` and `Projects` and have `Open in Codex` disabled.
 16. Confirm the Radar status bar item shows attention, running, and visible session counts, and opens the dashboard when clicked.
-17. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, and an `Open in Codex` button for eligible sessions.
+17. Select a sidebar session and confirm the preview opens with a fixed header, bounded transcript bubbles, an `Open in Codex` button for eligible sessions, and a distinct `Open in Codex CLI` button.
 18. Open a session whose `cwd` is inside the current workspace and confirm the Codex handoff does not show a workspace prompt.
 19. Open a session from another project with `codexRadar.openThreadBehavior` set to `ask`; confirm the modal can open its project in a new window, open the thread here, or cancel.
 20. Confirm `openWorkspace` preserves the current Remote SSH/local extension host, opens only the destination project, and does not change the Codex thread in the source window. In the destination window, select the same session from Radar and confirm the same-workspace Codex handoff works. Treat a Codex URI failure as non-blocking because that route is not a stable public contract.
-21. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
+21. Use `Open in Codex CLI` and confirm a visible integrated terminal starts the configured executable with `resume <exact-session-id>` in the session `cwd`, or the terminal default directory when the session has no `cwd`.
+22. Confirm no hook file, transcript file, `sessions.json`, or `config.json` was edited directly by the extension.
 
 ## Release Checklist
 

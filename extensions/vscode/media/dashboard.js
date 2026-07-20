@@ -138,6 +138,9 @@ function sessionActions(session, options = {}) {
   if (session.actions.canOpen) {
     actions.appendChild(actionButton("Open", "open", session, ""));
   }
+  if (session.actions.canOpenCli) {
+    actions.appendChild(actionButton("CLI", "openCli", session, "secondary"));
+  }
   if (session.actions.canMarkRead) {
     actions.appendChild(actionButton("Read", "markRead", session, "secondary"));
   }
@@ -219,6 +222,7 @@ function sessionRenderSignature(session, options = {}) {
     meta: session.description || session.statusText,
     showActions: Boolean(options.showActions),
     canOpen: Boolean(session.actions?.canOpen),
+    canOpenCli: Boolean(session.actions?.canOpenCli),
     canMarkRead: Boolean(session.actions?.canMarkRead),
     canMarkUnread: Boolean(session.actions?.canMarkUnread),
   });
@@ -473,6 +477,9 @@ function inspectorPane(model) {
   actions.appendChild(button("Open in Codex", "", () => {
     send(sessionMessage("sessionAction", session, { action: "open" }));
   }, !session.actions.canOpen));
+  actions.appendChild(button("Open in Codex CLI", "secondary", () => {
+    send(sessionMessage("sessionAction", session, { action: "openCli" }));
+  }, !session.actions.canOpenCli));
   if (session.actions.canMarkRead) {
     actions.appendChild(button("Mark read", "secondary", () => {
       send(sessionMessage("sessionAction", session, { action: "markRead" }));

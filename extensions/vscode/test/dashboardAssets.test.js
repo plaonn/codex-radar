@@ -222,6 +222,19 @@ test("wires preview Open in Codex action through the preview Webview", () => {
   assert.match(extension, /String\(message\.key \|\| ""\)/);
 });
 
+test("wires distinct sidebar and preview Open in Codex CLI actions", () => {
+  const dashboard = readDashboardJs();
+  const preview = readPreviewJs();
+  const extension = readExtensionJs();
+
+  assert.match(dashboard, /actionButton\("CLI", "openCli"/);
+  assert.match(dashboard, /Open in Codex CLI/);
+  assert.match(preview, /preview-open-cli/);
+  assert.match(preview, /action:\s*"openCli"/);
+  assert.match(extension, /action === "openCli"/);
+  assert.match(extension, /openCodexCliTerminal\(session\)/);
+});
+
 test("renders locale-aware preview timestamps with date separators and accessibility metadata", () => {
   const css = readDashboardCss();
   const preview = readPreviewJs();
