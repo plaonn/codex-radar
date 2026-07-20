@@ -65,6 +65,104 @@ test("resolves a delayed selection by stable session id after its state key chan
   assert.deepEqual(warnings, []);
 });
 
+test("opens a sidebar preview before the full refresh completes", async () => {
+  const controller = controllerWithSessions([
+    session("session-a", "2026-07-15T10:01:00Z"),
+  ]);
+  const refreshCalls = [];
+  let finishRefresh;
+  controller.refresh = async (options) => {
+    refreshCalls.push(options);
+    await new Promise((resolve) => {
+      finishRefresh = resolve;
+    });
+  };
+  controller.updatePreviewPanel = () => {
+    controller.previewRefreshes += 1;
+  };
+  controller.previewRefreshes = 0;
+
+  await controller.handleMessage("projects", {
+    type: "selectSession",
+    sessionId: "session-a",
+    interactionAt: 100,
+  });
+
+  assert.deepEqual(controller.openedPreviews, ["session-a"]);
+  assert.deepEqual(refreshCalls, [{ updatePreview: false }]);
+  assert.equal(controller.previewRefreshes, 0);
+
+  finishRefresh();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(controller.previewRefreshes, 1);
+});
+
+test("does not start a stale refresh after a newer sidebar preview wins", async () => {
+  const controller = controllerWithSessions([
+    session("session-a", "2026-07-15T10:01:00Z"),
+    session("session-b", "2026-07-15T10:02:00Z"),
+  ]);
+  let finishOlderPreview;
+  controller.openPreview = async (selected) => {
+    controller.openedPreviews.push(selected.session_id);
+    if (selected.session_id === "session-a") {
+      await new Promise((resolve) => {
+        finishOlderPreview = resolve;
+      });
+    }
+  };
+  let refreshCount = 0;
+  controller.refresh = async () => {
+    refreshCount += 1;
+  };
+
+  const olderSelection = controller.handleMessage("projects", {
+    type: "selectSession",
+    sessionId: "session-a",
+    interactionAt: 100,
+  });
+  await Promise.resolve();
+  await controller.handleMessage("projects", {
+    type: "selectSession",
+    sessionId: "session-b",
+    interactionAt: 200,
+  });
+  finishOlderPreview();
+  await olderSelection;
+
+  assert.deepEqual(controller.openedPreviews, ["session-a", "session-b"]);
+  assert.equal(controller.selectedSessionIdentity, "session-b");
+  assert.equal(refreshCount, 1);
+});
+
+test("does not refresh Preview after a newer interaction supersedes the selection", async () => {
+  const controller = controllerWithSessions([
+    session("session-a", "2026-07-15T10:01:00Z"),
+  ]);
+  let finishRefresh;
+  controller.refresh = async () => {
+    await new Promise((resolve) => {
+      finishRefresh = resolve;
+    });
+  };
+  controller.updatePreviewPanel = () => {
+    controller.previewRefreshes += 1;
+  };
+  controller.previewRefreshes = 0;
+
+  await controller.handleMessage("projects", {
+    type: "selectSession",
+    sessionId: "session-a",
+    interactionAt: 100,
+  });
+  controller.beginInteraction({ interactionAt: 200 });
+  finishRefresh();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(controller.previewRefreshes, 0);
+});
+
 test("ignores an older delayed click after a newer sidebar interaction", async () => {
   const controller = controllerWithSessions([
     session("session-a", "2026-07-15T10:01:00Z"),

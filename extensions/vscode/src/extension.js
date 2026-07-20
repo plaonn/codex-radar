@@ -809,14 +809,21 @@ class RadarWebviewController {
       const requestedIdentity = previewSessionIdentity(requestedSession);
       this.selectedKey = sessionStateKey(requestedSession);
       this.selectedSessionIdentity = requestedIdentity;
+      if (surface !== "dashboard") {
+        await this.openPreview(requestedSession);
+        if (!this.isCurrentInteraction(interactionAt)) {
+          return;
+        }
+        void this.refresh({ updatePreview: false }).then(() => {
+          if (this.isCurrentInteraction(interactionAt)) {
+            this.updatePreviewPanel();
+          }
+        });
+        return;
+      }
       await this.refresh({ updatePreview: false });
       if (!this.isCurrentInteraction(interactionAt)) {
         return;
-      }
-      if (surface !== "dashboard") {
-        await this.openPreview(
-          this.sessionForPreviewIdentity(requestedIdentity) || requestedSession,
-        );
       }
       return;
     }

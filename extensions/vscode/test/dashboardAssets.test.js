@@ -276,7 +276,11 @@ test("keeps preview ownership independent from dashboard selection fallback", ()
   assert.match(extension, /const requestedIdentity = previewSessionIdentity\(requestedSession\);/);
   assert.match(
     extension,
-    /this\.sessionForPreviewIdentity\(requestedIdentity\) \|\| requestedSession/,
+    /if \(surface !== "dashboard"\) \{\s*await this\.openPreview\(requestedSession\);/,
+  );
+  assert.match(
+    extension,
+    /void this\.refresh\(\{ updatePreview: false \}\)\.then\(\(\) => \{\s*if \(this\.isCurrentInteraction\(interactionAt\)\) \{\s*this\.updatePreviewPanel\(\);/,
   );
 });
 

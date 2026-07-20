@@ -11,7 +11,7 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.17`. It preserves specific missing, empty, and stale session-index setup diagnostics across the default shared-export path, keeps filesystem failure details path-free, classifies Sidebar **Current Workspace** groups from raw session working-directory evidence before sanitized card conversion, includes the explicit integrated-terminal **Open in Codex CLI** action, and shows locale-aware recorded times and date separators in transcript previews. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.18`. It opens Sidebar transcript Preview from the current in-memory session before refreshing the full session/catalog model, preserves specific missing, empty, and stale session-index setup diagnostics across the default shared-export path, keeps filesystem failure details path-free, classifies Sidebar **Current Workspace** groups from raw session working-directory evidence before sanitized card conversion, includes the explicit integrated-terminal **Open in Codex CLI** action, and shows locale-aware recorded times and date separators in transcript previews. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -99,7 +99,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.17.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.18.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

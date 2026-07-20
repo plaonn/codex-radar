@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.18
+
+### Changed
+
+- Open Sidebar transcript Preview from the selected in-memory session before refreshing shared session state and the Codex thread catalog.
+- Refresh the Preview after background synchronization only when the originating Sidebar interaction is still current.
+
+### Boundaries
+
+- Preserve the existing 220 ms single-click/double-click disambiguation and double-click **Open in Codex** behavior.
+- Keep dashboard selection, direct/observe/export adapters, export-to-direct fallback, privacy boundaries, and Remote SSH execution unchanged.
+
 ## 0.4.17
 
 ### Fixed
