@@ -2,6 +2,17 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.16
+
+### Fixed
+
+- Classify Sidebar `Current Workspace` groups from raw session `cwd` evidence before sanitized card conversion removes private path fields.
+- Preserve the project-basename fallback only for legacy sessions that genuinely have no `cwd`.
+
+### Boundaries
+
+- Keep official `Open in Codex` workspace mismatch behavior unchanged.
+
 ## 0.4.15
 
 ### Added

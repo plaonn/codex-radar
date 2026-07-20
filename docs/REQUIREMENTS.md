@@ -86,7 +86,7 @@
 - Requirement: GUI는 프로젝트 단위로 묶인 conversation list를 primary navigation으로 제공해야 한다.
 - Rationale: VS Code용 Codex extension의 기본 대화 목록은 프로젝트별 switching에 충분하지 않으므로, GUI 통합의 첫 가치는 project grouping이다.
 - Failure prevented: terminal fallback을 열지 않으면 프로젝트별 Codex thread를 찾기 어려운 문제.
-- Derived specs/tests: GUI project grouping rules, sidebar project folding rules, direct `sessions.json` read contract v1, `extensions/vscode` SessionSource grouping tests, Webview sidebar project section tests, Webview dashboard project grouping tests.
+- Derived specs/tests: GUI project grouping rules, raw-session `cwd` current-workspace classification before sanitized card conversion, missing-`cwd` project-basename fallback, sidebar project folding rules, direct `sessions.json` read contract v1, `extensions/vscode` SessionSource grouping tests, Webview sidebar project section tests, Webview dashboard project grouping tests.
 
 #### R7b: GUI attention state
 

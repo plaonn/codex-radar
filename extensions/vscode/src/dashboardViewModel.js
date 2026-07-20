@@ -191,16 +191,18 @@ function cardsForSessions(sessions, options = {}) {
   return sessions.map((session) => sessionCard(session, options));
 }
 
+function projectGroup(group, options = {}) {
+  const cards = cardsForSessions(group.sessions, options);
+  return {
+    project: group.project,
+    total: cards.length,
+    attention: cards.filter((card) => card.isAttention).length,
+    sessions: cards,
+  };
+}
+
 function projectGroups(sessions, options = {}) {
-  return groupSessionsByProject(sessions).map((group) => {
-    const cards = cardsForSessions(group.sessions, options);
-    return {
-      project: group.project,
-      total: cards.length,
-      attention: cards.filter((card) => card.isAttention).length,
-      sessions: cards,
-    };
-  });
+  return groupSessionsByProject(sessions).map((group) => projectGroup(group, options));
 }
 
 function normalizedFsPath(value) {
@@ -253,8 +255,9 @@ function sessionWorkspaceIndex(session, folders) {
 
 function sidebarProjectGroups(sessions, options = {}) {
   const folders = workspaceFolders(options);
-  const groups = projectGroups(sessions, options).map((group, originalIndex) => {
-    const matchingIndexes = group.sessions
+  const groups = groupSessionsByProject(sessions).map((rawGroup, originalIndex) => {
+    const group = projectGroup(rawGroup, options);
+    const matchingIndexes = rawGroup.sessions
       .map((session) => sessionWorkspaceIndex(session, folders))
       .filter((index) => index >= 0);
     const workspaceIndex = matchingIndexes.length ? Math.min(...matchingIndexes) : -1;

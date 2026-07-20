@@ -251,6 +251,43 @@ test("pins current workspace projects only in sidebar project groups", () => {
   assert.equal(model.sidebarGroups[1].isCurrentWorkspace, false);
 });
 
+test("does not label a project current when its explicit cwd is elsewhere", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "same-name-other-cwd",
+      cwd: "/work/elsewhere",
+      project: "codex-radar",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:01:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    workspaceFolders: ["/work/codex-radar"],
+    resolveTranscriptPathInfo: activeTranscriptResolver,
+  });
+
+  assert.equal(model.sidebarGroups[0].isCurrentWorkspace, false);
+  assert.equal(Object.hasOwn(model.sidebarGroups[0].sessions[0], "cwd"), false);
+});
+
+test("uses the project basename fallback only when session cwd is missing", () => {
+  const sessions = decorateSessions([
+    {
+      session_id: "legacy-no-cwd",
+      project: "codex-radar",
+      display_status: "done",
+      last_seen_at: "2026-07-05T00:01:00+09:00",
+    },
+  ], new Set(), new Set());
+  const model = buildDashboardModel(sessions, {
+    workspaceFolders: ["/work/codex-radar"],
+    resolveTranscriptPathInfo: activeTranscriptResolver,
+  });
+
+  assert.equal(model.sidebarGroups[0].isCurrentWorkspace, true);
+  assert.equal(Object.hasOwn(model.sidebarGroups[0].sessions[0], "cwd"), false);
+});
+
 test("orders multiple current workspace projects by workspace folder order", () => {
   const sessions = decorateSessions([
     {
