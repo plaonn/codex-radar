@@ -101,12 +101,12 @@ def _append_message(messages: List[Dict[str, str]], message: Dict[str, str]) -> 
     if messages and all(
         messages[-1].get(key) == message.get(key) for key in ("role", "text")
     ):
-        recorded_at = _earlier_timestamp(
-            messages[-1].get("recorded_at", ""),
-            message.get("recorded_at", ""),
+        timestamp = _earlier_timestamp(
+            messages[-1].get("timestamp", ""),
+            message.get("timestamp", ""),
         )
-        if recorded_at:
-            messages[-1]["recorded_at"] = recorded_at
+        if timestamp:
+            messages[-1]["timestamp"] = timestamp
         return
     messages.append(message)
 
@@ -116,7 +116,7 @@ def conversation_messages(items: Iterable[Mapping[str, Any]]) -> List[Dict[str, 
     for item in items:
         if not isinstance(item, Mapping):
             continue
-        recorded_at = sanitize_iso_datetime(item.get("timestamp"))
+        timestamp = sanitize_iso_datetime(item.get("timestamp"))
         for candidate in _candidate_messages(item):
             role = _candidate_role(candidate)
             if not role:
@@ -129,7 +129,7 @@ def conversation_messages(items: Iterable[Mapping[str, Any]]) -> List[Dict[str, 
                 {
                     "role": role,
                     "text": text,
-                    **({"recorded_at": recorded_at} if recorded_at else {}),
+                    **({"timestamp": timestamp} if timestamp else {}),
                 }
                 for text in texts
             ]

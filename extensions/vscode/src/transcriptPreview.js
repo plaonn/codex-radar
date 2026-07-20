@@ -694,7 +694,7 @@ function buildSessionPreviewModelFromExport(session, payload, options = {}) {
     text: message.text,
     html: markdownToSafeHtml(message.text),
     source: "shared-export",
-    ...(message.recorded_at ? { recordedAt: message.recorded_at } : {}),
+    ...(message.timestamp ? { recordedAt: message.timestamp } : {}),
   }));
   return buildSessionPreviewModelFromEntries(session, entries, options);
 }

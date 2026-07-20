@@ -25,7 +25,7 @@ The current source package version is `0.4.14`. It uses the shared sanitized Pyt
 - Keeps project-grouped navigation in the sidebar `Projects` section and dashboard project list.
 - Routes host-local Codex archived sessions to the sidebar `Archived` section and dashboard archived list.
 - Also uses Codex local thread state as a direct archived-thread fallback when the Codex thread id matches the Radar session id.
-- Opens a single-session editor preview when a sidebar session item is selected. In export mode this explicit action invokes `codex-radar export preview <session-id> --limit 120 --contract-version 2`; direct transcript preview remains the fallback. The preview shows bounded redacted user/Codex messages with safe Markdown rendering, locale-aware message times, and local-calendar date separators when valid rollout timestamps are available.
+- Opens a single-session editor preview when a sidebar session item is selected. In export mode this explicit action invokes `codex-radar export preview <session-id> --limit 120 --contract-version 2`; direct transcript preview remains the fallback. The preview shows bounded redacted user/Codex messages with safe Markdown rendering, locale-aware hour/minute labels, local-calendar date separators, and hover/accessibility metadata with seconds and timezone when valid rollout timestamps are available.
 - Separates lifecycle status, done read state, and archived state in sidebar/dashboard cards.
 - Shows `running` and `tool_running` with neutral loading spinners.
 - Shows unread `done` with a blue/cyan filled indicator and read `done` with a hollow gray indicator plus muted row treatment.

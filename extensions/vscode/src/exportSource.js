@@ -249,7 +249,7 @@ function validateDisplayState(payload) {
 }
 
 function validateTranscriptPreview(payload, expectedSessionId, expectedLimit) {
-  const messageKeys = new Set(["role", "text", "recorded_at"]);
+  const messageKeys = new Set(["role", "text", "timestamp"]);
   if (!isObject(payload)
       || !hasOnlyKeys(payload, PREVIEW_KEYS)
       || payload.contract !== TRANSCRIPT_PREVIEW_CONTRACT
@@ -269,7 +269,7 @@ function validateTranscriptPreview(payload, expectedSessionId, expectedLimit) {
         && typeof message.text === "string"
         && message.text.length > 0
         && message.text.length <= 20000
-        && (!("recorded_at" in message) || isIsoTimestamp(message.recorded_at))
+        && (!("timestamp" in message) || isIsoTimestamp(message.timestamp))
       ))) {
     throw new ExportSourceError("transcript_preview_schema_mismatch");
   }

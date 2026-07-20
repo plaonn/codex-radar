@@ -240,7 +240,7 @@ class ExportCliTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertEqual(0, result)
             self.assertEqual(2, payload["version"])
-            self.assertEqual("2026-07-14T00:00:00+00:00", payload["messages"][0]["recorded_at"])
+            self.assertEqual("2026-07-14T00:00:00+00:00", payload["messages"][0]["timestamp"])
 
     def test_export_preview_failure_has_empty_stdout_and_safe_stderr(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

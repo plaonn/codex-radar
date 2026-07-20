@@ -1,4 +1,6 @@
-const vscode = acquireVsCodeApi();
+const vscode = typeof acquireVsCodeApi === "function"
+  ? acquireVsCodeApi()
+  : { postMessage() {} };
 
 let activeSessionIdentity = "";
 
@@ -135,8 +137,13 @@ function timestampParts(value) {
       minute: "2-digit",
     }),
     accessibleText: date.toLocaleString(undefined, {
-      dateStyle: "long",
-      timeStyle: "short",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "short",
     }),
   };
 }
@@ -226,16 +233,25 @@ function renderPreview(message) {
   }
 }
 
-window.addEventListener("message", (event) => {
-  if (event.data?.type === "previewState") {
-    renderPreview(event.data);
-  }
-});
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  window.addEventListener("message", (event) => {
+    if (event.data?.type === "previewState") {
+      renderPreview(event.data);
+    }
+  });
 
-document.addEventListener("DOMContentLoaded", () => {
-  const body = previewBody();
-  if (body) {
-    body.addEventListener("scroll", saveScroll, { passive: true });
-  }
-  vscode.postMessage({ type: "previewReady" });
-});
+  document.addEventListener("DOMContentLoaded", () => {
+    const body = previewBody();
+    if (body) {
+      body.addEventListener("scroll", saveScroll, { passive: true });
+    }
+    vscode.postMessage({ type: "previewReady" });
+  });
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    timestampParts,
+    transcriptEntry,
+  };
+}

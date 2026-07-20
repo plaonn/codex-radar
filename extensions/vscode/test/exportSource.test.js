@@ -256,9 +256,17 @@ test("preview adapter fails closed on unnegotiated v1 or malformed v2 timestamps
   );
 
   const payload = fixture("transcript-preview-v2.json");
-  payload.messages[0].recorded_at = "2026-07-14T00:00:00";
+  payload.messages[0].timestamp = "2026-07-14T00:00:00";
   assert.throws(
     () => validateTranscriptPreview(payload, "session-1", 2),
+    (error) => error instanceof ExportSourceError && error.code === "transcript_preview_schema_mismatch",
+  );
+
+  const renamedPayload = fixture("transcript-preview-v2.json");
+  renamedPayload.messages[0].recorded_at = renamedPayload.messages[0].timestamp;
+  delete renamedPayload.messages[0].timestamp;
+  assert.throws(
+    () => validateTranscriptPreview(renamedPayload, "session-1", 2),
     (error) => error instanceof ExportSourceError && error.code === "transcript_preview_schema_mismatch",
   );
 });

@@ -71,11 +71,14 @@ class DisplayContractSchemaTests(unittest.TestCase):
                 self.assertEqual(version, fixture["version"])
                 self.assertFalse(schema["additionalProperties"])
                 self.assertFalse(schema["$defs"]["message"]["additionalProperties"])
+                if version == LATEST_TRANSCRIPT_PREVIEW_VERSION:
+                    self.assertIn("timestamp", schema["$defs"]["message"]["properties"])
+                    self.assertNotIn("recorded_at", schema["$defs"]["message"]["properties"])
                 self.assert_datetime(fixture["generated_at"])
                 self.assert_identity(fixture["session_id"], schema["properties"]["session_id"])
                 for message in fixture["messages"]:
-                    if "recorded_at" in message:
-                        self.assert_datetime(message["recorded_at"])
+                    if "timestamp" in message:
+                        self.assert_datetime(message["timestamp"])
 
     def test_schema_constraints_reject_empty_identity_and_malformed_timestamp(self) -> None:
         display_schema = json.loads(

@@ -191,6 +191,31 @@ test("keeps the earliest valid top-level timestamp when duplicate wrappers merge
   }]);
 });
 
+test("omits missing, malformed, timezone-naive, and nested-only rollout timestamps", () => {
+  const text = [
+    JSON.stringify({ role: "user", content: "missing" }),
+    JSON.stringify({ timestamp: "invalid", role: "assistant", content: "malformed" }),
+    JSON.stringify({ timestamp: "2026-07-14T09:00:00", role: "user", content: "naive" }),
+    JSON.stringify({
+      role: "assistant",
+      content: "nested",
+      payload: { timestamp: "2026-07-14T00:00:00Z" },
+    }),
+  ].join("\n");
+
+  const entries = skimTranscriptText(text, { limit: 0 });
+
+  assert.deepEqual(
+    entries.map(({ text: entryText, recordedAt }) => ({ text: entryText, recordedAt })),
+    [
+      { text: "missing", recordedAt: undefined },
+      { text: "malformed", recordedAt: undefined },
+      { text: "naive", recordedAt: undefined },
+      { text: "nested", recordedAt: undefined },
+    ],
+  );
+});
+
 test("keeps direct and shared-export preview timestamp semantics aligned", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-preview-time-parity-"));
   try {
@@ -211,7 +236,7 @@ test("keeps direct and shared-export preview timestamp semantics aligned", () =>
       messages: [{
         role: "assistant",
         text: "finished",
-        recorded_at: "2026-07-14T00:00:00+00:00",
+        timestamp: "2026-07-14T00:00:00+00:00",
       }],
     });
 

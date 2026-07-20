@@ -130,8 +130,40 @@ class TranscriptPreviewContractTests(unittest.TestCase):
                 {
                     "role": "user",
                     "text": "same prompt",
-                    "recorded_at": "2026-07-13T23:59:00+00:00",
+                    "timestamp": "2026-07-13T23:59:00+00:00",
                 }
+            ],
+            messages,
+        )
+
+    def test_preview_omits_missing_malformed_naive_and_nested_only_timestamps(self) -> None:
+        messages = conversation_messages(
+            [
+                {"role": "user", "content": "missing"},
+                {
+                    "timestamp": "invalid",
+                    "role": "assistant",
+                    "content": "malformed",
+                },
+                {
+                    "timestamp": "2026-07-14T09:00:00",
+                    "role": "user",
+                    "content": "naive",
+                },
+                {
+                    "role": "assistant",
+                    "content": "nested",
+                    "payload": {"timestamp": "2026-07-14T00:00:00Z"},
+                },
+            ]
+        )
+
+        self.assertEqual(
+            [
+                {"role": "user", "text": "missing"},
+                {"role": "assistant", "text": "malformed"},
+                {"role": "user", "text": "naive"},
+                {"role": "assistant", "text": "nested"},
             ],
             messages,
         )
