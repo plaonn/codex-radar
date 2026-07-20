@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, Mapping, Optional
 
 from .store import session_display_status
+from .project_classification import classified_project
 
 
 DISPLAY_STATE_CONTRACT = "codex-radar.display-state"
@@ -172,7 +173,7 @@ def _session(
         "requires_attention": status == "waiting_approval" and archive_state != "archived",
         "event_count": max(0, _int(source.get("event_count")) or 0),
     }
-    project = _safe_label(source.get("project"))
+    project = _safe_label(classified_project(source.get("cwd"), source.get("project")))
     if project:
         result["project"] = project
     for field in ("first_seen_at", "last_seen_at", "display_state_started_at"):

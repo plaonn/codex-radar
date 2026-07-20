@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  classifiedProject,
   defaultStateDir,
   filterSessionsByStatus,
   groupSessionsByProject,
@@ -38,6 +39,59 @@ test("groups sessions by project without changing recent project order", () => {
       ["project-b", 1],
     ],
   );
+});
+
+test("classifies Codex memory maintenance outside ordinary project groups", () => {
+  const options = {
+    env: { CODEX_HOME: "/tmp/codex-home" },
+    homeDir: "/tmp/home",
+    platform: "linux",
+  };
+
+  assert.equal(
+    classifiedProject({ cwd: "/tmp/codex-home/memories", project: "memories" }, options),
+    "Codex internal",
+  );
+  assert.equal(
+    classifiedProject({ cwd: "/tmp/project", project: "project" }, options),
+    "project",
+  );
+  assert.equal(
+    classifiedProject(
+      { cwd: "C:\\Users\\dev\\.codex\\memories\\maintenance", project: "maintenance" },
+      { env: {}, homeDir: "C:\\Users\\dev", platform: "win32" },
+    ),
+    "Codex internal",
+  );
+});
+
+test("normalizes cached Codex memory sessions without rewriting the cache", () => {
+  const sessions = sessionsFromPayload({
+    schema_version: 1,
+    sessions: {
+      internal: {
+        session_id: "internal",
+        cwd: "/tmp/codex-home/memories/maintenance",
+        project: "memories",
+        status: "done",
+      },
+    },
+  }, {
+    env: { CODEX_HOME: "/tmp/codex-home" },
+    homeDir: "/tmp/home",
+    platform: "linux",
+  });
+
+  assert.equal(sessions[0].project, "Codex internal");
+});
+
+test("does not add an empty project field to legacy cache rows", () => {
+  const sessions = sessionsFromPayload({
+    schema_version: 1,
+    sessions: { legacy: { session_id: "legacy", status: "done" } },
+  });
+
+  assert.equal(Object.prototype.hasOwnProperty.call(sessions[0], "project"), false);
 });
 
 test("keeps lifecycle status as display status", () => {

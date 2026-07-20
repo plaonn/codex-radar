@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, Optional
 
 from .platform_paths import default_state_dir
+from .project_classification import classified_project
 
 
 EVENT_STATUS = {
@@ -210,7 +211,7 @@ def normalize_event(payload: Dict[str, Any], recorded_at: Optional[str] = None) 
     )
     status = EVENT_STATUS.get(event_name, "unknown")
     cwd = _string(_find_first(payload, ("cwd", "current_working_directory", "currentWorkingDirectory")))
-    project = Path(cwd).name if cwd else ""
+    project = classified_project(cwd)
     last_message = _string(_find_first(payload, ("last_assistant_message", "lastAssistantMessage")))
 
     return {
@@ -281,7 +282,16 @@ def load_sessions(state_dir: Optional[Path] = None) -> Dict[str, Dict[str, Any]]
     sessions = data.get("sessions", data)
     if not isinstance(sessions, dict):
         return {}
-    return {str(key): value for key, value in sessions.items() if isinstance(value, dict)}
+    normalized: Dict[str, Dict[str, Any]] = {}
+    for key, value in sessions.items():
+        if not isinstance(value, dict):
+            continue
+        session = dict(value)
+        project = classified_project(session.get("cwd"), session.get("project"))
+        if project or "project" in session:
+            session["project"] = project
+        normalized[str(key)] = session
+    return normalized
 
 
 def load_config(state_dir: Optional[Path] = None) -> Dict[str, Any]:

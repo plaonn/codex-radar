@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.12
+
+### Changed
+
+- Classify sessions under the host-local Codex memory-maintenance root as `Codex internal` instead of presenting `memories` as an ordinary repository project.
+- Apply the classification while reading existing session caches, without rewriting or hiding the underlying session records.
+
+### Boundaries
+
+- Keep ordinary repository working directories grouped by their existing project names.
+- Do not generalize the rule to every hidden directory or every path under `CODEX_HOME`.
+
 ## 0.4.11
 
 ### Changed

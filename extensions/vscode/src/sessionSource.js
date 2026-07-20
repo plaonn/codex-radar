@@ -14,6 +14,8 @@ const STATUS_FILTER_VALUES = Object.freeze([
   "done",
   "unknown",
 ]);
+const CODEX_INTERNAL_PROJECT = "Codex internal";
+const CODEX_INTERNAL_SUBDIRECTORIES = Object.freeze(["memories"]);
 
 function expandHome(value, homeDir = os.homedir()) {
   if (!value) {
@@ -58,6 +60,51 @@ function defaultStateDir(env = process.env, homeDir = os.homedir(), platform = p
   return pathApi.join(homeDir, ".local", "state", "codex-radar");
 }
 
+function defaultCodexHome(env = process.env, homeDir = os.homedir(), platform = process.platform) {
+  const pathApi = platform === "win32" ? path.win32 : path.posix;
+  if (env.CODEX_HOME) {
+    return pathApi.resolve(expandHomeForPlatform(env.CODEX_HOME, homeDir, pathApi));
+  }
+  return pathApi.join(homeDir, ".codex");
+}
+
+function expandHomeForPlatform(value, homeDir, pathApi) {
+  if (!value) {
+    return value;
+  }
+  if (value === "~") {
+    return homeDir;
+  }
+  if (value.startsWith("~/")) {
+    return pathApi.join(homeDir, value.slice(2));
+  }
+  return value;
+}
+
+function isPathWithin(candidate, parent, pathApi) {
+  const relative = pathApi.relative(parent, candidate);
+  return relative === ""
+    || (!relative.startsWith(`..${pathApi.sep}`) && relative !== ".." && !pathApi.isAbsolute(relative));
+}
+
+function classifiedProject(session, options = {}) {
+  const platform = options.platform || process.platform;
+  const pathApi = platform === "win32" ? path.win32 : path.posix;
+  const env = options.env || process.env;
+  const homeDir = options.homeDir || os.homedir();
+  const cwd = String(session?.cwd || "").trim();
+  if (cwd) {
+    const candidate = pathApi.resolve(expandHomeForPlatform(cwd, homeDir, pathApi));
+    const codexHome = defaultCodexHome(env, homeDir, platform);
+    for (const subdirectory of CODEX_INTERNAL_SUBDIRECTORIES) {
+      if (isPathWithin(candidate, pathApi.join(codexHome, subdirectory), pathApi)) {
+        return CODEX_INTERNAL_PROJECT;
+      }
+    }
+  }
+  return String(session?.project || "");
+}
+
 function sessionCachePath(stateDir) {
   return path.join(stateDir, "sessions.json");
 }
@@ -86,6 +133,10 @@ function normalizeSession(sessionId, session, options = {}) {
     ...session,
     session_id: String(session.session_id || sessionId),
   };
+  const project = classifiedProject(normalized, options);
+  if (project || Object.prototype.hasOwnProperty.call(normalized, "project")) {
+    normalized.project = project;
+  }
   normalized.display_status = sessionDisplayStatus(normalized, options);
   return normalized;
 }
@@ -319,7 +370,9 @@ function groupSessionsByProject(sessions) {
 
 module.exports = {
   CACHE_SCHEMA_VERSION,
+  CODEX_INTERNAL_PROJECT,
   STATUS_FILTER_VALUES,
+  classifiedProject,
   defaultStateDir,
   expandHome,
   filterSessionsByStatus,

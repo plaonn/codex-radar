@@ -141,7 +141,7 @@ Privacy and stability boundary:
 - `turn_id`
 - `status`: dashboard용 derived status.
 - `cwd`
-- `project`: `cwd` basename.
+- `project`: 일반 작업 directory에서는 `cwd` basename. `$CODEX_HOME/memories`와 그 하위에서 실행된 Codex 자체 메모리 관리 session은 원본 session을 숨기거나 cache를 rewrite하지 않고 `Codex internal`로 표시한다.
 - `transcript_path`
 - `model`
 - `permission_mode`

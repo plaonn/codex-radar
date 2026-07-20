@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -56,6 +57,47 @@ class StoreTests(unittest.TestCase):
         self.assertEqual("done", event["status"])
         self.assertEqual("example-project", event["project"])
         self.assertEqual("session-1", event["session_id"])
+
+    def test_normalize_event_classifies_codex_memory_work_as_internal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {"CODEX_HOME": str(Path(tmp) / "codex-home")},
+        ):
+            event = normalize_event(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "session-1",
+                    "cwd": str(Path(tmp) / "codex-home" / "memories" / "maintenance"),
+                },
+                recorded_at="2026-07-20T00:00:00+00:00",
+            )
+
+        self.assertEqual("Codex internal", event["project"])
+
+    def test_load_sessions_reclassifies_internal_project_without_rewriting_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {"CODEX_HOME": str(Path(tmp) / "codex-home")},
+        ):
+            state_dir = Path(tmp) / "state"
+            state_dir.mkdir()
+            cache_path = state_dir / "sessions.json"
+            payload = {
+                "schema_version": 1,
+                "sessions": {
+                    "internal": {
+                        "session_id": "internal",
+                        "cwd": str(Path(tmp) / "codex-home" / "memories"),
+                        "project": "memories",
+                    }
+                },
+            }
+            cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            sessions = load_sessions(state_dir)
+
+            self.assertEqual("Codex internal", sessions["internal"]["project"])
+            self.assertEqual("memories", json.loads(cache_path.read_text(encoding="utf-8"))["sessions"]["internal"]["project"])
 
     def test_normalize_event_accepts_camel_case_payload_aliases(self) -> None:
         event = normalize_event(

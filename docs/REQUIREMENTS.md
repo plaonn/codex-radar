@@ -21,7 +21,7 @@
 - Requirement: 대화 목록은 프로젝트 단위로 구분되어야 하며, 사용자가 프로젝트 기준으로 thread를 좁혀보거나 전환할 수 있어야 한다.
 - Rationale: VS Code용 Codex extension의 대화 목록은 Codex App처럼 프로젝트 단위로 구분되어 보이지 않아 repository별 thread switching이 어렵다.
 - Failure prevented: VS Code 안의 Codex 대화 목록에서 프로젝트별 thread를 찾거나 전환하기 어려운 문제.
-- Derived specs/tests: `project` field, project column, TUI project group headers, `sessions --group-project`, `--project` filter, TUI active filter summary.
+- Derived specs/tests: `project` field, project column, TUI project group headers, `sessions --group-project`, `--project` filter, TUI active filter summary, known Codex internal work roots classified outside ordinary repository groups.
 - Revisit when: GUI 통합에서 프로젝트 grouping의 primary navigation UX를 설계할 때.
 
 ### R2: local-only hook session index

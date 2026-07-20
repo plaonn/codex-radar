@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -125,6 +126,25 @@ class DisplayStateTests(unittest.TestCase):
         self.assertNotIn("project", result["sessions"][0])
         self.assertEqual({"status": "unavailable"}, result["source"])
         self.assertEqual(["usage"], result["capabilities"])
+
+    def test_display_state_classifies_codex_memory_work_as_internal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            "os.environ",
+            {"CODEX_HOME": str(Path(tmp) / "codex-home")},
+        ):
+            result = build_display_state(
+                {
+                    "internal": {
+                        "session_id": "internal",
+                        "cwd": str(Path(tmp) / "codex-home" / "memories"),
+                        "project": "memories",
+                        "status": "done",
+                    }
+                },
+                generated_at="2026-07-20T00:00:00+00:00",
+            )
+
+        self.assertEqual("Codex internal", result["sessions"][0]["project"])
 
     def test_display_state_fails_closed_on_identity_and_allowed_field_smuggling(self) -> None:
         marker = "/private/smuggled/value"
