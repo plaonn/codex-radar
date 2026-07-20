@@ -439,6 +439,17 @@ function exportDiagnostic(payload, stateDir, sessionsCount) {
   };
 }
 
+function diagnosticWithExportSource(directDiagnostic, exportSourceDiagnostic) {
+  const setupDiagnostic = directDiagnostic.code === "ready"
+    ? exportSourceDiagnostic
+    : directDiagnostic;
+  return withSourceDiagnostic(setupDiagnostic, {
+    readSource: exportSourceDiagnostic.readSource,
+    requestedSource: exportSourceDiagnostic.requestedSource,
+    exportSourceStatus: exportSourceDiagnostic.exportSourceStatus,
+  });
+}
+
 async function loadSessionState(stateDir, options = {}) {
   const mode = normalizeReadSourceMode(options.mode);
   const directDiagnostic = inspectSessionCache(stateDir, options);
@@ -483,21 +494,26 @@ async function loadSessionState(stateDir, options = {}) {
   }
 
   if (payload.source.status !== "ready" && payload.source.status !== "partial") {
-    const diagnostic = exportDiagnostic(payload, stateDir, directSessions.length);
+    const exportSourceDiagnostic = exportDiagnostic(payload, stateDir, directSessions.length);
+    const setupDiagnostic = directDiagnostic.code === "ready"
+      ? exportSourceDiagnostic
+      : directDiagnostic;
     return {
       sessions: directSessions,
-      diagnostic: withSourceDiagnostic(directDiagnostic, {
-        ...diagnostic,
+      diagnostic: withSourceDiagnostic(setupDiagnostic, {
         readSource: "direct-fallback",
+        requestedSource: "export",
+        exportSourceStatus: payload.source.status,
         fallbackReason: payload.source.reason || `export_source_${payload.source.status}`,
         canLoad: directDiagnostic.canLoad,
       }),
     };
   }
   const sessions = sessionsFromDisplayState(payload, directSessions);
+  const exportSourceDiagnostic = exportDiagnostic(payload, stateDir, sessions.length);
   return {
     sessions,
-    diagnostic: exportDiagnostic(payload, stateDir, sessions.length),
+    diagnostic: diagnosticWithExportSource(directDiagnostic, exportSourceDiagnostic),
   };
 }
 

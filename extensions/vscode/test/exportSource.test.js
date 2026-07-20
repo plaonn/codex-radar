@@ -144,6 +144,75 @@ test("export mode uses shared state and keeps direct cwd for trusted handoff", a
   }
 });
 
+test("export mode preserves stale direct-cache setup diagnostics", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-export-stale-"));
+  try {
+    const payload = fixture("display-state-v1.json");
+    const stateDir = writeDirectState(root, directPayloadFromExport(payload));
+    const result = await loadSessionState(stateDir, {
+      mode: "export",
+      commandRunner: async () => JSON.stringify(payload),
+      nowMs: Date.parse(payload.generated_at) + (2 * 24 * 60 * 60 * 1000),
+      recentAfterMs: 24 * 60 * 60 * 1000,
+    });
+
+    assert.equal(result.diagnostic.code, "stale-session-index");
+    assert.equal(result.diagnostic.readSource, "export");
+    assert.equal(result.diagnostic.exportSourceStatus, "ready");
+    assert.equal(result.sessions.length, payload.sessions.length);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("export mode preserves an empty direct-cache setup diagnostic", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-export-empty-"));
+  try {
+    const stateDir = writeDirectState(root, { schema_version: 1, sessions: {} });
+    const payload = fixture("display-state-v1.json");
+    payload.sessions = [];
+    for (const key of Object.keys(payload.counts)) {
+      payload.counts[key] = 0;
+    }
+    const result = await loadSessionState(stateDir, {
+      mode: "export",
+      commandRunner: async () => JSON.stringify(payload),
+    });
+
+    assert.equal(result.diagnostic.code, "empty-session-index");
+    assert.equal(result.diagnostic.readSource, "export");
+    assert.equal(result.diagnostic.exportSourceStatus, "ready");
+    assert.equal(result.sessions.length, 0);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("export unavailable preserves a specific missing-state setup diagnostic", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-export-missing-"));
+  try {
+    const stateDir = path.join(root, "missing-state");
+    const payload = fixture("display-state-v1.json");
+    payload.source = { status: "unavailable", reason: "session_index_missing" };
+    payload.sessions = [];
+    for (const key of Object.keys(payload.counts)) {
+      payload.counts[key] = 0;
+    }
+    const result = await loadSessionState(stateDir, {
+      mode: "export",
+      commandRunner: async () => JSON.stringify(payload),
+    });
+
+    assert.equal(result.diagnostic.code, "missing-state-dir");
+    assert.equal(result.diagnostic.readSource, "direct-fallback");
+    assert.equal(result.diagnostic.exportSourceStatus, "unavailable");
+    assert.equal(result.diagnostic.fallbackReason, "session_index_missing");
+    assert.equal(fs.existsSync(stateDir), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("export failure falls back to direct sessions with safe source diagnostics", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-export-fallback-"));
   try {

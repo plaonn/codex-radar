@@ -2,6 +2,17 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.17
+
+### Fixed
+
+- Preserve missing, empty, and stale host-local session-index setup diagnostics when the default shared export source succeeds or falls back.
+- Keep filesystem error details path-free and route ambiguous missing/empty/stale states through the read-only `codex-radar-helper diagnose` check before attributing them to hook wiring.
+
+### Boundaries
+
+- Do not install the helper, edit Codex hook configuration, rewrite Radar state, or infer a hook defect from the absence of indexed sessions.
+
 ## 0.4.16
 
 ### Fixed

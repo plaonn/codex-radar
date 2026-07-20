@@ -175,7 +175,7 @@ function inspectSessionCache(stateDir, options = {}) {
         severity: "warning",
         title: "Codex Radar state directory not found",
         detail: "No host-local Radar runtime state was found for this VS Code extension host.",
-        action: "Run Codex with the codex-radar lifecycle hook on this host, then refresh.",
+        action: "Install or update the host-local helper, run codex-radar-helper diagnose, then configure the hook and start a Codex turn.",
         stateDir: resolvedStateDir,
         cachePath,
       });
@@ -183,7 +183,7 @@ function inspectSessionCache(stateDir, options = {}) {
     return sessionSourceDiagnostic("state-dir-unavailable", {
       severity: "error",
       title: "Codex Radar state directory is unavailable",
-      detail: error instanceof Error ? error.message : String(error),
+      detail: "The extension host could not inspect the configured Radar state directory.",
       action: "Check the codexRadar.stateDir setting and filesystem permissions on this host.",
       stateDir: resolvedStateDir,
       cachePath,
@@ -207,7 +207,7 @@ function inspectSessionCache(stateDir, options = {}) {
     return sessionSourceDiagnostic("state-dir-unreadable", {
       severity: "error",
       title: "Codex Radar state directory is not readable",
-      detail: error instanceof Error ? error.message : String(error),
+      detail: "The extension host does not have read access to the Radar state directory.",
       action: "Check filesystem permissions for the extension host user.",
       stateDir: resolvedStateDir,
       cachePath,
@@ -223,7 +223,7 @@ function inspectSessionCache(stateDir, options = {}) {
         severity: "warning",
         title: "No Codex Radar session index yet",
         detail: "The state directory exists, but sessions.json has not been written.",
-        action: "Verify the Codex lifecycle hook is configured and start a Codex turn on this host.",
+        action: "Run codex-radar-helper diagnose to distinguish helper/runtime and hook wiring issues, then start a Codex turn on this host.",
         stateDir: resolvedStateDir,
         cachePath,
       });
@@ -231,7 +231,7 @@ function inspectSessionCache(stateDir, options = {}) {
     return sessionSourceDiagnostic("session-index-unavailable", {
       severity: "error",
       title: "Codex Radar session index is unavailable",
-      detail: error instanceof Error ? error.message : String(error),
+      detail: "The extension host could not inspect sessions.json.",
       action: "Check sessions.json permissions on this extension host.",
       stateDir: resolvedStateDir,
       cachePath,
@@ -243,7 +243,7 @@ function inspectSessionCache(stateDir, options = {}) {
       severity: "error",
       title: "Codex Radar session index is not a file",
       detail: "sessions.json exists but is not a regular file.",
-      action: "Remove or replace it with the codex-radar session index file.",
+      action: "Check codexRadar.stateDir and resolve the conflicting sessions.json path; the extension will not change it.",
       stateDir: resolvedStateDir,
       cachePath,
     });
@@ -256,8 +256,8 @@ function inspectSessionCache(stateDir, options = {}) {
     return sessionSourceDiagnostic("session-index-invalid", {
       severity: "error",
       title: "Codex Radar session index cannot be read",
-      detail: error instanceof Error ? error.message : String(error),
-      action: "Regenerate sessions.json by running Codex with the codex-radar lifecycle hook.",
+      detail: "sessions.json is unreadable or is not valid JSON.",
+      action: "Run codex-radar-helper diagnose, then start a Codex turn with the current helper after resolving any reported issue.",
       stateDir: resolvedStateDir,
       cachePath,
       lastUpdatedAt: cacheStat.mtime.toISOString(),
@@ -282,7 +282,7 @@ function inspectSessionCache(stateDir, options = {}) {
       severity: "warning",
       title: "No Codex sessions indexed yet",
       detail: "sessions.json is present but does not contain any Radar sessions.",
-      action: "Start a Codex turn with the codex-radar lifecycle hook enabled, then refresh.",
+      action: "Run codex-radar-helper diagnose before treating this as a hook issue, then start a Codex turn and refresh.",
       stateDir: resolvedStateDir,
       cachePath,
       lastUpdatedAt: cacheStat.mtime.toISOString(),
@@ -297,7 +297,7 @@ function inspectSessionCache(stateDir, options = {}) {
       severity: "warning",
       title: "No recent Codex Radar updates",
       detail: "The session index exists, but the latest indexed Codex activity is older than the recent-session window.",
-      action: "If Codex is currently running, verify the lifecycle hook is still configured on this host.",
+      action: "If new Codex activity is expected, run codex-radar-helper diagnose to check the local runtime and hook wiring.",
       stateDir: resolvedStateDir,
       cachePath,
       sessionsCount: sessions.length,
