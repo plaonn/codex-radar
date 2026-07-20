@@ -246,6 +246,22 @@ def _atomic_json(path: Path, value: Any) -> None:
     os.replace(temporary, path)
 
 
+def _atomic_bytes(path: Path, content: bytes, *, mode: Optional[int] = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary.open("xb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if mode is not None:
+            temporary.chmod(mode)
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
 def _atomic_symlink(link: Path, target: str) -> None:
     link.parent.mkdir(parents=True, exist_ok=True)
     temporary = link.with_name(f".{link.name}.{uuid.uuid4().hex}.tmp")
@@ -682,6 +698,23 @@ def _split_command(command: str) -> list[str]:
     return values
 
 
+def _radar_hook_kind(command: str, stable: list[str]) -> Optional[str]:
+    try:
+        parsed = _split_command(command)
+    except ValueError:
+        return None
+    if parsed == stable:
+        return "stable"
+    if parsed == ["codex-radar", "hook"]:
+        return "legacy"
+    if not parsed:
+        return None
+    executable_name = parsed[0].replace("\\", "/").rsplit("/", 1)[-1].lower()
+    if executable_name in {"codex-radar-hook", "codex-radar-hook.cmd"}:
+        return "mismatched"
+    return None
+
+
 def _hook_wiring_diagnostics(hooks_file: Path, hook_command: Path) -> Dict[str, Any]:
     if hooks_file.is_symlink():
         return {"code": "hooks_symlink", "events": {event: "unknown" for event in HOOK_EVENTS}}
@@ -699,20 +732,21 @@ def _hook_wiring_diagnostics(hooks_file: Path, hook_command: Path) -> Dict[str, 
     )
     event_checks: Dict[str, str] = {}
     for event in HOOK_EVENTS:
-        commands = []
+        kinds = []
         for entry in _hook_entries(hooks.get(event)):
             command = entry.get("command")
             if not isinstance(command, str):
                 continue
-            try:
-                commands.append(_split_command(command))
-            except ValueError:
-                commands.append([])
-        if stable in commands:
+            kind = _radar_hook_kind(command, stable)
+            if kind:
+                kinds.append(kind)
+        if len(kinds) > 1:
+            event_checks[event] = "duplicate"
+        elif kinds == ["stable"]:
             event_checks[event] = "stable"
-        elif ["codex-radar", "hook"] in commands:
+        elif kinds == ["legacy"]:
             event_checks[event] = "legacy"
-        elif any(command and "codex-radar" in command[0] for command in commands):
+        elif kinds == ["mismatched"]:
             event_checks[event] = "mismatched"
         else:
             event_checks[event] = "missing"
@@ -721,6 +755,8 @@ def _hook_wiring_diagnostics(hooks_file: Path, hook_command: Path) -> Dict[str, 
         code = "ready"
     elif states <= {"legacy"}:
         code = "legacy"
+    elif "duplicate" in states:
+        code = "duplicate"
     elif "mismatched" in states:
         code = "mismatched"
     else:
@@ -785,24 +821,45 @@ def _merge_hook_config(existing: Dict[str, Any], fragment: Dict[str, Any]) -> Di
         if not isinstance(current_groups, list):
             raise HelperError(f"existing hooks.json field hooks.{event} is not an array")
         stable_command = groups[0]["hooks"][0]["command"]
-        found = False
+        stable = _split_command(stable_command)
+        retained_groups = []
         for group in current_groups:
             if not isinstance(group, dict) or not isinstance(group.get("hooks"), list):
-                continue
+                raise HelperError(f"existing hooks.json field hooks.{event} has an invalid hook group")
+            retained_entries = []
             for entry in group["hooks"]:
                 if not isinstance(entry, dict):
-                    continue
-                command = str(entry.get("command", "")).strip()
-                try:
-                    same_stable_command = _split_command(command) == _split_command(stable_command)
-                except ValueError:
-                    same_stable_command = False
-                if command == "codex-radar hook" or same_stable_command:
-                    entry.update(groups[0]["hooks"][0])
-                    found = True
-        if not found:
-            current_groups.extend(groups)
+                    raise HelperError(f"existing hooks.json field hooks.{event} has an invalid hook entry")
+                command = entry.get("command")
+                kind = _radar_hook_kind(command, stable) if isinstance(command, str) else None
+                if not kind:
+                    retained_entries.append(entry)
+            retained_group = dict(group)
+            retained_group["hooks"] = retained_entries
+            if retained_entries or set(retained_group) != {"hooks"}:
+                retained_groups.append(retained_group)
+        retained_groups.extend(groups)
+        existing_hooks[event] = retained_groups
     return merged
+
+
+def _read_hook_config(hooks_file: Path) -> tuple[bytes, Dict[str, Any]]:
+    if hooks_file.is_symlink():
+        raise HelperError("hooks file must not be a symlink")
+    if not hooks_file.exists():
+        return b"", {}
+    if not hooks_file.is_file():
+        raise HelperError("hooks file must be a regular file")
+    try:
+        original = hooks_file.read_bytes()
+        existing = json.loads(original.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise HelperError("existing hooks JSON must be UTF-8") from exc
+    except json.JSONDecodeError as exc:
+        raise HelperError(f"invalid hooks JSON: {exc}") from exc
+    if not isinstance(existing, dict):
+        raise HelperError("existing hooks JSON must be an object")
+    return original, existing
 
 
 def hook_config_output(hook_command: Path, hooks_file: Optional[Path] = None) -> str:
@@ -810,17 +867,8 @@ def hook_config_output(hook_command: Path, hooks_file: Optional[Path] = None) ->
     if hooks_file is None:
         return _json_bytes(fragment).decode("utf-8")
     hooks_file = hooks_file.expanduser()
-    if hooks_file.exists():
-        original = hooks_file.read_text(encoding="utf-8")
-        try:
-            existing = json.loads(original)
-        except json.JSONDecodeError as exc:
-            raise HelperError(f"invalid hooks JSON: {exc}") from exc
-        if not isinstance(existing, dict):
-            raise HelperError("existing hooks JSON must be an object")
-    else:
-        original = "{}\n"
-        existing = {}
+    original_bytes, existing = _read_hook_config(hooks_file)
+    original = original_bytes.decode("utf-8") if original_bytes else "{}\n"
     proposed = _json_bytes(_merge_hook_config(existing, fragment)).decode("utf-8")
     return "".join(
         difflib.unified_diff(
@@ -830,6 +878,56 @@ def hook_config_output(hook_command: Path, hooks_file: Optional[Path] = None) ->
             tofile=f"{hooks_file} (proposed; not written)",
         )
     )
+
+
+def apply_hook_config(hook_command: Path, hooks_file: Path) -> Dict[str, Any]:
+    hooks_file = hooks_file.expanduser()
+    original, existing = _read_hook_config(hooks_file)
+    proposed = _merge_hook_config(existing, hook_fragment(hook_command))
+    if existing == proposed:
+        wiring = _hook_wiring_diagnostics(hooks_file, hook_command)
+        if wiring["code"] != "ready":
+            raise HelperError("unchanged hook config did not validate as ready")
+        return {"action": "unchanged", "backup": None, "hook_wiring": wiring}
+
+    proposed_bytes = _json_bytes(proposed)
+    mode = hooks_file.stat().st_mode & 0o777 if original else None
+    backup: Optional[Path] = None
+    if original:
+        backup = hooks_file.with_name(
+            f"{hooks_file.name}.codex-radar-backup-{uuid.uuid4().hex}.json"
+        )
+        with backup.open("xb") as handle:
+            handle.write(original)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if mode is not None:
+            backup.chmod(mode)
+
+    current, _ = _read_hook_config(hooks_file)
+    if current != original:
+        if backup and backup.exists():
+            backup.unlink()
+        raise HelperError("hooks file changed while preparing the update")
+
+    try:
+        _atomic_bytes(hooks_file, proposed_bytes, mode=mode)
+        written, readback = _read_hook_config(hooks_file)
+        wiring = _hook_wiring_diagnostics(hooks_file, hook_command)
+        if written != proposed_bytes or readback != proposed or wiring["code"] != "ready":
+            raise HelperError("written hook config failed readback validation")
+    except Exception:
+        if original:
+            _atomic_bytes(hooks_file, original, mode=mode)
+        elif hooks_file.exists():
+            hooks_file.unlink()
+        raise
+
+    return {
+        "action": "applied",
+        "backup": str(backup) if backup else None,
+        "hook_wiring": wiring,
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -846,6 +944,11 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--hooks-file", type=Path)
     hook_config = subparsers.add_parser("hook-config", help="Print hook fragment or a no-write diff")
     hook_config.add_argument("--hooks-file", type=Path)
+    hook_config.add_argument(
+        "--apply",
+        action="store_true",
+        help="Explicitly back up, normalize, atomically write, and validate hooks.json",
+    )
     return parser
 
 
@@ -870,13 +973,27 @@ def main(argv: Optional[list[str]] = None) -> int:
                 )
             )
         elif args.command == "hook-config":
-            print(
-                hook_config_output(
-                    _command_path(args.bin_dir, "codex-radar-hook"),
-                    args.hooks_file,
-                ),
-                end="",
-            )
+            hook_command = _command_path(args.bin_dir, "codex-radar-hook")
+            if args.apply:
+                print(
+                    json.dumps(
+                        apply_hook_config(
+                            hook_command,
+                            args.hooks_file or default_hooks_file(),
+                        ),
+                        ensure_ascii=False,
+                        indent=2,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                print(
+                    hook_config_output(
+                        hook_command,
+                        args.hooks_file,
+                    ),
+                    end="",
+                )
         return 0
     except (HelperError, OSError) as exc:
         print(f"codex-radar-helper: {exc}", file=sys.stderr)

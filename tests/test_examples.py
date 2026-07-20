@@ -80,12 +80,15 @@ class ExamplesTests(unittest.TestCase):
             self.assertEqual(set(config["hooks"]), {item["last_event_name"] for item in sessions.values()})
             self.assertFalse((state_dir / "events.jsonl").exists())
 
-    def test_install_runbook_keeps_hooks_json_as_manual_merge_artifact(self) -> None:
+    def test_install_runbook_keeps_hook_apply_explicit_and_preserving(self) -> None:
         runbook = INSTALL_RUNBOOK.read_text(encoding="utf-8")
 
         self.assertIn("examples/hooks.json", runbook)
         self.assertIn("~/.codex/hooks.json", runbook)
-        self.assertIn("merge", runbook)
+        self.assertIn("--apply", runbook)
+        self.assertIn("backed up", runbook)
+        self.assertIn("atomically", runbook)
+        self.assertIn("idempotent", runbook)
         self.assertIn("unrelated hook", runbook)
         self.assertNotIn("cp examples/hooks.json ~/.codex/hooks.json", runbook)
         self.assertNotIn("cat examples/hooks.json > ~/.codex/hooks.json", runbook)

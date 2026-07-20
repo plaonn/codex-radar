@@ -20,7 +20,7 @@ Hook 기반 상태는 실제 Codex session 상태의 authoritative source가 아
 - `codex-radar-helper install <bundle-dir>`: POSIX/Native Windows helper bundle을 검증하고 immutable runtime으로 설치한 뒤 platform-specific stable shim과 current runtime selector를 연결한다. Codex hook config는 수정하지 않는다.
 - `codex-radar-helper status`: current/retained helper runtime을 machine-readable JSON으로 출력한다.
 - `codex-radar-helper rollback [runtime-version]`: retained runtime으로 POSIX `current` symlink 또는 Windows `current.json` selector를 원자적으로 전환한다.
-- `codex-radar-helper hook-config [--hooks-file <path>]`: fixed absolute hook shim을 사용하는 fragment 또는 no-write unified diff를 출력한다.
+- `codex-radar-helper hook-config [--hooks-file <path>] [--apply]`: fixed absolute hook shim을 사용하는 fragment 또는 no-write unified diff를 출력한다. `--apply`를 명시하면 selected file의 Radar-owned entry만 event별 정확히 하나로 정규화해 원자적으로 적용한다.
 - `codex-radar sessions`: 알려진 세션 목록을 출력한다. `--group-project`는 text output을 project header로 묶고 JSON output shape는 바꾸지 않는다.
 - `codex-radar transcript <session-or-path>`: 로컬 transcript를 짧게 훑어본다.
 - `codex-radar tui`: 가벼운 session dashboard를 연다.
@@ -283,7 +283,7 @@ Distribution/setup boundary:
 - Native Windows hook updates use a same-user byte-range file lock before reading and replacing `sessions.json`. POSIX retains `flock`.
 - `curses` is imported only when `codex-radar tui` is invoked, so hook, helper, `--help`, `sessions`, and other base CLI imports do not require curses on Windows.
 - Bundle compatibility metadata declares the supported POSIX/Windows/Python boundary and a VS Code extension version range. VSIX and helper runtime versions remain independent.
-- `codex-radar-helper hook-config` prints the exact fragment, or a unified diff against an existing file, but never writes `~/.codex/hooks.json`. Hook wiring changes remain explicit user-approved migrations.
+- `codex-radar-helper hook-config` prints the exact fragment, or a unified diff against an existing file, without writing by default. Only an explicit `hook-config --apply` migration may write the selected hooks file. It preserves unrelated hooks, removes duplicate or obsolete Radar-owned entries, leaves exactly one canonical Radar hook per managed event, creates an adjacent backup before a changed write, uses same-directory atomic replacement, and validates the readback. Install, upgrade, rollback, diagnose, and the VS Code extension never invoke this apply path implicitly.
 - `codex-radar doctor` remains a state/cache diagnostic. The helper manager's read-only `diagnose` command checks the local runtime, stable shims, compatibility metadata, and actual hook wiring, but it does not provide remote latest-release authority or change local configuration.
 - Bundle SHA-256 verification detects download or packaging corruption but is not an authenticity proof. Bootstrap trust comes from obtaining the installer, manifest, checksum, and bundle from the intended GitHub Release/account over trusted TLS.
 - Bundle artifact paths and retained runtime selections reject symlinks. Reactivating an existing immutable runtime verifies its marker and original manifest digest but does not rehash every extracted file; retained runtime contents remain inside the same-user local trust boundary.
@@ -299,10 +299,12 @@ Distribution/setup boundary:
 - 사용자가 TUI에서 resumable row를 선택하고 Enter를 눌렀을 때 같은 terminal process를 `codex resume <session_id>`로 교체하기.
 - 사용자가 helper manager를 명시적으로 실행했을 때 user-selected runtime root와 bin directory 아래에 verified immutable runtime, platform-specific stable shim, install history를 생성하거나 원자적으로 전환하기.
 - 사용자가 요청한 hook fragment 또는 existing hook config에 대한 no-write diff를 stdout으로 출력하기.
+- 사용자가 `hook-config --apply`를 명시적으로 실행했을 때 selected hooks file의 관련 없는 hook을 보존하고 Radar-owned entry만 event별 정확히 하나로 정규화한 뒤 backup, atomic replace, readback validation을 수행하기.
 
 금지:
 
-- `~/.codex/hooks.json` 자동 편집.
+- install, upgrade, rollback, diagnose, VS Code extension 또는 `--apply` 없는 command에서 `~/.codex/hooks.json`을 자동 편집.
+- Hook migration 중 관련 없는 hook을 삭제하거나 덮어쓰기.
 - notification, telemetry, transcript, session metadata를 외부 서비스로 전송.
 - Codex transcript 삭제.
 - raw hook event log 기본 누적 저장.

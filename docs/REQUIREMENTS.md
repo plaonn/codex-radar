@@ -155,10 +155,10 @@
 #### R10a: stable hook entrypoint and migration boundary
 
 - Status: confirmed direction
-- Requirement: 배포 가능한 hook integration은 가능한 한 stable command/shim을 `hooks.json`에 등록하고, helper/indexer implementation 업데이트는 hook config 변경 없이 처리해야 한다. hook event set, command contract, privacy boundary가 바뀌는 경우에만 사용자 승인 기반 migration을 요구해야 한다.
+- Requirement: 배포 가능한 hook integration은 가능한 한 stable command/shim을 `hooks.json`에 등록하고, helper/indexer implementation 업데이트는 hook config 변경 없이 처리해야 한다. hook event set, command contract, privacy boundary가 바뀌는 경우에만 사용자 승인 기반 migration을 요구해야 한다. Migration은 기본적으로 no-write preview를 제공하고, 사용자가 명시적으로 apply를 요청한 경우에만 Radar-owned entry를 event별 정확히 하나로 정규화해 쓸 수 있다.
 - Rationale: extension, CLI, future app 배포가 반복되어도 global Codex hook config churn을 줄이고, 사용자가 승인하지 않은 Codex config 변경을 피해야 한다.
 - Failure prevented: extension update마다 hook path가 깨지는 문제, outdated hook wiring이 조용히 남아 세션 index가 비는 문제, global Codex config가 자동으로 변경되는 privacy/automation boundary 위반.
-- Derived specs/tests: setup/doctor detects missing or outdated hook runtime, hook migration preview/diff before write, uninstall or disable path for stable shim, no automatic `~/.codex/hooks.json` edits outside explicit setup/migration flow.
+- Derived specs/tests: setup/doctor detects missing, outdated, or duplicate hook runtime wiring; hook migration preview/diff before write; explicit apply preserves unrelated hooks, creates a backup, uses atomic replacement, and validates readback; repeated apply is idempotent; uninstall or disable path for stable shim; no automatic `~/.codex/hooks.json` edits outside explicit user-invoked setup/migration flow.
 
 #### R10b: shared sanitized display-state contract
 

@@ -102,14 +102,20 @@ Inspect, diagnose, upgrade by installing a newer bundle, or roll back:
 & "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" rollback
 ```
 
-Print the exact Windows hook fragment, or a no-write diff:
+Print the exact Windows hook fragment, or preview a no-write diff:
 
 ```powershell
 & "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config
 & "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config --hooks-file "$HOME\.codex\hooks.json"
 ```
 
-Review and manually merge the output into `$HOME\.codex\hooks.json`. Install, upgrade, and rollback never edit that file. The fragment uses the fixed absolute `codex-radar-hook.cmd` path, so selecting another runtime does not require another hook edit.
+After reviewing the diff, apply it explicitly:
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config --hooks-file "$HOME\.codex\hooks.json" --apply
+```
+
+The apply command preserves unrelated hooks, removes duplicate or obsolete Radar entries, and leaves exactly one canonical Radar hook on each managed event. A changed existing file is backed up next to `hooks.json`, replaced atomically, and read back for validation. Repeating the command is idempotent. Manual merge remains an alternative, but install, upgrade, rollback, diagnose, and the VS Code extension never edit the file implicitly. The fragment uses the fixed absolute `codex-radar-hook.cmd` path, so selecting another runtime does not require another hook edit.
 
 After configuring the hook, run a Native Windows Codex turn and verify:
 
@@ -148,7 +154,13 @@ Preview a unified diff against an existing file without writing it:
 ~/.local/bin/codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json
 ```
 
-Review the output, then manually merge the proposed `hooks` entries into `~/.codex/hooks.json`. Preserve unrelated hooks. [`examples/hooks.json`](../../examples/hooks.json) shows the exact event shape, but its `/home/YOUR_USER` placeholder must be replaced with the absolute path printed by `hook-config`.
+After reviewing the diff, apply it explicitly:
+
+```bash
+~/.local/bin/codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json --apply
+```
+
+The apply command preserves unrelated hooks, removes duplicate or obsolete Radar entries, and leaves exactly one canonical Radar hook on each managed event. A changed existing file is backed up next to `hooks.json`, replaced atomically, and read back for validation. Repeating the command is idempotent. Manual merge remains an alternative. [`examples/hooks.json`](../../examples/hooks.json) shows the exact event shape, but its `/home/YOUR_USER` placeholder must be replaced with the absolute path printed by `hook-config`.
 
 The managed events are `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, and `Stop`. They all invoke the same fixed absolute `codex-radar-hook` shim with a five-second timeout.
 
@@ -274,14 +286,20 @@ Windows 기본 경로는 다음과 같습니다.
 & "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" rollback
 ```
 
-정확한 Windows hook fragment 또는 no-write diff를 출력합니다.
+정확한 Windows hook fragment 또는 no-write diff를 preview합니다.
 
 ```powershell
 & "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config
 & "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config --hooks-file "$HOME\.codex\hooks.json"
 ```
 
-출력을 검토하고 `$HOME\.codex\hooks.json`에 직접 병합합니다. Install, upgrade, rollback은 이 파일을 수정하지 않습니다. Fragment는 고정 절대 경로의 `codex-radar-hook.cmd`를 사용하므로 runtime 선택 변경만으로 hook을 다시 편집할 필요가 없습니다.
+Diff를 검토한 뒤 명시적으로 적용합니다.
+
+```powershell
+& "$env:LOCALAPPDATA\codex-radar\bin\codex-radar-helper.cmd" hook-config --hooks-file "$HOME\.codex\hooks.json" --apply
+```
+
+Apply command는 관련 없는 hook을 보존하고 중복되거나 오래된 Radar entry를 제거해 managed event마다 canonical Radar hook을 정확히 하나 남깁니다. 기존 파일이 바뀌면 `hooks.json` 옆에 backup을 만들고 원자적으로 교체한 뒤 readback을 검증합니다. 같은 command를 반복해도 결과는 누적되지 않습니다. 직접 merge하는 방법도 대안으로 유지합니다. Install, upgrade, rollback, diagnose, VS Code 확장은 파일을 암묵적으로 수정하지 않습니다. Fragment는 고정 절대 경로의 `codex-radar-hook.cmd`를 사용하므로 runtime 선택 변경만으로 hook을 다시 편집할 필요가 없습니다.
 
 Hook을 설정한 뒤 Native Windows Codex turn을 실행하고 확인합니다.
 
@@ -320,7 +338,13 @@ Source checkout command는 안정적인 release hook 경로가 아닙니다. Che
 ~/.local/bin/codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json
 ```
 
-출력을 검토한 다음 제안된 `hooks` entry를 `~/.codex/hooks.json`에 직접 merge합니다. 관련 없는 hook은 유지해야 합니다. [`examples/hooks.json`](../../examples/hooks.json)은 정확한 event shape를 보여주지만, `/home/YOUR_USER` placeholder는 `hook-config`가 출력한 절대 경로로 바꿔야 합니다.
+Diff를 검토한 뒤 명시적으로 적용합니다.
+
+```bash
+~/.local/bin/codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json --apply
+```
+
+Apply command는 관련 없는 hook을 보존하고 중복되거나 오래된 Radar entry를 제거해 managed event마다 canonical Radar hook을 정확히 하나 남깁니다. 기존 파일이 바뀌면 `hooks.json` 옆에 backup을 만들고 원자적으로 교체한 뒤 readback을 검증합니다. 같은 command를 반복해도 결과는 누적되지 않습니다. 직접 merge하는 방법도 대안으로 유지합니다. [`examples/hooks.json`](../../examples/hooks.json)은 정확한 event shape를 보여주지만, `/home/YOUR_USER` placeholder는 `hook-config`가 출력한 절대 경로로 바꿔야 합니다.
 
 관리 대상 event는 `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `Stop`입니다. 모두 같은 고정 절대 경로의 `codex-radar-hook` shim을 5초 timeout으로 호출합니다.
 

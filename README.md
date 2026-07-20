@@ -86,10 +86,10 @@ For a release helper bundle, verify and extract the downloaded bundle, then run 
 
 ## Configure the Codex Hook
 
-Hook setup is explicit. Codex Radar does not install hooks, edit `~/.codex/hooks.json`, or overwrite unrelated hooks. Release bundles provide a fixed absolute `~/.local/bin/codex-radar-hook` shim so helper upgrades do not require another hook-config change.
+Hook setup is explicit. Codex Radar does not edit `~/.codex/hooks.json` during install, upgrade, rollback, diagnose, or VS Code setup. Release bundles provide a fixed absolute `~/.local/bin/codex-radar-hook` shim so helper upgrades do not require another hook-config change.
 
 1. Run `codex-radar-helper hook-config` when using a release bundle, or review [`examples/hooks.json`](examples/hooks.json) and replace `/home/YOUR_USER` with the real absolute path.
-2. Merge the resulting `hooks` object into `~/.codex/hooks.json` on the host where Codex runs. To preview without writing, use `codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json`.
+2. Preview with `codex-radar-helper hook-config --hooks-file ~/.codex/hooks.json`, then apply explicitly with the same command plus `--apply`. The apply path backs up changed files, preserves unrelated hooks, and normalizes duplicate Radar entries.
 3. Start or resume Codex. If hook review is requested, inspect and trust the hook through `/hooks`.
 4. Run a short Codex turn, then verify the index:
 

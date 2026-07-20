@@ -16,6 +16,7 @@ from unittest import mock
 
 from codex_radar.helper_manager import (
     HelperError,
+    apply_hook_config,
     diagnose_helper,
     hook_fragment,
     hook_config_output,
@@ -376,6 +377,151 @@ class HelperManagerTests(unittest.TestCase):
             self.assertIn("proposed; not written", diff)
             self.assertEqual(original_text, hooks_file.read_text(encoding="utf-8"))
 
+    def test_hook_apply_backs_up_and_normalizes_duplicates_idempotently(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            hook_command = base / "bin" / "codex-radar-hook"
+            hooks_file = base / "hooks.json"
+            stable_command = str(hook_command.resolve())
+            original = {
+                "other": {"preserved": True},
+                "hooks": {
+                    event: [
+                        {
+                            "matcher": "keep",
+                            "hooks": [
+                                {"type": "command", "command": "other-hook", "timeout": 9},
+                                {"type": "command", "command": "codex-radar hook", "timeout": 3},
+                            ],
+                        },
+                        {
+                            "hooks": [
+                                {"type": "command", "command": stable_command, "timeout": 1},
+                            ]
+                        },
+                    ]
+                    for event in (
+                        "SessionStart",
+                        "UserPromptSubmit",
+                        "PreToolUse",
+                        "PostToolUse",
+                        "PermissionRequest",
+                        "Stop",
+                    )
+                },
+            }
+            original_bytes = json.dumps(original).encode("utf-8")
+            hooks_file.write_bytes(original_bytes)
+
+            result = apply_hook_config(hook_command, hooks_file)
+
+            self.assertEqual("applied", result["action"])
+            self.assertEqual("ready", result["hook_wiring"]["code"])
+            backup = Path(result["backup"])
+            self.assertEqual(original_bytes, backup.read_bytes())
+            written = json.loads(hooks_file.read_text(encoding="utf-8"))
+            self.assertEqual({"preserved": True}, written["other"])
+            canonical = hook_fragment(hook_command)
+            for event in canonical["hooks"]:
+                groups = written["hooks"][event]
+                commands = [
+                    entry.get("command")
+                    for group in groups
+                    for entry in group["hooks"]
+                    if isinstance(entry, dict)
+                ]
+                self.assertEqual(1, commands.count("other-hook"))
+                self.assertEqual(
+                    1,
+                    commands.count(canonical["hooks"][event][0]["hooks"][0]["command"]),
+                )
+                self.assertNotIn("codex-radar hook", commands)
+
+            unchanged = apply_hook_config(hook_command, hooks_file)
+            self.assertEqual("unchanged", unchanged["action"])
+            self.assertIsNone(unchanged["backup"])
+            self.assertEqual(written, json.loads(hooks_file.read_text(encoding="utf-8")))
+
+    def test_hook_apply_rejects_symlink_and_invalid_schema_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            hook_command = base / "bin" / "codex-radar-hook"
+            invalid = base / "invalid.json"
+            invalid.write_text('{"hooks": {"Stop": {}}}', encoding="utf-8")
+            before = invalid.read_bytes()
+
+            with self.assertRaisesRegex(HelperError, "hooks.Stop is not an array"):
+                apply_hook_config(hook_command, invalid)
+            self.assertEqual(before, invalid.read_bytes())
+
+            target = base / "target.json"
+            target.write_text("{}\n", encoding="utf-8")
+            link = base / "link.json"
+            link.symlink_to(target)
+            with self.assertRaisesRegex(HelperError, "must not be a symlink"):
+                apply_hook_config(hook_command, link)
+            self.assertEqual("{}\n", target.read_text(encoding="utf-8"))
+
+    def test_hook_apply_rolls_back_when_readback_validation_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            hook_command = base / "bin" / "codex-radar-hook"
+            hooks_file = base / "hooks.json"
+            original = b'{"hooks": {"Stop": []}}\n'
+            hooks_file.write_bytes(original)
+
+            with mock.patch(
+                "codex_radar.helper_manager._hook_wiring_diagnostics",
+                return_value={"code": "incomplete", "events": {}},
+            ), self.assertRaisesRegex(HelperError, "failed readback validation"):
+                apply_hook_config(hook_command, hooks_file)
+
+            self.assertEqual(original, hooks_file.read_bytes())
+
+    def test_diagnose_reports_duplicate_radar_hook_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "runtime"
+            bin_dir = base / "bin"
+            hooks_file = base / "hooks.json"
+            install_bundle(_fake_bundle(base, "1.0.0"), root, bin_dir)
+            fragment = hook_fragment(bin_dir / "codex-radar-hook")
+            for event, groups in fragment["hooks"].items():
+                groups.append(json.loads(json.dumps(groups[0])))
+            hooks_file.write_text(json.dumps(fragment), encoding="utf-8")
+
+            result = diagnose_helper(root, bin_dir, hooks_file)
+
+            self.assertEqual("duplicate", result["hook_wiring"]["code"])
+            self.assertEqual(
+                {"duplicate"},
+                set(result["hook_wiring"]["events"].values()),
+            )
+
+    def test_hook_config_apply_cli_is_explicit_and_returns_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            hooks_file = base / "hooks.json"
+            hooks_file.write_text("{}\n", encoding="utf-8")
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                result = main(
+                    [
+                        "--bin-dir",
+                        str(base / "bin"),
+                        "hook-config",
+                        "--hooks-file",
+                        str(hooks_file),
+                        "--apply",
+                    ]
+                )
+
+            self.assertEqual(0, result)
+            payload = json.loads(output.getvalue())
+            self.assertEqual("applied", payload["action"])
+            self.assertEqual("ready", payload["hook_wiring"]["code"])
+
     def test_cli_reports_helper_errors_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             error = io.StringIO()
@@ -590,6 +736,45 @@ class WindowsHelperManagerTests(unittest.TestCase):
             Path("C:/Users/example/AppData/Local"),
             windows_local_app_data({}, home=Path("C:/Users/example")),
         )
+
+    def test_hook_apply_handles_windows_command_paths_and_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            hook_command = base / "bin with space" / "codex-radar-hook.cmd"
+            hooks_file = base / "hooks.json"
+            fragment = hook_fragment(hook_command)
+            for event, groups in fragment["hooks"].items():
+                groups.insert(
+                    0,
+                    {
+                        "hooks": [
+                            {"type": "command", "command": "unrelated-hook.cmd"},
+                            {"type": "command", "command": "codex-radar hook"},
+                        ]
+                    },
+                )
+            hooks_file.write_text(json.dumps(fragment), encoding="utf-8")
+
+            applied = apply_hook_config(hook_command, hooks_file)
+            unchanged = apply_hook_config(hook_command, hooks_file)
+
+            self.assertEqual("applied", applied["action"])
+            self.assertEqual("ready", applied["hook_wiring"]["code"])
+            self.assertEqual("unchanged", unchanged["action"])
+            written = json.loads(hooks_file.read_text(encoding="utf-8"))
+            expected = hook_fragment(hook_command)
+            for event in expected["hooks"]:
+                commands = [
+                    entry["command"]
+                    for group in written["hooks"][event]
+                    for entry in group["hooks"]
+                ]
+                self.assertEqual(1, commands.count("unrelated-hook.cmd"))
+                self.assertEqual(
+                    1,
+                    commands.count(expected["hooks"][event][0]["hooks"][0]["command"]),
+                )
+                self.assertNotIn("codex-radar hook", commands)
 
     def test_install_upgrade_rollback_and_cmd_launchers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
