@@ -2,7 +2,7 @@
   "name": "codex-radar-vscode",
   "displayName": "Codex Radar",
   "description": "Project-grouped Codex thread radar for VS Code.",
-  "version": "0.4.12",
+  "version": "0.4.13",
   "publisher": "plaonn",
   "license": "MIT",
   "homepage": "https://github.com/plaonn/codex-radar/tree/main/extensions/vscode",
@@ -80,12 +80,12 @@
             "export"
           ],
           "enumDescriptions": [
-            "Keep the direct adapter effective while checking shared export semantic parity locally.",
+            "Use the direct adapter while checking shared export semantic parity locally.",
             "Use only the legacy direct sessions.json and transcript adapters.",
-            "Use the shared sanitized export contract, with the direct adapter as a one-release fallback."
+            "Use the shared sanitized export contract, with a bounded direct adapter fallback when export is unavailable or invalid."
           ],
-          "default": "observe",
-          "description": "Selects the VS Code read adapter during the shared-export migration. Observation is local and sends no telemetry."
+          "default": "export",
+          "description": "Selects the VS Code list-state adapter. Shared export is the default; observation is local and sends no telemetry."
         },
         "codexRadar.openThreadBehavior": {
           "type": "string",

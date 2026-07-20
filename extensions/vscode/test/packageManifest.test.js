@@ -12,7 +12,7 @@ function readManifest() {
 test("uses the current manual testing package version", () => {
   const manifest = readManifest();
 
-  assert.equal(manifest.version, "0.4.12");
+  assert.equal(manifest.version, "0.4.13");
 });
 
 test("declares release metadata and workspace extension host scope", () => {
@@ -162,12 +162,12 @@ test("configures a separately installed Codex executable without a bundled defau
   assert.match(setting.description, /does not bundle Codex/);
 });
 
-test("keeps shared export in observation mode before a default-source switch", () => {
+test("uses shared export by default with explicit observation and direct compatibility modes", () => {
   const manifest = readManifest();
   const setting = manifest.contributes.configuration.properties["codexRadar.readSource"];
 
-  assert.equal(setting.default, "observe");
+  assert.equal(setting.default, "export");
   assert.deepEqual(setting.enum, ["observe", "direct", "export"]);
-  assert.match(setting.enumDescriptions[0], /direct adapter effective/);
-  assert.match(setting.enumDescriptions[2], /direct adapter as a one-release fallback/);
+  assert.match(setting.enumDescriptions[0], /checking shared export semantic parity/);
+  assert.match(setting.enumDescriptions[2], /bounded direct adapter fallback/);
 });

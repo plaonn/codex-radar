@@ -5,9 +5,11 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  DEFAULT_READ_SOURCE_MODE,
   ExportSourceError,
   loadExportPreview,
   loadSessionState,
+  normalizeReadSourceMode,
   semanticParity,
   sessionsFromDisplayState,
   validateDisplayState,
@@ -42,6 +44,14 @@ function writeDirectState(root, payload) {
   fs.writeFileSync(path.join(stateDir, "sessions.json"), JSON.stringify(payload));
   return stateDir;
 }
+
+test("defaults missing and invalid read-source settings to shared export", () => {
+  assert.equal(DEFAULT_READ_SOURCE_MODE, "export");
+  assert.equal(normalizeReadSourceMode(), "export");
+  assert.equal(normalizeReadSourceMode("invalid"), "export");
+  assert.equal(normalizeReadSourceMode("observe"), "observe");
+  assert.equal(normalizeReadSourceMode("direct"), "direct");
+});
 
 test("accepts the golden display-state contract and preserves direct action metadata only during adaptation", () => {
   const payload = validateDisplayState(fixture("display-state-v1.json"));
@@ -158,6 +168,35 @@ test("export failure falls back to direct sessions with safe source diagnostics"
     assert.equal(result.diagnostic.readSource, "direct-fallback");
     assert.equal(result.diagnostic.fallbackReason, "export_command_unavailable");
     assert.equal(JSON.stringify(result.diagnostic).includes("/private/helper/path"), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("export schema mismatch falls back without exposing rejected payload fields", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-radar-export-schema-fallback-"));
+  try {
+    const stateDir = writeDirectState(root, {
+      schema_version: 1,
+      sessions: {
+        "session-1": {
+          session_id: "session-1",
+          status: "done",
+          last_seen_at: "2026-07-14T00:00:00+00:00",
+        },
+      },
+    });
+    const payload = fixture("display-state-v1.json");
+    payload.sessions[0].cwd = "/private/rejected/path";
+    const result = await loadSessionState(stateDir, {
+      commandRunner: async () => JSON.stringify(payload),
+    });
+
+    assert.equal(result.sessions.length, 1);
+    assert.equal(result.diagnostic.requestedSource, "export");
+    assert.equal(result.diagnostic.readSource, "direct-fallback");
+    assert.equal(result.diagnostic.fallbackReason, "display_state_schema_mismatch");
+    assert.equal(JSON.stringify(result.diagnostic).includes("/private/rejected/path"), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

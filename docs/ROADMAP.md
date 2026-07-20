@@ -21,7 +21,7 @@
 - 첫 GUI notification surface는 sidebar section badge와 dashboard count/highlight 같은 in-surface cue로 제한한다.
 - 첫 GUI action boundary는 Codex/codex-radar runtime state에 대해 read-only dashboard/sidebar다. Extension-local read/unread UI state는 허용하지만 VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다. 직접 `codex resume` 실행은 후속 requirement로 다룬다.
 - GUI integration은 transcript/session metadata를 외부로 전송하지 않고 R6 privacy boundary를 유지해야 한다.
-- 전환 중에는 기존 direct `sessions.json`/host-local source를 한 release 동안 fallback으로 유지하고 golden parity test로 결과를 비교한 뒤 shared export를 기본 source로 바꾼다.
+- Shared export를 GUI list의 기본 source로 사용하고, command/source/schema failure에는 direct `sessions.json` adapter로 fallback한다. Raw host-local action metadata는 sanitized contract 밖의 trusted adapter boundary에 유지한다.
 
 ## VS Code Extension Release
 
@@ -63,8 +63,8 @@
 - 기본 display-state contract와 transcript preview contract를 분리한다. Preview는 사용자가 session을 명시하고 limit을 지정한 bounded request에서만 생성한다.
 - Display state는 source status/capability, aggregate counts, sanitized session fields, semantic usage pools를 포함할 수 있다. Raw `cwd`, private file path, raw transcript/rollout payload, HTML, UI 문자열과 ordering, client-local read/unread state는 포함하지 않는다.
 - Archive state는 `active`, `archived`, `unknown` tri-state로 표현한다. v1 read/unread는 각 client의 local UI state로 유지한다.
-- Migration 순서는 shared builder/schema와 golden fixtures, export CLI와 privacy tests, VS Code export adapter/direct fallback parity, one-release observation, default source switch 순으로 둔다. Node-side duplicate scanner 제거는 default switch 이후에 한다.
-- Existing VS Code workspace handoff가 사용하는 raw `cwd`는 migration 동안 trusted host-local adapter에 남긴다. Future mobile/SSH protocol에서 raw path 기반 action이 필요해지면 별도 privacy/product decision을 요구한다.
+- Shared export default-source 전환 뒤에도 direct `sessions.json` reader는 export failure fallback과 trusted host-local `cwd`/transcript metadata 결합에 필요하므로 유지한다. Node-side scanner 제거는 workspace handoff, explicit preview, fallback 책임을 shared contract를 오염시키지 않고 대체하는 별도 설계가 생길 때만 진행한다.
+- Existing VS Code workspace handoff가 사용하는 raw `cwd`는 trusted host-local adapter에 남긴다. Future mobile/SSH protocol에서 raw path 기반 action이 필요해지면 별도 privacy/product decision을 요구한다.
 
 ## Mobile Direction
 

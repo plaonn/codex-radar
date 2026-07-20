@@ -2,6 +2,19 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.13
+
+### Changed
+
+- Use the Python shared sanitized display-state export as the default VS Code list source after the public `0.4.4` observation release and current installed-host parity smoke.
+- Fall back to the direct host-local session adapter when the export command is unavailable, fails, or returns an invalid/unsupported contract.
+
+### Boundaries
+
+- Keep raw working directory and transcript metadata in the trusted extension-host adapter only for workspace handoff, explicit preview, and fallback behavior.
+- Retain explicit `observe` and `direct` modes for diagnosis and compatibility.
+- Keep the direct session reader while fallback and trusted action metadata still require it; no Node-side scanner is removed without a replacement for those host-local responsibilities.
+
 ## 0.4.12
 
 ### Changed

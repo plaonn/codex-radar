@@ -11,12 +11,12 @@
 
 Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.12`. It uses the read-only Codex App Server Controller for supported rate-limit usage reads, classifies Codex memory-maintenance sessions outside ordinary repository groups, and keeps the rollout adapter as a one-release fallback and parity observation source. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.13`. It uses the shared sanitized Python export as the default list source, the read-only Codex App Server Controller for supported rate-limit usage reads, and classifies Codex memory-maintenance sessions outside ordinary repository groups. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
 - Provides a dedicated Codex Radar Activity Bar container.
-- Keeps the direct `sessions.json` adapter effective by default while locally observing semantic parity with `codex-radar export state --json`. Set `codexRadar.readSource` to `export` to opt into the shared sanitized contract; export failure or schema mismatch falls back to the direct adapter for this migration release.
+- Uses `codex-radar export state --json` as the default list source. Export command failure, source unavailability, or schema mismatch falls back to the direct `sessions.json` adapter. Explicit `observe` and `direct` settings remain available for diagnosis and compatibility.
 - Shows setup diagnostics when the extension host cannot find or use the Radar state directory/session index, including missing state, missing or empty `sessions.json`, unsupported schema, and stale index activity.
 - Refreshes automatically when `sessions.json` is created, changed, or deleted, and when an archived transcript is created or deleted under the extension host's `CODEX_HOME` (or `~/.codex`). Active transcript changes do not refresh the navigation, and the manual refresh command is the fallback instead of periodic polling.
 - Provides native collapsible sidebar sections for `Attention`, `Projects`, and collapsed `Archived`, with each section body rendered by a Webview.
@@ -95,7 +95,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.12.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.13.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

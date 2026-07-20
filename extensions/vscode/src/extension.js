@@ -8,10 +8,10 @@ const { officialCodexThreadUriString } = require("./codexLink");
 const {
   STATUS_FILTER_VALUES,
   defaultStateDir,
-  loadSessionCache,
   normalizeStatusFilter,
 } = require("./sessionSource");
 const {
+  DEFAULT_READ_SOURCE_MODE,
   loadExportPreview,
   loadSessionState,
   normalizeReadSourceMode,
@@ -86,7 +86,7 @@ function configuredCodexExecutable() {
 
 function configuredReadSource() {
   return normalizeReadSourceMode(
-    vscode.workspace.getConfiguration("codexRadar").get("readSource", "observe"),
+    vscode.workspace.getConfiguration("codexRadar").get("readSource", DEFAULT_READ_SOURCE_MODE),
   );
 }
 
@@ -116,10 +116,6 @@ async function prunedReadKeys(globalState, sessions) {
     }
   }
   return pruned;
-}
-
-function loadDecoratedSessions(globalState, stateDir = configuredStateDir()) {
-  return decorateSessions(loadSessionCache(stateDir), readKeys(globalState));
 }
 
 function currentWorkspaceFolders() {
@@ -617,7 +613,7 @@ class RadarWebviewController {
         });
       }
     } catch {
-      // Preview remains usable through the trusted direct adapter for this migration release.
+      // Preview remains usable through the trusted direct adapter fallback.
     }
     return buildSessionPreviewModel(displaySession, { homeDir: process.env.HOME || "" });
   }
@@ -1026,7 +1022,6 @@ module.exports = {
   configuredReadSource,
   dashboardHtml,
   deactivate,
-  loadDecoratedSessions,
   officialCodexThreadUri,
   openOfficialCodexThread,
   previewHtml,

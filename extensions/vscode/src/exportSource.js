@@ -7,6 +7,7 @@ const TRANSCRIPT_PREVIEW_CONTRACT = "codex-radar.transcript-preview";
 const EXPORT_CONTRACT_VERSION = 1;
 const DEFAULT_PREVIEW_LIMIT = 120;
 const READ_SOURCE_MODES = Object.freeze(["direct", "observe", "export"]);
+const DEFAULT_READ_SOURCE_MODE = "export";
 const SOURCE_STATUSES = new Set(["ready", "partial", "unavailable", "invalid"]);
 const LIFECYCLE_STATUSES = new Set([
   "active",
@@ -87,7 +88,7 @@ class ExportSourceError extends Error {
 
 function normalizeReadSourceMode(value) {
   const mode = String(value || "").trim();
-  return READ_SOURCE_MODES.includes(mode) ? mode : "observe";
+  return READ_SOURCE_MODES.includes(mode) ? mode : DEFAULT_READ_SOURCE_MODE;
 }
 
 function commandErrorCode(error) {
@@ -498,6 +499,7 @@ async function loadSessionState(stateDir, options = {}) {
 
 module.exports = {
   DEFAULT_PREVIEW_LIMIT,
+  DEFAULT_READ_SOURCE_MODE,
   DISPLAY_STATE_CONTRACT,
   EXPORT_CONTRACT_VERSION,
   ExportSourceError,
