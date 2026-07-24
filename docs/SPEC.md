@@ -124,6 +124,8 @@ Privacy and stability boundary:
 
 `codex-radar export`는 RPC/listener 없이 shared Python builder를 감싸는 read-only machine-readable surface다. 성공 시 stdout은 JSON protocol 전용이며 diagnostics를 섞지 않는다. Preview lookup 실패는 private path나 raw input을 반복하지 않는 stable code만 stderr에 출력하고 nonzero로 종료한다.
 
+Mobile SSH read-protocol Stage 0는 shipped CLI가 아니라 `scripts/read-protocol-stage0.py`의 non-packaged foreground spike로 평가한다. SSH client가 process lifetime과 reconnect를 소유하고, protocol v1 initialize 후 기존 display-state v1과 명시적으로 negotiated된 bounded transcript-preview v1/v2만 반환한다. `attention/poll`의 첫 호출은 connection-local baseline만 만들고, 이후 foreground poll에서 새 `waiting_approval` 또는 `running`/`tool_running`에서 `done`으로의 transition을 sanitized event로 출력한다. EOF/disconnect 뒤에는 새 process에서 initialize, current-state read, 새 baseline을 수행하며 missed-event replay를 보장하지 않는다. Network listener, daemon, background delivery, raw path, shared read state, remote write는 Stage 0 범위 밖이다. 세부 계약과 검증은 [Stage 0 proposal](proposals/mobile-ssh-read-protocol-stage0.md)을 따른다.
+
 - Display state schema: [schemas/display-state-v1.schema.json](schemas/display-state-v1.schema.json).
 - Transcript preview schemas: immutable [v1](schemas/transcript-preview-v1.schema.json) and timestamped [v2](schemas/transcript-preview-v2.schema.json).
 - Display state는 raw `cwd`, transcript/rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다.

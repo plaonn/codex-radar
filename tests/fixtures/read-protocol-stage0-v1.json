@@ -1,0 +1,104 @@
+{
+  "protocol": "codex-radar.read-protocol",
+  "version": 1,
+  "exchanges": [
+    {
+      "request": {
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocol_versions": [1],
+          "preview_contract_versions": [1, 2]
+        }
+      },
+      "messages": [
+        {
+          "id": 1,
+          "result": {
+            "protocol": "codex-radar.read-protocol",
+            "version": 1,
+            "display_state_version": 1,
+            "preview_contract_version": 2,
+            "capabilities": [
+              "state/read",
+              "preview/read",
+              "attention/poll"
+            ],
+            "attention_delivery": "foreground-poll"
+          }
+        }
+      ],
+      "shutdown": false
+    },
+    {
+      "request": {
+        "id": 2,
+        "method": "state/read"
+      },
+      "messages": [
+        {
+          "id": 2,
+          "result": {
+            "contract": "codex-radar.display-state",
+            "version": 1,
+            "generated_at": "2026-07-24T00:00:00+00:00",
+            "source": {
+              "status": "ready"
+            },
+            "capabilities": [
+              "transcript-preview"
+            ],
+            "counts": {
+              "attention": 0,
+              "running": 0
+            },
+            "sessions": [],
+            "usage": {
+              "available": false,
+              "reason": "usage_unavailable"
+            }
+          }
+        }
+      ],
+      "shutdown": false
+    },
+    {
+      "request": {
+        "id": 3,
+        "method": "preview/read",
+        "params": {
+          "session_id": "session-1",
+          "limit": 10
+        }
+      },
+      "messages": [
+        {
+          "id": 3,
+          "result": {
+            "contract": "codex-radar.transcript-preview",
+            "version": 2,
+            "session_id": "session-1",
+            "limit": 10,
+            "messages": []
+          }
+        }
+      ],
+      "shutdown": false
+    },
+    {
+      "request": {
+        "id": 4,
+        "method": "shutdown"
+      },
+      "messages": [
+        {
+          "id": 4,
+          "result": {
+            "shutdown": true
+          }
+        }
+      ],
+      "shutdown": true
+    }
+  ]
+}

@@ -6,6 +6,7 @@
 
 Milestone status:
 
+- `complete`: 정의된 exit criterion과 증거 묶음이 닫혔으며, 새 trigger나 별도 승인 없이는 실행 task를 만들지 않는다.
 - `operating`: 현재 구현과 지원 범위에 반영됐으며 regression과 운영 안정성을 계속 관리한다.
 - `active`: 현재 release 또는 구현 묶음으로 구체화돼 실행 task를 둘 수 있다.
 - `watching`: exit criterion은 명확하지만 external environment, upstream contract, 또는 별도 승인 때문에 즉시 완료할 수 없다.
@@ -24,9 +25,9 @@ Task admission rules:
 | ID | Milestone | Status | Next admission boundary |
 |---|---|---|---|
 | M1 | Shared host-local runtime and VS Code cockpit | operating | Current contract regression or setup reliability evidence |
-| M2 | Next public-beta consolidation | active | Select one VSIX/helper candidate pair and close candidate checks |
+| M2 | Next public-beta consolidation | complete | Reopen only for new source divergence; publication remains a separate approval |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
-| M4 | Mobile SSH read-protocol Stage 0 | trigger-based | Admit a protocol spike after M2 and display-state/preview contract stability review |
+| M4 | Mobile SSH read-protocol Stage 0 | complete | A separate user-owned decision is required before any Android product phase |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -40,7 +41,7 @@ Task admission rules:
 
 ## M2: Next Public-Beta Consolidation
 
-- Status: `active` for candidate definition and validation; publication remains a separate approval.
+- Status: `complete` for VSIX `0.4.19` + helper runtime `0.4.10` candidate definition and validation; publication remains a separate approval.
 - Entry condition: source versions or user-visible changes have advanced beyond the last documented public release and form one reviewable compatibility set.
 - Work package:
   - select the VSIX/helper candidate pair from current source versions;
@@ -48,6 +49,7 @@ Task admission rules:
   - run Python tests/compileall, VS Code extension tests/package, manifest inspection, and POSIX or Remote SSH install/upgrade smoke proportional to the changed surface;
   - state explicitly whether Native Windows assets are excluded, candidate-only, or independently validated.
 - Exit criterion: one candidate pair and evidence bundle are internally consistent and pushed. GitHub Release or other publication is not part of this exit criterion.
+- Evidence: candidate notes and validation contract are recorded in [0.4.19 release notes](releases/0.4.19.md) and pushed in commit `9e51595`.
 - Decision boundary: Codex may choose the candidate composition from repository evidence. Any public release, support-level expansion, Marketplace/PyPI publication, or credential/account action requires separate user approval.
 
 ## M3: Native Windows Real-Host Validation
@@ -59,10 +61,11 @@ Task admission rules:
 
 ## M4: Mobile SSH Read-Protocol Stage 0
 
-- Status: `trigger-based`; R9 remains a proposed product direction, not an active Android implementation milestone.
+- Status: `complete` for the read-only protocol proposal and local loopback spike; R9 remains a proposed product direction, not an active Android implementation milestone.
 - Entry condition: M2 candidate work is closed and shared display-state/preview contracts have no unresolved migration or privacy defect that would be frozen into a remote protocol.
 - First work package: a read-only protocol proposal plus host-local spike that proves version negotiation, project/thread list, bounded redacted preview, foreground attention events, stdout/stderr separation, disconnect/reconnect behavior, and SSH trust-boundary assumptions.
 - Exit criterion: golden fixtures and a local SSH-loopback or equivalent harness demonstrate the protocol without opening a network listener or adding remote write actions.
+- Evidence: [Stage 0 protocol proposal](proposals/mobile-ssh-read-protocol-stage0.md), focused unit tests, and the disposable two-connection subprocess loopback cover negotiation, state/preview reuse, foreground attention transitions, stdout/stderr separation, and reconnect semantics.
 - Non-goals: production Android UI, background push, multi-host aggregation, shared read state, and unifying this read protocol with experimental R12 write orchestration without a separate design decision.
 - Decision boundary: Codex may design and evaluate Stage 0. Activating an Android product phase or choosing a mobile UX/support commitment is a user-owned product-priority decision.
 
