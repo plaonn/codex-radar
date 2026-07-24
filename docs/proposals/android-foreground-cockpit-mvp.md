@@ -163,6 +163,13 @@ The implementation reuses one Python core with the Stage 0 spike and provides
 - Exit: repeatable unit/UI tests demonstrate the complete read-only UX using
   fixtures.
 
+Current truth: implemented as a Kotlin native platform-Views app with package
+`dev.codexradar.cockpit`, minimum SDK 26, mechanically derived host fixtures,
+fixture drift/privacy guards, JVM tests, and API 36.1 emulator UI coverage.
+Preview content remains memory-only, foreground attention establishes a fresh
+baseline after each connection, and the app has no network permission, SSH
+dependency, credential handling, background component, or remote write path.
+
 ### A3: Foreground SSH Transport
 
 - Select an SSH dependency using security, license, maintenance, key-format,
@@ -210,6 +217,6 @@ The implementation reuses one Python core with the Stage 0 spike and provides
 ## Current Disposition
 
 The MVP design is active. A1 is complete under its separately adopted execution
-contract. A2 remains unclaimed and still requires its own bounded contract;
-this document does not authorize Android implementation, credential handling,
-or publication.
+contract. A2 is implemented under its fixture-only task and awaits parent
+acceptance/A3-readiness disposition. A3 live SSH, credential handling,
+background behavior, signing, and publication remain unauthorized.

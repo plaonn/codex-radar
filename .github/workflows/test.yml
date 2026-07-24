@@ -28,3 +28,22 @@ jobs:
         run: python -m compileall src tests
       - name: VS Code extension tests
         run: npm --prefix extensions/vscode test
+
+  android-fixture-cockpit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Verify mechanically derived fixture
+        working-directory: apps/android
+        run: python3 tools/check_fixture_drift.py --check
+      - name: Verify Android privacy boundary
+        working-directory: apps/android
+        run: python3 tools/privacy_negative_check.py
+      - name: Build and test fixture cockpit
+        working-directory: apps/android
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug compileDebugAndroidTestKotlin --console=plain
