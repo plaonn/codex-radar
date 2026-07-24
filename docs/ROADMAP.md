@@ -85,12 +85,12 @@ Task admission rules:
 
 ## M4A: Android Foreground Cockpit MVP
 
-- Status: `active`; A1 packaged host read protocol correction is ready for acceptance in helper runtime `0.4.12`, while Android A2 remains unclaimed.
+- Status: `active`; A1 packaged host read protocol is accepted and complete in helper runtime `0.4.12`, while Android A2 remains unclaimed.
 - Root outcome: an Android app can use a user-owned foreground SSH connection to inspect host-local Radar projects, thread status, bounded redacted preview, and new attention transitions without opening a server port or gaining remote write authority.
 - Entry evidence: M4 Stage 0 negotiation/reconnect semantics are complete, shared display-state/preview contracts are active, and `v0.4.19` is the current POSIX public-beta baseline.
 - Design contract: [Android foreground cockpit MVP](proposals/android-foreground-cockpit-mvp.md).
 - Ordered implementation packages:
-  1. ready for acceptance: productize the Stage 0 semantics as `codex-radar mobile rpc` in helper runtime `0.4.12`, including a 1 MiB inbound-frame bound, without changing R12 `thread rpc`;
+  1. complete: productize the Stage 0 semantics as `codex-radar mobile rpc` in helper runtime `0.4.12`, including a 1 MiB inbound-frame bound, without changing R12 `thread rpc`;
   2. build an Android app shell and protocol client against deterministic fixtures, with no live SSH or production signing requirement;
   3. add foreground SSH transport, explicit host-key verification, key-based authentication, reconnect, and sanitized failure handling;
   4. complete a real Android-to-POSIX-host smoke covering state, preview, attention, disconnect, and reconnect.
