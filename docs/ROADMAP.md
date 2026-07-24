@@ -28,7 +28,8 @@ Task admission rules:
 | M2 | Next public-beta consolidation | complete | Reopen only for new source divergence |
 | M2P | `0.4.19` POSIX public-beta publication | complete | Reopen only for release verification drift |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
-| M4 | Mobile SSH read-protocol Stage 0 | complete | A separate user-owned decision is required before any Android product phase |
+| M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
+| M4A | Android foreground cockpit MVP | active | Adopt the first bounded implementation contract |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -80,7 +81,22 @@ Task admission rules:
 - Exit criterion: golden fixtures and a local SSH-loopback or equivalent harness demonstrate the protocol without opening a network listener or adding remote write actions.
 - Evidence: [Stage 0 protocol proposal](proposals/mobile-ssh-read-protocol-stage0.md), focused unit tests, and the disposable two-connection subprocess loopback cover negotiation, state/preview reuse, foreground attention transitions, stdout/stderr separation, and reconnect semantics.
 - Non-goals: production Android UI, background push, multi-host aggregation, shared read state, and unifying this read protocol with experimental R12 write orchestration without a separate design decision.
-- Decision boundary: Codex may design and evaluate Stage 0. Activating an Android product phase or choosing a mobile UX/support commitment is a user-owned product-priority decision.
+- Decision boundary: Stage 0 is complete. The user approved the separate Android foreground cockpit MVP design phase on 2026-07-24; its product and execution boundary is M4A.
+
+## M4A: Android Foreground Cockpit MVP
+
+- Status: `active` for the approved MVP design; implementation remains unclaimed until a bounded execution contract is separately adopted.
+- Root outcome: an Android app can use a user-owned foreground SSH connection to inspect host-local Radar projects, thread status, bounded redacted preview, and new attention transitions without opening a server port or gaining remote write authority.
+- Entry evidence: M4 Stage 0 negotiation/reconnect semantics are complete, shared display-state/preview contracts are active, and `v0.4.19` is the current POSIX public-beta baseline.
+- Design contract: [Android foreground cockpit MVP](proposals/android-foreground-cockpit-mvp.md).
+- Ordered implementation packages:
+  1. productize the Stage 0 semantics as a packaged, versioned, read-only host command without changing R12 `thread rpc`;
+  2. build an Android app shell and protocol client against deterministic fixtures, with no live SSH or production signing requirement;
+  3. add foreground SSH transport, explicit host-key verification, key-based authentication, reconnect, and sanitized failure handling;
+  4. complete a real Android-to-POSIX-host smoke covering state, preview, attention, disconnect, and reconnect.
+- Exit criterion: a real Android device or emulator connects to one user-selected POSIX host over SSH, launches the packaged read-only protocol, groups threads by project, shows attention/status and bounded preview, reports foreground attention transitions, and safely reconciles current state after reconnect.
+- Non-goals: background service or push delivery, OS notifications, remote thread resume/send/archive, shared read state, multi-host aggregation, remote HTTP listener, Play Store/public APK publication, Native Windows validation, and R12 read/write protocol unification.
+- Decision boundary: the user approved the MVP product phase and this design contract only. Implementation claim, Android signing/publication, support commitments, paid services, background execution, credential policy expansion, and any remote write action require their own contract or approval.
 
 ## M5: Distribution Channel Expansion
 
@@ -183,7 +199,7 @@ Task admission rules:
 - Foreground attention event는 사용자가 다른 thread를 보고 있을 때 `done`, `waiting_approval`, `running -> done` 같은 변화를 in-app banner/toast로 보여주고, tap하면 해당 thread로 이동하게 한다.
 - TUI는 모바일의 primary path가 아니라 VS Code도 Android app도 없는 SSH-only 환경을 위한 lightweight fallback dashboard로 유지한다.
 - Shared state builder는 VS Code extension, TUI fallback, future mobile RPC가 같은 sanitized display model과 privacy boundary를 재사용할 수 있게 설계한다.
-- 첫 실행 milestone과 activation boundary는 M4를 따른다. 아래 방향만으로 Android 구현 task를 만들지 않는다.
+- Android foreground cockpit의 product activation과 실행 경계는 M4A를 따른다. M4A의 bounded implementation contract가 adopted되기 전에는 아래 방향만으로 Android 구현 task를 claim하지 않는다.
 
 ## Parking Lot
 

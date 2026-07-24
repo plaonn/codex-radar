@@ -144,13 +144,13 @@
 
 ### R9: foreground mobile cockpit over SSH
 
-- Status: proposed direction
+- Status: confirmed direction, Android foreground cockpit MVP design active
 - Requirement: 장기 모바일 surface는 별도 remote HTTP server를 먼저 열기보다 Android app이 SSH 연결 위에서 host-local `codex-radar` machine-readable protocol을 실행해 프로젝트별 thread list, 상태, bounded transcript preview, foreground attention event를 받아볼 수 있어야 한다.
 - Rationale: 모바일에서의 주요 문제는 공식 ChatGPT app의 project/thread switching depth와 멀티태스킹 제약이다. 사용자가 앱을 열고 여러 프로젝트의 Codex thread를 집중적으로 전환하는 상황에서는 SSH trust boundary와 host-local sanitized model을 재사용하는 편이 server auth, port exposure, push infrastructure보다 단순하다.
 - Failure prevented: 모바일 UX를 위해 별도 server/auth/push stack을 먼저 설계하면서 scope가 커지거나, 반대로 CLI/TUI를 사람용 terminal UI로만 키워 Android/PWA가 재사용할 안정된 contract가 없는 문제.
 - Assumptions: 초기 모바일 앱은 foreground-first tool이다. 앱이 닫혔거나 SSH/RPC 연결이 끊긴 동안의 notification delivery는 보장하지 않으며, 장기 push notification은 공식 ChatGPT/Codex app 또는 별도 milestone의 역할로 둔다.
-- Derived specs/tests: future packaged `codex-radar rpc` or equivalent JSON/JSONL protocol, shared mobile/gui state builder, strict stdout protocol with diagnostics on stderr, bounded/redacted preview output, foreground in-app attention events, no remote HTTP listener by default; Stage 0 is proven by the non-packaged `scripts/read-protocol-stage0.py` spike, proposal, unit tests, and disposable reconnect loopback.
-- Revisit when: Android app, mobile web/PWA, background notification, multi-host dashboard, or remote write actions become active milestones.
+- Derived specs/tests: [Android foreground cockpit MVP contract](proposals/android-foreground-cockpit-mvp.md), future packaged read-only mobile JSONL command, shared mobile/gui display-state and preview contracts, strict stdout protocol with diagnostics on stderr, bounded/redacted preview output, foreground in-app attention events, explicit SSH host-key verification, and no remote HTTP listener by default; Stage 0 transport semantics are proven by the non-packaged `scripts/read-protocol-stage0.py` spike, proposal, unit tests, and disposable reconnect loopback.
+- Revisit when: the MVP needs background notification, multi-host aggregation, shared read state, mobile web/PWA support, remote write actions, or a public Android distribution/support commitment.
 
 ### R10: surface-independent local runtime
 
