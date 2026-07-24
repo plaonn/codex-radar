@@ -26,7 +26,7 @@ Task admission rules:
 |---|---|---|---|
 | M1 | Shared host-local runtime and VS Code cockpit | operating | Current contract regression or setup reliability evidence |
 | M2 | Next public-beta consolidation | complete | Reopen only for new source divergence |
-| M2P | `0.4.19` POSIX public-beta publication | watching | Explicit approval to publish the prepared candidate |
+| M2P | `0.4.19` POSIX public-beta publication | complete | Reopen only for release verification drift |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | A separate user-owned decision is required before any Android product phase |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
@@ -55,7 +55,7 @@ Task admission rules:
 
 ## M2P: `0.4.19` POSIX Public-Beta Publication
 
-- Status: `watching`; VSIX `0.4.19`, helper runtime `0.4.10`, release notes, checksums, and candidate validation are ready, but no publication has been authorized.
+- Status: `complete`; GitHub prerelease `v0.4.19` publishes VSIX `0.4.19`, helper runtime `0.4.10`, and the adjacent checksum for the supported POSIX Python 3.9+ scope.
 - Entry condition: the user explicitly approves publishing the prepared candidate as a GitHub prerelease with the supported scope still limited to POSIX Python 3.9+ hosts.
 - Work package:
   - create the `v0.4.19` GitHub prerelease from the prepared candidate commit and notes;
@@ -63,7 +63,7 @@ Task admission rules:
   - verify release asset names, checksums, download visibility, and public install instructions;
   - update public release-baseline references without claiming Native Windows validation, Marketplace/PyPI availability, or broader support.
 - Exit criterion: the GitHub prerelease and exact candidate assets are publicly available, release-baseline documentation points to `v0.4.19`, and the published copy retains the POSIX support and Native Windows validation boundaries.
-- Decision boundary: publication and any credential/account action require explicit user approval. Candidate readiness does not authorize publication, and publication does not complete M3 or expand the support boundary.
+- Decision boundary: the `v0.4.19` publication was explicitly approved. Any later publication, credential/account action, support expansion, Marketplace/PyPI publication, or Native Windows support claim requires separate authority. M2P completion does not complete M3.
 
 ## M3: Native Windows Real-Host Validation
 
@@ -132,8 +132,8 @@ Task admission rules:
 
 ## VS Code Extension Release
 
-- Latest published baseline은 `0.4.12` public beta다. Source versions와 candidate notes가 그 이후로 전진할 수 있으므로 다음 배포 단위는 M2에서 명시적으로 묶는다. Source tree에는 Native Windows helper foundation과 `windows-latest` CI가 추가됐지만, 실제 Windows Codex hook smoke 전에는 Windows support-complete 또는 Windows public release로 선언하지 않는다.
-- GitHub Release readiness와 Marketplace publish는 별도 milestone로 유지한다.
+- Latest published baseline은 `0.4.19` public beta다. 이후 source version과 release candidate는 M2에서 다시 명시적으로 묶는다. Source tree와 helper asset에는 Native Windows foundation이 포함돼 있지만, 실제 Windows Codex hook smoke 전에는 Windows support-complete 또는 officially validated로 선언하지 않는다.
+- Marketplace publish는 별도 milestone로 유지한다.
 - Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
 - GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.
 - Marketplace publish는 publisher/namespace, marketplace metadata, asset policy, release 운영 방식이 정해진 뒤 별도 milestone으로 진행한다.
