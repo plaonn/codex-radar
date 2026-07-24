@@ -25,7 +25,8 @@ Task admission rules:
 | ID | Milestone | Status | Next admission boundary |
 |---|---|---|---|
 | M1 | Shared host-local runtime and VS Code cockpit | operating | Current contract regression or setup reliability evidence |
-| M2 | Next public-beta consolidation | complete | Reopen only for new source divergence; publication remains a separate approval |
+| M2 | Next public-beta consolidation | complete | Reopen only for new source divergence |
+| M2P | `0.4.19` POSIX public-beta publication | watching | Explicit approval to publish the prepared candidate |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | A separate user-owned decision is required before any Android product phase |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
@@ -51,6 +52,18 @@ Task admission rules:
 - Exit criterion: one candidate pair and evidence bundle are internally consistent and pushed. GitHub Release or other publication is not part of this exit criterion.
 - Evidence: candidate notes and validation contract are recorded in [0.4.19 release notes](releases/0.4.19.md) and pushed in commit `9e51595`.
 - Decision boundary: Codex may choose the candidate composition from repository evidence. Any public release, support-level expansion, Marketplace/PyPI publication, or credential/account action requires separate user approval.
+
+## M2P: `0.4.19` POSIX Public-Beta Publication
+
+- Status: `watching`; VSIX `0.4.19`, helper runtime `0.4.10`, release notes, checksums, and candidate validation are ready, but no publication has been authorized.
+- Entry condition: the user explicitly approves publishing the prepared candidate as a GitHub prerelease with the supported scope still limited to POSIX Python 3.9+ hosts.
+- Work package:
+  - create the `v0.4.19` GitHub prerelease from the prepared candidate commit and notes;
+  - upload the exact VSIX, helper bundle, and checksum named by the candidate contract;
+  - verify release asset names, checksums, download visibility, and public install instructions;
+  - update public release-baseline references without claiming Native Windows validation, Marketplace/PyPI availability, or broader support.
+- Exit criterion: the GitHub prerelease and exact candidate assets are publicly available, release-baseline documentation points to `v0.4.19`, and the published copy retains the POSIX support and Native Windows validation boundaries.
+- Decision boundary: publication and any credential/account action require explicit user approval. Candidate readiness does not authorize publication, and publication does not complete M3 or expand the support boundary.
 
 ## M3: Native Windows Real-Host Validation
 
@@ -109,8 +122,8 @@ Task admission rules:
 
 - VS Code extension은 이 repository 안의 `extensions/vscode/` subtree에서 시작한다.
 - Python core는 stdlib-first를 유지하고, Node/extension dependency는 extension subtree에 격리한다.
-- 현재 GUI milestone은 `sessions.json`을 직접 읽는 sectioned Webview sidebar와 editor Webview dashboard의 hybrid surface다.
-- GUI implementation은 read adapter를 통해 state source를 캡슐화한다. Schema evolution, computed field, archive/usage normalization, transcript redaction policy가 이미 여러 surface에서 중복되기 시작했으므로 shared sanitized export contract로 전환하는 조건은 충족된 것으로 본다.
+- 현재 GUI milestone은 shared sanitized export를 기본 list source로 사용하고 direct `sessions.json` adapter를 bounded fallback과 trusted host-local action metadata source로 유지하는 sectioned Webview sidebar와 editor Webview dashboard의 hybrid surface다.
+- GUI implementation은 read adapter를 통해 state source를 캡슐화한다. Shared export가 computed field, archive/usage normalization, transcript redaction policy의 공통 contract를 소유하며 direct adapter는 command/source/schema failure와 raw `cwd`가 필요한 명시적 host-local action을 보완한다.
 - GUI는 thread 상태(`waiting_approval`, `running`, `tool_running`, `done`, `unknown`)와 Codex archived state를 navigation 안에서 구분해야 한다.
 - 첫 GUI notification surface는 sidebar section badge와 dashboard count/highlight 같은 in-surface cue로 제한한다.
 - GUI의 Codex/codex-radar runtime state는 read-only로 유지한다. Extension-local read/unread UI state와 사용자가 명시적으로 실행하는 user-visible integrated-terminal `codex resume` action은 active scope다. VS Code GUI에서는 retention config/prune controls를 노출하지 않고 terminal CLI workflow에 맡긴다.

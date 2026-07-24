@@ -1,11 +1,11 @@
 # codex-radar Spec
 
 Current requirements and RDD hierarchy live in [REQUIREMENTS.md](REQUIREMENTS.md).
-This document defines the current terminal MVP behavior, data model, and local automation/privacy contract.
+This document defines the current host-local runtime, terminal fallback, VS Code GUI, shared export, experimental foreground orchestration, data model, and local automation/privacy contracts.
 
 ## Spec
 
-현재 spec은 local-only hook indexer, latest-state session index, server-side retention config/pruning, project-aware session list/filtering, terminal MVP commands, opt-in foreground watcher, transcript skim, automation/privacy boundary로 구성된다. 장기적으로는 VS Code extension 같은 GUI surface에서 프로젝트 단위로 묶인 conversation list와 통합하는 것을 지향하지만, 현재 spec은 terminal MVP/fallback contract를 정의한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
+현재 spec은 local-only hook indexer, latest-state session index, server-side retention config/pruning, shared sanitized export와 bounded preview, project-aware terminal fallback, opt-in foreground watcher, sectioned VS Code sidebar/dashboard/preview, experimental foreground thread orchestration, automation/privacy boundary로 구성된다. Host-local runtime이 lifecycle truth와 shared display contract를 소유하고 terminal과 VS Code surface가 이를 각자 fallback·action boundary 안에서 사용한다. 구체적인 상태 전이, data field, command behavior, watcher behavior는 아래 섹션의 contract를 따른다.
 
 Experimental thread orchestration is exposed separately through `codex-radar thread rpc`. It owns one compatible `codex app-server --stdio` process and provides a strict JSONL stdin/stdout control protocol. Requests are `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/send`, and `shutdown`. Threads started by this host receive canonical dynamic function specs named `create_thread`, `list_threads`, `read_thread`, and `send_message_to_thread`. The host handles `item/tool/call` on a separate worker so a tool may issue nested requests on the same app-server connection without blocking the sole stdout reader. This opt-in write surface does not replace the hook-owned lifecycle index, does not open a network listener, and declines unsupported server requests rather than auto-approving command, file, or permission changes.
 
