@@ -17,6 +17,7 @@ from .export_adapter import (
     export_transcript_preview,
 )
 from .hook import run_hook
+from .mobile_rpc import run_mobile_rpc
 from .reconcile import reconcile_sessions
 from .store import (
     DEFAULT_RETENTION_DAYS,
@@ -345,6 +346,12 @@ def cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mobile(args: argparse.Namespace) -> int:
+    if args.mobile_command != "rpc":
+        raise SystemExit("expected mobile command")
+    return run_mobile_rpc(state_dir=_state_dir_arg(args.state_dir))
+
+
 def cmd_config(args: argparse.Namespace) -> int:
     state_dir = _state_dir_arg(args.state_dir)
     if args.config_command == "get":
@@ -536,6 +543,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Transcript preview contract version. Default: 1",
     )
     export_preview.set_defaults(func=cmd_export)
+
+    mobile = subparsers.add_parser("mobile", help="Use the read-only mobile SSH protocol")
+    mobile_subparsers = mobile.add_subparsers(dest="mobile_command", required=True)
+    mobile_rpc = mobile_subparsers.add_parser(
+        "rpc",
+        help="Serve the read-only mobile JSONL protocol on stdin/stdout",
+    )
+    mobile_rpc.set_defaults(func=cmd_mobile)
 
     config = subparsers.add_parser("config", help="Read or update codex-radar config")
     config_subparsers = config.add_subparsers(dest="config_command", required=True)

@@ -10,7 +10,10 @@ The repository spike is intentionally non-packaged:
 PYTHONPATH=src python3 scripts/read-protocol-stage0.py
 ```
 
-It evaluates transport semantics around the shipped sanitized contracts without changing the helper or VSIX candidate.
+It evaluates transport semantics around the shipped sanitized contracts. The
+same implementation is now productized by helper runtime `0.4.11` as the
+stable read-only `codex-radar mobile rpc` command; the spike remains compatible
+evidence and does not change the helper's read-only boundary or the VSIX.
 
 ## Ownership and Trust Boundary
 

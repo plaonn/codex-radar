@@ -39,6 +39,25 @@ class CliTests(unittest.TestCase):
             self.assertEqual(0, result.returncode)
             self.assertEqual(f"{state_dir}\n", result.stdout)
 
+    def test_mobile_rpc_is_a_packaged_cli_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "state"
+            stdin = io.StringIO(
+                '{"id":1,"method":"initialize","params":{"protocol_versions":[1],"preview_contract_versions":[2]}}\n'
+                '{"id":2,"method":"shutdown"}\n'
+            )
+            stdout = io.StringIO()
+            previous_stdin, previous_stdout = sys.stdin, sys.stdout
+            try:
+                sys.stdin, sys.stdout = stdin, stdout
+                self.assertEqual(0, main(["--state-dir", str(state_dir), "mobile", "rpc"]))
+            finally:
+                sys.stdin, sys.stdout = previous_stdin, previous_stdout
+
+            messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+            self.assertEqual("codex-radar.read-protocol", messages[0]["result"]["protocol"])
+            self.assertEqual({"shutdown": True}, messages[1]["result"])
+
     def test_path_prints_state_dir_without_creating_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp) / "missing-state"

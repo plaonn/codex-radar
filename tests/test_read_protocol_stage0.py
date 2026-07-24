@@ -7,6 +7,7 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "read-protocol-stage0.py"
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "read-protocol-stage0-v1.json"
+MOBILE_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "mobile-rpc-v1.json"
 SPEC = importlib.util.spec_from_file_location("read_protocol_stage0", SCRIPT)
 assert SPEC and SPEC.loader
 protocol = importlib.util.module_from_spec(SPEC)
@@ -54,6 +55,13 @@ class ReadProtocolStage0Tests(unittest.TestCase):
         self.assertEqual("codex-radar.read-protocol", fixture["protocol"])
         self.assertEqual(1, fixture["version"])
         self.assertEqual(fixture["exchanges"], observed)
+
+    def test_mobile_fixture_is_stage0_compatible(self) -> None:
+        fixture = json.loads(MOBILE_FIXTURE.read_text(encoding="utf-8"))
+        stage0 = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual("codex-radar.read-protocol", fixture["fixture_contract"])
+        self.assertEqual(1, fixture["fixture_version"])
+        self.assertEqual(stage0["exchanges"], fixture["exchanges"])
 
     def test_negotiates_versions_and_reuses_existing_contracts(self) -> None:
         session = protocol.ReadProtocolSession(

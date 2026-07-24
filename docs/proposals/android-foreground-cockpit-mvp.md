@@ -149,6 +149,10 @@ but it must have one documented stable entrypoint and must not overload
 - Exit: an installed helper exposes one documented read-only command with the
   Stage 0 contract and no R12 write authority.
 
+Current truth: complete in helper runtime `0.4.11` as `codex-radar mobile rpc`.
+The implementation reuses one Python core with the Stage 0 spike and provides
+`tests/fixtures/mobile-rpc-v1.json` for A2; it does not authorize A2.
+
 ### A2: Android Fixture Cockpit
 
 - Create `apps/android/` with isolated build configuration.
@@ -204,7 +208,7 @@ but it must have one documented stable entrypoint and must not overload
 
 ## Current Disposition
 
-The MVP design is active. No implementation package is claimed by this document
-alone. A design-owned execution contract must select the first package,
-authority, stop conditions, and `Done means` before a coordinator or worker
-starts implementation.
+The MVP design is active. A1 is complete under its separately adopted execution
+contract. A2 remains unclaimed and still requires its own bounded contract;
+this document does not authorize Android implementation, credential handling,
+or publication.
