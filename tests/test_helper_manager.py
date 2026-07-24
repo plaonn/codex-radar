@@ -317,8 +317,22 @@ class HelperManagerTests(unittest.TestCase):
                 for groups in payload["hooks"].values()
                 for group in groups
             }
-            self.assertEqual({str(command.resolve())}, commands)
+            self.assertEqual({str(command.parent.resolve() / command.name)}, commands)
             self.assertNotIn("codex-radar hook", commands)
+
+    def test_hook_fragment_preserves_installed_stable_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "runtime"
+            bin_dir = base / "bin"
+            install_bundle(_fake_bundle(base, "1.0.0"), root, bin_dir)
+            command = bin_dir / "codex-radar-hook"
+
+            payload = hook_fragment(command)
+            rendered = payload["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+
+            self.assertEqual(str(command.parent.resolve() / command.name), rendered)
+            self.assertNotIn(str(root / "versions"), rendered)
 
     def test_hook_fragment_quotes_space_path_and_upgrades_unquoted_stable_entry(self) -> None:
         with tempfile.TemporaryDirectory(prefix="radar helper ") as tmp:
@@ -327,8 +341,9 @@ class HelperManagerTests(unittest.TestCase):
             output = hook_config_output(command)
             payload = json.loads(output)
             rendered = payload["hooks"]["SessionStart"][0]["hooks"][0]["command"]
-            self.assertEqual([str(command.resolve())], shlex.split(rendered))
-            self.assertNotEqual(str(command.resolve()), rendered)
+            stable_command = str(command.parent.resolve() / command.name)
+            self.assertEqual([stable_command], shlex.split(rendered))
+            self.assertNotEqual(stable_command, rendered)
 
             hooks_file = base / "hooks.json"
             hooks_file.write_text(
@@ -340,7 +355,7 @@ class HelperManagerTests(unittest.TestCase):
                                     "hooks": [
                                         {
                                             "type": "command",
-                                            "command": str(command.resolve()),
+                                            "command": stable_command,
                                             "timeout": 5,
                                         }
                                     ]
@@ -373,7 +388,8 @@ class HelperManagerTests(unittest.TestCase):
             diff = hook_config_output(base / "bin" / "codex-radar-hook", hooks_file)
 
             self.assertIn("other-hook", diff)
-            self.assertIn(str((base / "bin" / "codex-radar-hook").resolve()), diff)
+            command = base / "bin" / "codex-radar-hook"
+            self.assertIn(str(command.parent.resolve() / command.name), diff)
             self.assertIn("proposed; not written", diff)
             self.assertEqual(original_text, hooks_file.read_text(encoding="utf-8"))
 
@@ -382,7 +398,7 @@ class HelperManagerTests(unittest.TestCase):
             base = Path(tmp)
             hook_command = base / "bin" / "codex-radar-hook"
             hooks_file = base / "hooks.json"
-            stable_command = str(hook_command.resolve())
+            stable_command = str(hook_command.parent.resolve() / hook_command.name)
             original = {
                 "other": {"preserved": True},
                 "hooks": {

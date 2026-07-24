@@ -9,9 +9,9 @@
   See what is running, what needs attention, and resume in the right workspace.
 </p>
 
-Version `0.4.4` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
+Version `0.4.12` is the current Codex Radar public beta, distributed through GitHub Releases and not published to the VS Code Marketplace.
 
-The current source package version is `0.4.18`. It opens Sidebar transcript Preview from the current in-memory session before refreshing the full session/catalog model, preserves specific missing, empty, and stale session-index setup diagnostics across the default shared-export path, keeps filesystem failure details path-free, classifies Sidebar **Current Workspace** groups from raw session working-directory evidence before sanitized card conversion, includes the explicit integrated-terminal **Open in Codex CLI** action, and shows locale-aware recorded times and date separators in transcript previews. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+The current source package version is `0.4.19`. It opens Sidebar transcript Preview from the current in-memory session before refreshing the full session/catalog model, preserves specific missing, empty, and stale session-index setup diagnostics across the default shared-export path, keeps filesystem failure details path-free, classifies Sidebar **Current Workspace** groups from raw session working-directory evidence before sanitized card conversion, includes the explicit integrated-terminal **Open in Codex CLI** action, and shows locale-aware recorded times and date separators in transcript previews. Native Windows support is not complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
 
 ## Current Scope
 
@@ -78,10 +78,10 @@ The extension preserves the current local, Remote SSH, WSL, or Dev Container URI
 
 ## Install From VSIX
 
-After the `0.4.4` package is published to a GitHub Release, download `codex-radar-vscode-0.4.4.vsix` and install it into the extension host where Codex runs:
+Download `codex-radar-vscode-0.4.12.vsix` from the published `v0.4.12` GitHub Release and install it into the extension host where Codex runs:
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.4.vsix --force
+code --install-extension codex-radar-vscode-0.4.12.vsix --force
 ```
 
 The extension requires the host-local `codex-radar` helper/indexer and a user-configured Codex lifecycle hook that produces `sessions.json`. Follow the root [development and testing guide](https://github.com/plaonn/codex-radar#development-and-testing) and [hook setup runbook](https://github.com/plaonn/codex-radar/blob/main/docs/runbooks/install-hooks.md). The extension does not install hooks or edit `~/.codex/hooks.json`.
@@ -99,7 +99,7 @@ The command writes `extensions/vscode/codex-radar-vscode-<version>.vsix`. VSIX f
 Install the locally built package into the extension host you want to test:
 
 ```bash
-code --install-extension extensions/vscode/codex-radar-vscode-0.4.18.vsix --force
+code --install-extension extensions/vscode/codex-radar-vscode-0.4.19.vsix --force
 ```
 
 For Remote SSH, install the VSIX while connected to the remote window so the extension runs on the remote workspace extension host. The manifest declares `extensionKind: ["workspace"]` to keep the default execution host aligned with the remote `codex-radar` state directory.

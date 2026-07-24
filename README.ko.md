@@ -13,11 +13,11 @@
   실행 중인 작업과 확인이 필요한 상태를 보고, 올바른 워크스페이스에서 바로 이어갈 수 있습니다.
 </p>
 
-<p align="center"><strong>공개 베타 · v0.4.4</strong></p>
+<p align="center"><strong>공개 베타 · v0.4.12</strong></p>
 
 Codex Radar는 여러 프로젝트에서 Codex를 사용하는 개발자를 위한 로컬 대시보드이며, 특히 VS Code Remote SSH 환경에 적합합니다. 스레드를 프로젝트별로 묶고, 승인 요청과 완료된 작업을 보여주며, 제한된 범위의 대화 미리보기를 제공합니다. 또한 이어갈 수 있는 스레드를 적절한 워크스페이스의 공식 Codex 확장으로 연결합니다.
 
-공개 베타는 POSIX helper bundle과 VSIX를 포함한 [v0.4.4 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.4)로 배포됩니다. VS Code Marketplace나 PyPI에는 게시되어 있지 않습니다.
+공개 베타는 POSIX 지원 helper bundle과 VSIX를 포함한 [v0.4.12 GitHub Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.12)로 배포됩니다. VS Code Marketplace나 PyPI에는 게시되어 있지 않습니다.
 
 ## 주요 기능
 
@@ -67,12 +67,12 @@ Remote SSH에서는 helper 설치, hook 설정, VSIX 설치를 모두 원격 확
 
 ## Helper 설치
 
-v0.4.4 release는 Python 3.9 이상 POSIX host용 helper bundle을 제공합니다. Installer는 checksum을 검증하고 변경 불가능한 runtime version을 보존하며, Codex hook 설정을 바꾸지 않고 원자적 upgrade와 rollback을 제공합니다. v0.4.4 Release에서 bundle과 인접 checksum을 다운로드한 다음 실행합니다.
+v0.4.12 release는 Python 3.9 이상 POSIX 지원 경로에 helper runtime `0.4.7`을 제공합니다. Installer는 checksum을 검증하고 변경 불가능한 runtime version을 보존하며, Codex hook 설정을 바꾸지 않고 원자적 upgrade와 rollback을 제공합니다. v0.4.12 Release에서 bundle과 인접 checksum을 다운로드한 다음 실행합니다.
 
 ```bash
-shasum -a 256 -c codex-radar-helper-0.4.4.zip.sha256
-unzip codex-radar-helper-0.4.4.zip
-cd codex-radar-helper-0.4.4
+shasum -a 256 -c codex-radar-helper-0.4.7.zip.sha256
+unzip codex-radar-helper-0.4.7.zip
+cd codex-radar-helper-0.4.7
 python3 install-helper.py install .
 ```
 
@@ -103,10 +103,10 @@ Hook은 사용자가 명시적으로 설정해야 합니다. Codex Radar는 inst
 
 ## VSIX 설치
 
-[v0.4.4 공개 베타 Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.4)에서 [`codex-radar-vscode-0.4.4.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.4/codex-radar-vscode-0.4.4.vsix)를 다운로드한 다음, Codex와 Radar 상태가 있는 VS Code 확장 호스트에 설치합니다.
+[v0.4.12 공개 베타 Release](https://github.com/plaonn/codex-radar/releases/tag/v0.4.12)에서 [`codex-radar-vscode-0.4.12.vsix`](https://github.com/plaonn/codex-radar/releases/download/v0.4.12/codex-radar-vscode-0.4.12.vsix)를 다운로드한 다음, Codex와 Radar 상태가 있는 VS Code 확장 호스트에 설치합니다.
 
 ```bash
-code --install-extension codex-radar-vscode-0.4.4.vsix --force
+code --install-extension codex-radar-vscode-0.4.12.vsix --force
 ```
 
 Remote SSH에서는 원격 창에 연결한 상태에서 VSIX를 설치해야 워크스페이스 확장이 원격 helper 및 인덱스와 같은 곳에서 실행됩니다. 창을 다시 불러온 다음 Activity Bar에서 **Codex Radar**를 엽니다.
@@ -176,7 +176,7 @@ codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 ## 현재 제한 사항
 
 - 공개 베타는 GitHub Release로만 배포하며 VS Code Marketplace나 PyPI에서는 제공하지 않습니다.
-- Helper foundation은 POSIX와 Native Windows Python 3.9+ host를 지원합니다. Published `v0.4.4` bundle은 여전히 POSIX 전용이며, Native Windows 지원 완료에는 실제 Codex hook-to-sidebar smoke가 남아 있습니다.
+- Helper foundation은 POSIX와 Native Windows Python 3.9+ host를 지원합니다. Published `v0.4.12` helper asset은 POSIX 공개 베타 경로로 지원되며, Native Windows 지원 완료에는 실제 Codex hook-to-sidebar smoke가 남아 있습니다.
 - WSL2는 Native Windows milestone의 공식 검증 범위에 포함되지 않습니다.
 - `codex-radar-helper diagnose`는 로컬 runtime, stable shim, compatibility metadata, hook wiring을 확인하지만 원격 최신 release 존재 여부는 조회하지 않습니다. `codex-radar doctor`는 Radar state/cache 진단에 집중합니다.
 - 확장을 사용하려면 별도의 host-local helper/indexer 설치와 명시적인 hook 설정이 필요합니다.
@@ -224,9 +224,9 @@ npm --prefix extensions/vscode run package
 
 ## 릴리스 및 배포
 
-현재 릴리스는 [Codex Radar 0.4.4 공개 베타](https://github.com/plaonn/codex-radar/releases/tag/v0.4.4)입니다. 공개 베타의 지원되는 배포 경로는 GitHub Release asset입니다. Marketplace 및 PyPI 게시는 별도의 향후 결정으로 남아 있습니다.
+현재 릴리스는 [Codex Radar 0.4.12 공개 베타](https://github.com/plaonn/codex-radar/releases/tag/v0.4.12)입니다. 공개 베타의 지원되는 배포 경로는 GitHub Release asset입니다. Marketplace 및 PyPI 게시는 별도의 향후 결정으로 남아 있습니다.
 
-자세한 내용은 [0.4.4 릴리스 노트](docs/releases/0.4.4.md)와 [확장 변경 이력](extensions/vscode/CHANGELOG.md)을 참고합니다.
+자세한 내용은 [0.4.12 릴리스 노트](docs/releases/0.4.12.md)와 [확장 변경 이력](extensions/vscode/CHANGELOG.md)을 참고합니다.
 
 ## 문서 및 지원
 

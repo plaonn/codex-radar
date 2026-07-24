@@ -116,7 +116,7 @@ Task admission rules:
 
 ## VS Code Extension Release
 
-- Repository public installation docs가 가리키는 published baseline은 `0.4.4` public beta다. Source versions와 candidate notes가 그 이후로 전진할 수 있으므로 다음 배포 단위는 M2에서 명시적으로 묶는다. Source tree에는 Native Windows helper foundation과 `windows-latest` CI가 추가됐지만, 실제 Windows Codex hook smoke 전에는 Windows support-complete 또는 Windows public release로 선언하지 않는다.
+- Latest published baseline은 `0.4.12` public beta다. Source versions와 candidate notes가 그 이후로 전진할 수 있으므로 다음 배포 단위는 M2에서 명시적으로 묶는다. Source tree에는 Native Windows helper foundation과 `windows-latest` CI가 추가됐지만, 실제 Windows Codex hook smoke 전에는 Windows support-complete 또는 Windows public release로 선언하지 않는다.
 - GitHub Release readiness와 Marketplace publish는 별도 milestone로 유지한다.
 - Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
 - GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.

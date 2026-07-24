@@ -798,8 +798,9 @@ def diagnose_helper(
 
 
 def hook_fragment(hook_command: Path) -> Dict[str, Any]:
-    resolved = str(hook_command.expanduser().resolve())
-    command = subprocess.list2cmdline([resolved]) if is_windows() else shlex.quote(resolved)
+    expanded = hook_command.expanduser()
+    stable_path = str(expanded.parent.resolve() / expanded.name)
+    command = subprocess.list2cmdline([stable_path]) if is_windows() else shlex.quote(stable_path)
     hooks: Dict[str, Any] = {}
     for event in HOOK_EVENTS:
         entry: Dict[str, Any] = {"type": "command", "command": command, "timeout": 5}

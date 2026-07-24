@@ -2,6 +2,18 @@
 
 All notable changes for the Codex Radar VS Code extension are tracked here.
 
+## 0.4.19
+
+### Changed
+
+- Consolidate the post-`0.4.12` extension work into the next public-beta candidate.
+- Align packaged installation guidance with the published `v0.4.12` baseline while preserving the current source behavior.
+
+### Boundaries
+
+- Keep GitHub Release publication separate from candidate preparation and validation.
+- Do not publish to the VS Code Marketplace or claim Native Windows support complete before the real hook-to-sidebar smoke.
+
 ## 0.4.18
 
 ### Changed
