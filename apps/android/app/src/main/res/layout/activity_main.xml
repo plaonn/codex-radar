@@ -1,0 +1,20 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+    <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Radar Cockpit" android:textSize="24sp" android:textStyle="bold" />
+    <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="8dp" />
+    <TextView android:id="@+id/profile" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="4dp" />
+    <Button android:id="@+id/attention" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:visibility="gone" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="12dp">
+        <Button android:id="@+id/connect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connect fixture" />
+        <Button android:id="@+id/reconnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Reconnect" />
+        <Button android:id="@+id/disconnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Disconnect" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <Button android:id="@+id/poll_attention" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Poll fixture attention" />
+        <Button android:id="@+id/fixture_error" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fixture error" />
+    </LinearLayout>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:id="@+id/content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingTop="12dp" />
+    </ScrollView>
+</LinearLayout>

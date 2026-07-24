@@ -126,6 +126,18 @@ Privacy and stability boundary:
 
 Mobile SSH read protocol은 helper runtime `0.4.12`의 stable `codex-radar mobile rpc` foreground JSONL command다. SSH client가 process lifetime과 reconnect를 소유하고, protocol v1 initialize 후 기존 display-state v1과 명시적으로 negotiated된 bounded transcript-preview v1/v2만 반환한다. Inbound JSONL request frames are capped at 1 MiB; an oversized frame returns the path-free `request_frame_too_large` error and terminates without parsing or executing it. `attention/poll`의 첫 호출은 connection-local baseline만 만들고, 이후 foreground poll에서 새 `waiting_approval` 또는 `running`/`tool_running`에서 `done`으로의 transition을 sanitized event로 출력한다. EOF/disconnect 뒤에는 새 process에서 initialize, current-state read, 새 baseline을 수행하며 missed-event replay를 보장하지 않는다. `scripts/read-protocol-stage0.py`는 동일 Python core를 호출하는 compatibility evidence이고 `tests/fixtures/mobile-rpc-v1.json`은 Android A2용 deterministic fixture다. Network listener, daemon, background delivery, raw path, shared read state, remote write는 범위 밖이다. 세부 계약과 검증은 [Stage 0 proposal](proposals/mobile-ssh-read-protocol-stage0.md)을 따른다.
 
+Android A2 fixture cockpit은 `apps/android/`에 격리된
+`dev.codexradar.cockpit` Kotlin/platform-Views debug app이다. Canonical mobile
+RPC framing과 display-state v1/transcript-preview v2 goldens에서 richer UI
+scenario를 기계적으로 생성하고 hash drift check로 검증한다. Fixture
+transport, protocol parser, domain reducer, UI state를 분리하며 host가 준
+`display_status`, `archive_state`, `requires_attention`을 사용한다. Host
+profile, disconnected/connecting/connected/error/reconnect, Attention-first
+project grouping, opaque session navigation, explicit bounded memory-only
+preview, fresh-baseline foreground attention banner/tap을 제공한다. Manifest는
+network/background permission이나 component를 선언하지 않으며 SSH,
+credential, persistence, remote-write implementation을 포함하지 않는다.
+
 - Display state schema: [schemas/display-state-v1.schema.json](schemas/display-state-v1.schema.json).
 - Transcript preview schemas: immutable [v1](schemas/transcript-preview-v1.schema.json) and timestamped [v2](schemas/transcript-preview-v2.schema.json).
 - Display state는 raw `cwd`, transcript/rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다.
@@ -354,6 +366,10 @@ Transcript skim output은 흔한 secret-like token을 best-effort로 redact하�
 
 - `PYTHONPATH=src python3 -m unittest discover`
 - `python3 -m compileall src tests`
+- `cd apps/android && python3 tools/check_fixture_drift.py --check`
+- `cd apps/android && python3 tools/privacy_negative_check.py`
+- `cd apps/android && ./gradlew testDebugUnitTest lintDebug assembleDebug compileDebugAndroidTestKotlin`
+- booted local emulator: `cd apps/android && ./gradlew connectedDebugAndroidTest`
 - 현재 테스트는 hook event normalization/cache update, no-default event log, config/pruning, stale display status, session filters, transcript skim/redaction, TUI project grouping, TUI resume guard, status watcher, shell completion, VS Code sidebar/dashboard/preview view model/manifest, extension-local read-state pruning을 보호한다.
 
 ## Non-goals
