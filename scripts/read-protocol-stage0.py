@@ -9,6 +9,7 @@ from typing import Iterable, Optional
 
 from codex_radar.mobile_rpc import (
     ATTENTION_STATUSES,
+    MAX_REQUEST_FRAME_BYTES,
     PROTOCOL,
     PROTOCOL_VERSION,
     RUNNING_STATUSES,

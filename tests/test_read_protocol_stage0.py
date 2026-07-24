@@ -213,6 +213,61 @@ class ReadProtocolStage0Tests(unittest.TestCase):
         self.assertEqual("unknown_method", messages[3]["error"]["code"])
         self.assertEqual({"shutdown": True}, messages[4]["result"])
 
+    def test_request_frame_limit_accepts_just_below_and_at_limit(self) -> None:
+        for frame_size in (protocol.MAX_REQUEST_FRAME_BYTES - 1, protocol.MAX_REQUEST_FRAME_BYTES):
+            with self.subTest(frame_size=frame_size):
+                request = _padded_initialize_request(frame_size)
+                stdout = io.StringIO()
+                result = protocol.run_protocol(
+                    io.BytesIO(request + b"\n"),
+                    stdout,
+                    io.StringIO(),
+                    state_reader=lambda: _state(),
+                    preview_reader=lambda _session_id, _limit, _version: {},
+                )
+                messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+                self.assertEqual(frame_size, len(request))
+                self.assertEqual(0, result)
+                self.assertEqual("codex-radar.read-protocol", messages[0]["result"]["protocol"])
+
+    def test_oversized_request_frame_is_path_free_and_terminates_without_execution(self) -> None:
+        oversized = _padded_initialize_request(protocol.MAX_REQUEST_FRAME_BYTES + 1)
+        state_reads = []
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        result = protocol.run_protocol(
+            io.BytesIO(oversized + b"\n" + b'{"id":2,"method":"state/read"}\n'),
+            stdout,
+            stderr,
+            state_reader=lambda: state_reads.append(True) or _state(),
+            preview_reader=lambda _session_id, _limit, _version: {},
+        )
+
+        messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+        self.assertEqual(0, result)
+        self.assertEqual([], state_reads)
+        self.assertEqual("", stderr.getvalue())
+        self.assertEqual([{"id": None, "error": {"code": "request_frame_too_large"}}], messages)
+        self.assertNotIn("padding", stdout.getvalue())
+
+    def test_oversized_missing_newline_terminates_without_partial_execution(self) -> None:
+        oversized = _padded_initialize_request(protocol.MAX_REQUEST_FRAME_BYTES + 1)
+        stdout = io.StringIO()
+
+        protocol.run_protocol(
+            io.BytesIO(oversized),
+            stdout,
+            io.StringIO(),
+            state_reader=lambda: self.fail("oversized input must not execute"),
+            preview_reader=lambda _session_id, _limit, _version: {},
+        )
+
+        self.assertEqual(
+            [{"id": None, "error": {"code": "request_frame_too_large"}}],
+            [json.loads(line) for line in stdout.getvalue().splitlines()],
+        )
+
     def test_rejects_unnegotiated_preview_and_invalid_display_contract(self) -> None:
         session = protocol.ReadProtocolSession(
             state_reader=lambda: {"raw": "/private/path"},
@@ -243,3 +298,21 @@ class ReadProtocolStage0Tests(unittest.TestCase):
             )
         with self.assertRaisesRegex(protocol.ProtocolError, "display_state_contract_invalid"):
             session.handle({"id": 3, "method": "state/read"})
+
+
+def _padded_initialize_request(frame_size: int) -> bytes:
+    request = {
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocol_versions": [1],
+            "preview_contract_versions": [1, 2],
+            "padding": "",
+        },
+    }
+    encoded = json.dumps(request, separators=(",", ":")).encode("utf-8")
+    request["params"]["padding"] = "x" * (frame_size - len(encoded))
+    encoded = json.dumps(request, separators=(",", ":")).encode("utf-8")
+    if len(encoded) != frame_size:
+        raise AssertionError("unexpected JSON frame size")
+    return encoded

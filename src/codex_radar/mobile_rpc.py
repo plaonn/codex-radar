@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Mapping, Optional, TextIO
+from typing import Any, BinaryIO, Callable, Dict, Iterable, Mapping, Optional, TextIO
 
 from .export_adapter import ExportAdapterError, export_display_state, export_transcript_preview
 from .transcript_preview import MAX_PREVIEW_LIMIT
@@ -16,6 +16,7 @@ PROTOCOL_VERSION = 1
 SUPPORTED_PREVIEW_VERSIONS = (1, 2)
 ATTENTION_STATUSES = {"waiting_approval"}
 RUNNING_STATUSES = {"running", "tool_running"}
+MAX_REQUEST_FRAME_BYTES = 1024 * 1024
 
 
 class ProtocolError(Exception):
@@ -46,6 +47,28 @@ def _response(request_id: str | int, result: Mapping[str, Any]) -> Dict[str, Any
 def _error(request_id: Any, code: str) -> Dict[str, Any]:
     safe_id = request_id if isinstance(request_id, (str, int)) and not isinstance(request_id, bool) else None
     return {"id": safe_id, "error": {"code": code}}
+
+
+def _read_request_frame(stdin: TextIO | BinaryIO) -> tuple[str | None, bool]:
+    """Read one JSONL frame without materializing more than its byte limit."""
+    frame = stdin.readline(MAX_REQUEST_FRAME_BYTES + 1)
+    if not frame:
+        return None, False
+
+    if isinstance(frame, bytes):
+        has_newline = frame.endswith(b"\n")
+        frame_size = len(frame) - (1 if has_newline else 0)
+        if frame_size > MAX_REQUEST_FRAME_BYTES:
+            return None, True
+        return frame.decode("utf-8"), False
+
+    # Text streams are retained for unit-test injection. Production reads use
+    # sys.stdin.buffer below, so the read itself is bounded in bytes.
+    has_newline = frame.endswith("\n")
+    frame_size = len(frame.encode("utf-8")) - (1 if has_newline else 0)
+    if frame_size > MAX_REQUEST_FRAME_BYTES:
+        return None, True
+    return frame, False
 
 
 class ReadProtocolSession:
@@ -177,7 +200,7 @@ class ReadProtocolSession:
 
 
 def run_protocol(
-    stdin: TextIO,
+    stdin: TextIO | BinaryIO,
     stdout: TextIO,
     stderr: TextIO,
     *,
@@ -185,13 +208,20 @@ def run_protocol(
     preview_reader: Callable[[str, int, int], Dict[str, Any]],
 ) -> int:
     session = ReadProtocolSession(state_reader=state_reader, preview_reader=preview_reader)
-    for line in stdin:
+    while True:
         request_id: Any = None
         try:
-            request = json.loads(line)
-            if isinstance(request, dict):
-                request_id = request.get("id")
-            messages, should_shutdown = session.handle(request)
+            line, oversized = _read_request_frame(stdin)
+            if line is None and not oversized:
+                break
+            if oversized:
+                messages, should_shutdown = [_error(None, "request_frame_too_large")], True
+            else:
+                assert line is not None
+                request = json.loads(line)
+                if isinstance(request, dict):
+                    request_id = request.get("id")
+                messages, should_shutdown = session.handle(request)
         except json.JSONDecodeError:
             messages, should_shutdown = [_error(None, "invalid_json")], False
         except ProtocolError as exc:
@@ -209,7 +239,7 @@ def run_protocol(
 
 def run_mobile_rpc(*, state_dir: Optional[Path] = None, codex_home: Optional[Path] = None) -> int:
     return run_protocol(
-        sys.stdin, sys.stdout, sys.stderr,
+        getattr(sys.stdin, "buffer", sys.stdin), sys.stdout, sys.stderr,
         state_reader=lambda: export_display_state(state_dir, codex_home=codex_home),
         preview_reader=lambda session_id, limit, version: export_transcript_preview(
             session_id, limit=limit, contract_version=version, state_dir=state_dir, codex_home=codex_home

@@ -149,7 +149,8 @@ but it must have one documented stable entrypoint and must not overload
 - Exit: an installed helper exposes one documented read-only command with the
   Stage 0 contract and no R12 write authority.
 
-Current truth: complete in helper runtime `0.4.11` as `codex-radar mobile rpc`.
+Current truth: ready for A1 acceptance in helper runtime `0.4.12` as
+`codex-radar mobile rpc`, with a 1 MiB inbound request-frame bound.
 The implementation reuses one Python core with the Stage 0 spike and provides
 `tests/fixtures/mobile-rpc-v1.json` for A2; it does not authorize A2.
 
