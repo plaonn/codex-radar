@@ -408,6 +408,12 @@ def main() -> int:
             bin_dir, helper_version = build_and_install_helper(temp)
             stage = "connected-android-tests"
             run([str(ANDROID / "gradlew"), "connectedDebugAndroidTest"], cwd=ANDROID)
+            stage = "reinstall-a4-test-packages"
+            run(
+                [str(ANDROID / "gradlew"), "installDebug", "installDebugAndroidTest"],
+                cwd=ANDROID,
+                capture_output=True,
+            )
             stage = "a4-live-contract"
             run(["adb", "-s", emulator_serial, "logcat", "-c"])
             stage = "keystore-identity"
