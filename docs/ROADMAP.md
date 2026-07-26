@@ -30,6 +30,7 @@ Task admission rules:
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
 | M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
+| M4B | Android personal-device pilot | watching | Connect and authorize one USB Android device for the disposable A5.0 smoke |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -99,6 +100,18 @@ Task admission rules:
 - Exit criterion: a real Android device or emulator connects to one user-selected POSIX host over SSH, launches the packaged read-only protocol, groups threads by project, shows attention/status and bounded preview, reports foreground attention transitions, and safely reconciles current state after reconnect.
 - Non-goals: background service or push delivery, OS notifications, remote thread resume/send/archive, shared read state, multi-host aggregation, remote HTTP listener, Play Store/public APK publication, Native Windows validation, and R12 read/write protocol unification.
 - Decision boundary: the Android foreground cockpit MVP phase is complete for the accepted emulator plus disposable POSIX-host evidence boundary. This completion does not activate or authorize physical-device support, Android signing/publication, APK/AAB/store delivery, public support commitments, production hosts or credentials, paid services, background execution, credential-policy expansion, Ed25519 support, or any remote write action. Each requires a separate trigger and contract.
+
+## M4B: Android Personal-Device Pilot
+
+- Status: `watching`; the bounded A5 design is approved, but no physical device is currently admitted or claimed.
+- Root outcome: validate the accepted foreground cockpit on one actual Android device before introducing a personal host or Android signing boundary.
+- Design contract: [Android physical-device pilot A5](proposals/android-physical-device-pilot-a5.md).
+- Ordered packages:
+  1. A5.0: use USB `adb reverse` to connect one physical device to a disposable loopback-only SSH host and synthetic Radar state; validate installation, Android Keystore identity, host pinning, production transport, foreground lifecycle, debug replace/update observation, privacy, and cleanup;
+  2. A5.1: only after explicit A5.0 acceptance and fresh user authorization, run the same read-only foreground workflow against one user-selected existing POSIX SSH host.
+- Next admission boundary: the user connects exactly one compatible Android device, enables and authorizes USB debugging, and explicitly starts the disposable A5.0 run. Until then its dashboard task remains unclaimed and watching.
+- Exit criterion: A5.0 and A5.1 each have exact-commit evidence and separate explicit acceptance, and the personal-host pilot demonstrates useful foreground state, bounded preview, attention, disconnect, and reconnect without weakening trust, credential, privacy, or remote-write boundaries.
+- Decision boundary: A5 does not authorize release signing, durable APK/AAB delivery, Play Store/public publication, background operation, push/notification, remote writes, Ed25519 support, automated host configuration, production credential capture, or public device-support claims. Signing and distribution require a later A6 proposal and explicit user decision.
 
 ## M5: Distribution Channel Expansion
 
