@@ -37,3 +37,17 @@ python3 tools/privacy_negative_check.py
 ./gradlew connectedDebugAndroidTest
 ./gradlew app:dependencies --configuration debugRuntimeClasspath
 ```
+
+The final A4 end-to-end harness owns a clean local emulator, builds and installs
+the source helper wheel through the disposable packaged-helper installer, and
+uses only loopback-bound user-mode SSH servers plus synthetic Radar/Codex state:
+
+```sh
+cd apps/android
+python3 tools/run_a4_smoke.py
+```
+
+It requires the `Medium_Phone_API_36.1` AVD, `adb`, `emulator`, `uv`,
+`ssh-keygen`, and `/usr/sbin/sshd`. It refuses to share an already-running
+Android device and always removes its emulator, SSH processes, keys, installed
+helper, and synthetic state.
