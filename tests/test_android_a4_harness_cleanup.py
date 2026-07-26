@@ -100,6 +100,50 @@ class A4HarnessCleanupTest(unittest.TestCase):
                 )
         self.assertIsNotNone(process.poll())
 
+    def test_transition_failure_terminates_process(self):
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys,time; "
+                    "print('a4_step=waiting_ready', flush=True); "
+                    "time.sleep(60)"
+                ),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        sessions = {
+            "opaque-preview": {"status": "done", "display_state": "done"},
+        }
+        with (
+            mock.patch.object(A4.subprocess, "Popen", return_value=process),
+            mock.patch.object(
+                A4, "persist_sessions", side_effect=RuntimeError("injected")
+            ),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "injected"):
+                A4.instrument_with_transitions(
+                    "emulator-test",
+                    [],
+                    Path("/unused"),
+                    sessions,
+                    timeout_seconds=5,
+                )
+        self.assertIsNotNone(process.poll())
+
+    def test_app_private_scan_has_bounded_timeout(self):
+        with mock.patch.object(
+            A4.subprocess,
+            "run",
+            side_effect=subprocess.TimeoutExpired(["adb"], 30),
+        ) as run:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                A4.app_private_bytes("emulator-test")
+        self.assertEqual(30, run.call_args.kwargs["timeout"])
+
     def test_artifact_privacy_failure_still_removes_artifacts(self):
         with tempfile.TemporaryDirectory() as raw:
             android = Path(raw)

@@ -394,6 +394,7 @@ def instrument_with_transitions(
     assert process.stdout is not None
     output: list[str] = []
     lines: queue.Queue[str | None] = queue.Queue()
+    reader: threading.Thread | None = None
 
     def read_output() -> None:
         try:
@@ -402,58 +403,52 @@ def instrument_with_transitions(
         finally:
             lines.put(None)
 
-    reader = threading.Thread(target=read_output, daemon=True)
-    reader.start()
-    deadline = time.monotonic() + timeout_seconds
-    while True:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
+    try:
+        reader = threading.Thread(target=read_output, daemon=True)
+        reader.start()
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError("a4_foreground_instrumentation_timeout")
+            try:
+                line = lines.get(timeout=min(0.1, remaining))
+            except queue.Empty:
+                continue
+            if line is None:
+                break
+            output.append(line)
+            if "a4_step=waiting_ready" in line:
+                sessions["opaque-preview"]["status"] = "waiting_approval"
+                sessions["opaque-preview"]["display_state"] = "waiting_approval"
+                persist_sessions(state, sessions)
+            elif "a4_step=running_done" in line:
+                sessions["opaque-running"]["status"] = "done"
+                sessions["opaque-running"]["display_state"] = "done"
+                persist_sessions(state, sessions)
+            elif "a4_step=backgrounded" in line:
+                sessions["opaque-offline"]["status"] = "waiting_approval"
+                sessions["opaque-offline"]["display_state"] = "waiting_approval"
+                persist_sessions(state, sessions)
+        try:
+            returncode = process.wait(timeout=3)
+        except subprocess.TimeoutExpired as exception:
+            raise RuntimeError("a4_foreground_instrumentation_timeout") from exception
+        text = "".join(output)
+        if returncode != 0 or "OK (1 test)" not in text:
+            raise RuntimeError("a4_foreground_instrumentation_failed")
+        return text
+    finally:
+        if process.poll() is None:
             process.terminate()
             try:
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=3)
+        if reader is not None:
             reader.join(timeout=1)
-            process.stdout.close()
-            raise RuntimeError("a4_foreground_instrumentation_timeout")
-        try:
-            line = lines.get(timeout=min(0.1, remaining))
-        except queue.Empty:
-            continue
-        if line is None:
-            break
-        output.append(line)
-        if "a4_step=waiting_ready" in line:
-            sessions["opaque-preview"]["status"] = "waiting_approval"
-            sessions["opaque-preview"]["display_state"] = "waiting_approval"
-            persist_sessions(state, sessions)
-        elif "a4_step=running_done" in line:
-            sessions["opaque-running"]["status"] = "done"
-            sessions["opaque-running"]["display_state"] = "done"
-            persist_sessions(state, sessions)
-        elif "a4_step=backgrounded" in line:
-            sessions["opaque-offline"]["status"] = "waiting_approval"
-            sessions["opaque-offline"]["display_state"] = "waiting_approval"
-            persist_sessions(state, sessions)
-    try:
-        returncode = process.wait(timeout=3)
-    except subprocess.TimeoutExpired:
-        process.terminate()
-        try:
-            process.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=3)
-        reader.join(timeout=1)
         process.stdout.close()
-        raise RuntimeError("a4_foreground_instrumentation_timeout")
-    reader.join(timeout=1)
-    process.stdout.close()
-    text = "".join(output)
-    if returncode != 0 or "OK (1 test)" not in text:
-        raise RuntimeError("a4_foreground_instrumentation_failed")
-    return text
 
 
 def app_private_bytes(serial: str) -> bytes:
@@ -465,6 +460,7 @@ def app_private_bytes(serial: str) -> bytes:
         ["adb", "-s", serial, "exec-out", "run-as", "dev.codexradar.cockpit", "sh", "-c", command],
         check=True,
         capture_output=True,
+        timeout=30,
     ).stdout
 
 
@@ -476,8 +472,11 @@ def android_test_artifact_roots() -> tuple[Path, ...]:
 
 
 def remove_android_test_artifacts() -> None:
-    for root in android_test_artifact_roots():
+    roots = android_test_artifact_roots()
+    for root in roots:
         shutil.rmtree(root, ignore_errors=True)
+    if any(root.exists() for root in roots):
+        raise RuntimeError("a4_android_test_artifact_cleanup_failed")
 
 
 def scan_and_remove_android_test_artifacts() -> None:
