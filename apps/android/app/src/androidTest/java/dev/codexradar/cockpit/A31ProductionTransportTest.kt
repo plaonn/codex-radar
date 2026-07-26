@@ -31,6 +31,7 @@ class A31ProductionTransportTest {
     private val alias = AndroidKeystoreP256Identity.aliasFor(profileId)
 
     @Test fun prepare_non_exportable_keystore_key() {
+        assumeTrue(arguments.getString("a31_prepare_key") == "true")
         val provider = AndroidKeystoreP256Identity(profileId, alias)
         val pair = provider.createKeyPair()
         assertNull(pair.private.encoded)

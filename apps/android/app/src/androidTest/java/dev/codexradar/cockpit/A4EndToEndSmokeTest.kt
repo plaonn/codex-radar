@@ -34,6 +34,7 @@ class A4EndToEndSmokeTest {
     private val alias = AndroidKeystoreP256Identity.aliasFor(profileId)
 
     @Test fun prepare_non_exportable_keystore_key() {
+        assumeTrue(arguments.getString("a4_prepare_key") == "true")
         context.getSharedPreferences("host_profile_v1", Context.MODE_PRIVATE).edit().clear().commit()
         AndroidKeystoreP256Identity(profileId, alias).delete()
         val identity = AndroidKeystoreP256Identity(profileId, alias)

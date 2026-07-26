@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import pwd
+import queue
 import re
 import shutil
 import socket
@@ -70,40 +71,52 @@ def start_emulator(temp: Path) -> tuple[subprocess.Popen[str], str, object]:
     if not emulator:
         raise RuntimeError("android_emulator_unavailable")
     log = (temp / "emulator.log").open("w+", encoding="utf-8")
-    process = subprocess.Popen(
-        [
-            emulator,
-            "-avd",
-            AVD,
-            "-no-window",
-            "-no-audio",
-            "-no-boot-anim",
-            "-no-snapshot",
-            "-wipe-data",
-            "-gpu",
-            "swiftshader_indirect",
-        ],
-        stdout=log,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    deadline = time.monotonic() + 30
+    process: subprocess.Popen[str] | None = None
     serial = ""
-    while time.monotonic() < deadline:
-        devices = subprocess.run(
-            ["adb", "devices"], capture_output=True, text=True, check=True
-        ).stdout.splitlines()[1:]
-        serials = [line.split()[0] for line in devices if line.strip() and line.startswith("emulator-")]
-        if len(serials) == 1:
-            serial = serials[0]
-            break
-        if process.poll() is not None:
-            raise RuntimeError("emulator_start_failed")
-        time.sleep(0.5)
-    if not serial:
-        raise RuntimeError("emulator_serial_unavailable")
-    wait_for_boot(serial)
-    return process, serial, log
+    try:
+        process = subprocess.Popen(
+            [
+                emulator,
+                "-avd",
+                AVD,
+                "-no-window",
+                "-no-audio",
+                "-no-boot-anim",
+                "-no-snapshot",
+                "-wipe-data",
+                "-gpu",
+                "swiftshader_indirect",
+            ],
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            devices = subprocess.run(
+                ["adb", "devices"], capture_output=True, text=True, check=True
+            ).stdout.splitlines()[1:]
+            serials = [
+                line.split()[0]
+                for line in devices
+                if line.strip() and line.startswith("emulator-")
+            ]
+            if len(serials) == 1:
+                serial = serials[0]
+                break
+            if process.poll() is not None:
+                raise RuntimeError("emulator_start_failed")
+            time.sleep(0.5)
+        if not serial:
+            raise RuntimeError("emulator_serial_unavailable")
+        wait_for_boot(serial)
+        return process, serial, log
+    except BaseException:
+        if process is not None:
+            stop_emulator(process, serial, log)
+        else:
+            log.close()
+        raise
 
 
 def stop_emulator(process: subprocess.Popen[str], serial: str, log: object) -> None:
@@ -181,6 +194,9 @@ def prepare_public_key(serial: str) -> str:
             "instrument",
             "-w",
             "-r",
+            "-e",
+            "a4_prepare_key",
+            "true",
             "-e",
             "class",
             f"{TEST_CLASS}#prepare_non_exportable_keystore_key",
@@ -341,6 +357,7 @@ def instrument_with_transitions(
     arguments: list[str],
     state: Path,
     sessions: dict[str, dict[str, object]],
+    timeout_seconds: float = 60,
 ) -> str:
     command = [
         "adb",
@@ -360,7 +377,36 @@ def instrument_with_transitions(
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     assert process.stdout is not None
     output: list[str] = []
-    for line in process.stdout:
+    lines: queue.Queue[str | None] = queue.Queue()
+
+    def read_output() -> None:
+        try:
+            for line in process.stdout:
+                lines.put(line)
+        finally:
+            lines.put(None)
+
+    reader = threading.Thread(target=read_output, daemon=True)
+    reader.start()
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+            reader.join(timeout=1)
+            process.stdout.close()
+            raise RuntimeError("a4_foreground_instrumentation_timeout")
+        try:
+            line = lines.get(timeout=min(0.1, remaining))
+        except queue.Empty:
+            continue
+        if line is None:
+            break
         output.append(line)
         if "a4_step=waiting_ready" in line:
             sessions["opaque-preview"]["status"] = "waiting_approval"
@@ -374,7 +420,20 @@ def instrument_with_transitions(
             sessions["opaque-offline"]["status"] = "waiting_approval"
             sessions["opaque-offline"]["display_state"] = "waiting_approval"
             persist_sessions(state, sessions)
-    returncode = process.wait(timeout=60)
+    try:
+        returncode = process.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        process.terminate()
+        try:
+            process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=3)
+        reader.join(timeout=1)
+        process.stdout.close()
+        raise RuntimeError("a4_foreground_instrumentation_timeout")
+    reader.join(timeout=1)
+    process.stdout.close()
     text = "".join(output)
     if returncode != 0 or "OK (1 test)" not in text:
         raise RuntimeError("a4_foreground_instrumentation_failed")
@@ -391,6 +450,40 @@ def app_private_bytes(serial: str) -> bytes:
         check=True,
         capture_output=True,
     ).stdout
+
+
+def android_test_artifact_roots() -> tuple[Path, ...]:
+    return (
+        ANDROID / "app" / "build" / "outputs" / "androidTest-results",
+        ANDROID / "app" / "build" / "reports" / "androidTests",
+    )
+
+
+def remove_android_test_artifacts() -> None:
+    for root in android_test_artifact_roots():
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def scan_and_remove_android_test_artifacts() -> None:
+    roots = android_test_artifact_roots()
+    leaked = False
+    try:
+        for root in roots:
+            if not root.exists():
+                continue
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                data = path.read_bytes()
+                if b"_public_key_openssh=" in data or any(
+                    canary.encode("utf-8") in data for canary in CANARIES
+                ):
+                    leaked = True
+        if leaked:
+            raise RuntimeError("a4_android_test_artifact_privacy_failed")
+    finally:
+        for root in roots:
+            shutil.rmtree(root, ignore_errors=True)
 
 
 def main() -> int:
@@ -414,7 +507,10 @@ def main() -> int:
             stage = "packaged-helper"
             bin_dir, helper_version = build_and_install_helper(temp)
             stage = "connected-android-tests"
+            remove_android_test_artifacts()
             run([str(ANDROID / "gradlew"), "connectedDebugAndroidTest"], cwd=ANDROID)
+            stage = "android-test-artifact-privacy"
+            scan_and_remove_android_test_artifacts()
             stage = "reinstall-a4-test-packages"
             run(
                 [str(ANDROID / "gradlew"), "installDebug", "installDebugAndroidTest"],

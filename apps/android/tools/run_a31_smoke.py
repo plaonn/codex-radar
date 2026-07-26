@@ -162,30 +162,37 @@ def write_sshd_config(
 
 def start_sshd(config: Path, log: Path) -> tuple[subprocess.Popen[str], object]:
     handle = log.open("w+", encoding="utf-8")
-    run(["/usr/sbin/sshd", "-t", "-f", str(config)])
-    server = subprocess.Popen(
-        ["/usr/sbin/sshd", "-D", "-e", "-f", str(config)],
-        stdout=subprocess.DEVNULL,
-        stderr=handle,
-        text=True,
-    )
-    port = int(
-        next(
-            line.split()[1]
-            for line in config.read_text(encoding="utf-8").splitlines()
-            if line.startswith("Port ")
+    server: subprocess.Popen[str] | None = None
+    try:
+        run(["/usr/sbin/sshd", "-t", "-f", str(config)])
+        server = subprocess.Popen(
+            ["/usr/sbin/sshd", "-D", "-e", "-f", str(config)],
+            stdout=subprocess.DEVNULL,
+            stderr=handle,
+            text=True,
         )
-    )
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline:
-        if server.poll() is not None:
-            raise RuntimeError("disposable_sshd_start_failed")
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
-                return server, handle
-        except OSError:
-            time.sleep(0.05)
-    raise RuntimeError("disposable_sshd_not_listening")
+        port = int(
+            next(
+                line.split()[1]
+                for line in config.read_text(encoding="utf-8").splitlines()
+                if line.startswith("Port ")
+            )
+        )
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            if server.poll() is not None:
+                raise RuntimeError("disposable_sshd_start_failed")
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                    return server, handle
+            except OSError:
+                time.sleep(0.05)
+        raise RuntimeError("disposable_sshd_not_listening")
+    except BaseException:
+        if server is not None:
+            stop_server(server)
+        handle.close()
+        raise
 
 
 def interrupt_after_auth(server: subprocess.Popen[str], log: Path) -> None:
@@ -205,7 +212,8 @@ def interrupt_after_auth(server: subprocess.Popen[str], log: Path) -> None:
 def prepare_public_key() -> str:
     completed = run(
         [
-            "adb", "shell", "am", "instrument", "-w", "-r", "-e", "class",
+            "adb", "shell", "am", "instrument", "-w", "-r",
+            "-e", "a31_prepare_key", "true", "-e", "class",
             (
                 "dev.codexradar.cockpit.A31ProductionTransportTest"
                 "#prepare_non_exportable_keystore_key"
