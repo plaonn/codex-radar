@@ -4,7 +4,7 @@ Observed 2026-07-26 on a fresh, wipe-data Android API 36 emulator against only
 loopback-bound disposable user-mode SSH servers and synthetic Radar/Codex
 state.
 
-- Source under test: `c025a5cc1089b84b051c23e7b76c050b5ad80ca9`.
+- Source under test: `087a79573365860d959fb5d8d50215fdffe21d3a`.
 - Android: `Medium_Phone_API_36.1`, emulator `36.1.9.0`, app
   `0.2.0-a3.1`.
 - Host: OpenSSH `10.2p1` on loopback, reached only through the documented
@@ -29,6 +29,12 @@ Every disposable SSH process, packaged-helper install, key, synthetic state
 directory, and emulator was removed. It did not change system SSH, firewall,
 Remote Login, an OS user, global Codex configuration, provider state, or any
 real Radar/Codex data.
+
+Generic connected tests gate disposable public-key status export. Their result
+artifacts are scanned for key/status and privacy canaries, then removed before
+the live contract proceeds. Injected failure tests also verify cleanup when
+emulator or SSH startup fails, instrumentation exceeds its deadline, or an
+artifact privacy scan rejects retained output.
 
 Acceptance commands:
 
