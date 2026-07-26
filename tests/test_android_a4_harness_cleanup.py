@@ -7,6 +7,10 @@ from pathlib import Path
 from unittest import mock
 
 
+if sys.platform == "win32":
+    raise unittest.SkipTest("A4 disposable POSIX harness tests are not supported on Windows")
+
+
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / "apps" / "android" / "tools"
 sys.path.insert(0, str(TOOLS))
