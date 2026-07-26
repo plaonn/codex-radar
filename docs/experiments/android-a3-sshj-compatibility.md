@@ -23,6 +23,8 @@ the same Keystore and exact-pin contracts.
 
 - A per-profile `AndroidKeyStore` key is EC P-256, implements `ECKey`, and has
   no encoded private-key material.
+- The spike emits the public key directly in OpenSSH `authorized_keys` format;
+  no X.509-to-OpenSSH host conversion or private material is involved.
 - An unknown host key is captured for explicit SHA-256 fingerprint review and
   rejected before authentication.
 - An exact algorithm and fingerprint pin reconnects; a changed pin hard-fails
@@ -30,14 +32,20 @@ the same Keystore and exact-pin contracts.
 - SSHJ authenticates using the Keystore-owned private key without export,
   import, password, keyboard-interactive authentication, or software-key
   storage.
-- A command channel executes exactly `codex-radar mobile rpc`. The disposable
-  host forced-command guard observed two exact commands, no PTY for either, and
-  both helper processes exited after background/close.
+- A command channel executes exactly `codex-radar mobile rpc`. Disposable host
+  forced-command guards observed the exact command and no PTY.
 - The helper was an isolated install of runtime `0.4.12` using disposable,
   synthetic Radar state. `initialize` and `state/read` crossed the bounded
   JSONL session and reused the accepted A2 domain parser.
 - A fresh reconnect starts a new SSH process and protocol baseline. No replay
   path exists in the spike.
+- Remote `shutdown`/EOF, command exit, and a forced SSH transport loss
+  automatically close protocol, command, session, and SSH ownership without
+  calling `onBackground`. Explicit background close remains idempotent.
+- Remote stderr is read and discarded on a dedicated bounded drain. The real
+  smoke sent one bounded diagnostic, while focused instrumentation verifies
+  `MAX` is discarded and `MAX + 1` closes with `diagnostic_too_large`; no
+  diagnostic content is exposed.
 - Outbound and inbound frames accept `MAX` and reject `MAX + 1` before writing
   or parsing. Malformed JSON, duplicate response ids, unexpected ids, and
   incompatible protocol versions poison the connection.
@@ -74,8 +82,13 @@ can include host details.
 
 - Android JVM unit suite: passed.
 - Android lint, debug assembly, and Android-test compilation: passed.
-- Emulator instrumentation: 10 tests passed, including the real SSHJ/Keystore
-  smoke and the existing A2 fixture cockpit UI test.
+- Emulator protocol/lifecycle instrumentation: 9 tests passed.
+- Existing A2 fixture cockpit UI instrumentation: 1 test passed.
+- The two-phase real SSH smoke: 1 test, 0 failures. Its public-safe scenario
+  manifest is `android-a3-sshj-smoke-result.json`.
+- The normal Gradle connected suite is run without host arguments after the
+  smoke. Its retained XML is green and marks the separately prepared real-host
+  test skipped rather than pretending Gradle owns host authorization.
 - Repository Python unit suite and compileall: passed.
 - Fixture drift and Android privacy-negative checks: passed.
 - Disposable app/test packages, SSH host, host keys, public-key authorization,
@@ -84,3 +97,28 @@ can include host details.
 The experiment does not claim production transport, physical-device support,
 background execution, publication, imported credentials, remote writes, A3.1,
 or A4.
+
+## Reproducible two-phase smoke
+
+The real smoke cannot honestly be a single fresh-install Gradle test. Android
+creates the non-exportable key inside the installed app, and the disposable
+host must authorize its public half before authentication. Test ordering cannot
+replace that explicit trust ceremony.
+
+1. Build and install the debug app and test APK once.
+2. Run only
+   `A3SshjCompatibilityTest#prepare_non_exportable_keystore_key`.
+3. Copy the emitted `a3_public_key_openssh` value, unchanged, into the
+   disposable host's forced-command `authorized_keys`.
+4. Start the loopback-only normal and forced-loss sshd fixtures.
+5. Run only
+   `A3SshjCompatibilityTest#sshj_keystore_pin_exec_protocol_reconnect_and_cleanup`
+   with the disposable host, normal port, loss port, and user runner arguments.
+6. Sanitize the runner result into the checked-in public scenario manifest.
+7. Run `connectedDebugAndroidTest` without host arguments last. The real-host
+   method is expected to skip; all hermetic protocol/lifecycle and A2 UI tests
+   must pass.
+
+Running both preparation and authentication in an unordered full-class
+invocation is invalid evidence. A fresh Gradle install may rotate the Keystore
+key before the host has authorized it.

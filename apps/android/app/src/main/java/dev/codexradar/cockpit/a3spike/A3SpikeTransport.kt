@@ -21,6 +21,9 @@ import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.PublicKey
 import java.util.Base64
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 const val MAX_JSONL_FRAME_BYTES = 1_048_576
 const val RADAR_COMMAND = "codex-radar mobile rpc"
@@ -98,6 +101,14 @@ class AndroidKeystoreP256(private val profileId: String) : KeyProvider {
     override fun getPrivate(): java.security.PrivateKey = keyPair().private
     override fun getPublic(): PublicKey = keyPair().public
     override fun getType(): KeyType = KeyType.ECDSA256
+
+    /** Public authorization material only; the profile id and private key are never included. */
+    fun openSshPublicKey(): String {
+        val publicKey = keyPair().public
+        val type = KeyType.fromKey(publicKey).toString()
+        val blob = Buffer.PlainBuffer().putPublicKey(publicKey).compactData
+        return "$type ${Base64.getEncoder().encodeToString(blob)} codex-radar-android"
+    }
 }
 
 class ProtocolViolation(val code: String) : Exception(code)
@@ -196,6 +207,64 @@ sealed class SpikeResult {
 }
 
 /**
+ * Owns post-connect termination. Remote EOF/exit, SSH loss, or oversized
+ * diagnostic input closes every resource exactly once; stderr bytes are discarded.
+ */
+class PostConnectLifecycle(
+    private val closeOwnedResources: () -> Unit,
+    private val maxDiagnosticBytes: Int = 8_192,
+) {
+    private val terminated = AtomicBoolean(false)
+    private val closed = CountDownLatch(1)
+    @Volatile private var terminalCode: String? = null
+
+    fun remoteEnded() = terminate("remote_eof")
+    fun sshLost() = terminate("ssh_disconnected")
+
+    fun drainStderr(input: InputStream): Thread = Thread {
+        var total = 0
+        val buffer = ByteArray(1_024)
+        try {
+            while (!terminated.get()) {
+                val count = input.read(buffer)
+                if (count < 0) return@Thread
+                total += count
+                if (total > maxDiagnosticBytes) {
+                    terminate("diagnostic_too_large")
+                    return@Thread
+                }
+            }
+        } catch (_: Exception) {
+            if (!terminated.get()) sshLost()
+        }
+    }.apply {
+        name = "codex-radar-a3-stderr"
+        isDaemon = true
+        start()
+    }
+
+    fun explicitClose() {
+        if (terminated.compareAndSet(false, true)) {
+            closeOwnedResources()
+            closed.countDown()
+        }
+    }
+
+    fun awaitClosed(timeoutMillis: Long): Boolean =
+        closed.await(timeoutMillis, TimeUnit.MILLISECONDS)
+
+    fun failureCode(): String? = terminalCode
+
+    private fun terminate(code: String) {
+        if (terminated.compareAndSet(false, true)) {
+            terminalCode = code
+            closeOwnedResources()
+            closed.countDown()
+        }
+    }
+}
+
+/**
  * Compatibility-spike transport only. It is intentionally not wired into MainActivity.
  * Calling close on background/disconnect closes command, session, and SSH in ownership order.
  */
@@ -204,9 +273,11 @@ class SshjRadarSpike : Closeable {
     private var session: Session? = null
     private var command: Session.Command? = null
     private var protocol: BoundedJsonlSession? = null
+    private var lifecycle: PostConnectLifecycle? = null
 
     fun connect(profile: SpikeHostProfile): SpikeResult {
         close()
+        lifecycle = null
         val verifier = ExactHostKeyVerifier(profile)
         var stage = "host"
         return try {
@@ -240,7 +311,34 @@ class SshjRadarSpike : Closeable {
             val ownedProtocol = BoundedJsonlSession(ownedCommand.inputStream, ownedCommand.outputStream)
             protocol = ownedProtocol
             stage = "protocol"
-            SpikeResult.Connected(ownedProtocol.initializeAndReadState())
+            val state = ownedProtocol.initializeAndReadState()
+            val ownedLifecycle = PostConnectLifecycle(::releaseOwnedResources)
+            lifecycle = ownedLifecycle
+            client.transport.disconnectListener = net.schmizz.sshj.transport.DisconnectListener { _, _ ->
+                Thread {
+                    ownedLifecycle.sshLost()
+                }.apply {
+                    name = "codex-radar-a3-disconnect"
+                    isDaemon = true
+                    start()
+                }
+            }
+            ownedLifecycle.drainStderr(ownedCommand.errorStream)
+            Thread {
+                try {
+                    ownedCommand.join()
+                } catch (_: Exception) {
+                    ownedLifecycle.sshLost()
+                    return@Thread
+                }
+                if (client.transport.isRunning) ownedLifecycle.remoteEnded()
+                else ownedLifecycle.sshLost()
+            }.apply {
+                name = "codex-radar-a3-command"
+                isDaemon = true
+                start()
+            }
+            SpikeResult.Connected(state)
         } catch (_: ProtocolViolation) {
             close()
             SpikeResult.Failed("protocol_failed")
@@ -269,7 +367,27 @@ class SshjRadarSpike : Closeable {
 
     fun onBackground() = close()
 
+    fun requestRemoteShutdown(): Boolean = try {
+        protocol?.call("shutdown")?.optBoolean("shutdown") == true
+    } catch (_: Exception) {
+        false
+    }
+
+    fun awaitAutomaticClose(timeoutMillis: Long): Boolean =
+        lifecycle?.awaitClosed(timeoutMillis) ?: false
+
+    fun terminalFailureCode(): String? = lifecycle?.failureCode()
+
     override fun close() {
+        val ownedLifecycle = lifecycle
+        if (ownedLifecycle != null) {
+            ownedLifecycle.explicitClose()
+            return
+        }
+        releaseOwnedResources()
+    }
+
+    private fun releaseOwnedResources() {
         protocol?.close()
         runCatching { command?.close() }
         runCatching { session?.close() }
