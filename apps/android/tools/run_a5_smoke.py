@@ -42,12 +42,16 @@ def adb(serial: str, *arguments: str, **kwargs: object) -> subprocess.CompletedP
     return run(["adb", "-s", serial, *arguments], **kwargs)
 
 
-def discover_device() -> tuple[str, str, str]:
-    lines = run(["adb", "devices"], capture_output=True).stdout.splitlines()[1:]
-    devices = [line.split()[0] for line in lines if line.strip() and line.endswith("\tdevice")]
+def discover_device() -> tuple[str, str, str, str]:
+    lines = run(["adb", "devices", "-l"], capture_output=True).stdout.splitlines()[1:]
+    devices = [
+        (line.split()[0], line)
+        for line in lines
+        if line.strip() and len(line.split()) >= 2 and line.split()[1] == "device"
+    ]
     if len(devices) != 1:
         raise RuntimeError("a5_exactly_one_authorized_device_required")
-    serial = devices[0]
+    serial, device_line = devices[0]
     if adb(serial, "shell", "getprop", "ro.kernel.qemu", capture_output=True).stdout.strip() == "1":
         raise RuntimeError("a5_physical_device_required")
     api = adb(
@@ -58,7 +62,8 @@ def discover_device() -> tuple[str, str, str]:
     ).stdout.strip()
     if not api.isdigit() or not re.fullmatch(r"[A-Za-z0-9_.-]+", abi):
         raise RuntimeError("a5_device_metadata_unavailable")
-    return serial, api, abi
+    transport = "usb" if " usb:" in device_line else "paired-wireless"
+    return serial, api, abi, transport
 
 
 def package_installed(serial: str, package: str) -> bool:
@@ -204,8 +209,7 @@ def main() -> int:
     if run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True).stdout.strip():
         raise RuntimeError("a5_source_must_be_clean")
 
-    serial, api_level, abi = discover_device()
-    transport = "paired-wireless" if ":" in serial else "usb"
+    serial, api_level, abi, transport = discover_device()
     assert_packages_absent(serial)
     gradle_env = os.environ.copy()
     gradle_env["ANDROID_SERIAL"] = serial
