@@ -2,31 +2,36 @@ package dev.codexradar.cockpit.a3spike
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import net.schmizz.sshj.DefaultSecurityProviderConfig
-import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.common.Buffer
-import net.schmizz.sshj.common.KeyType
-import net.schmizz.sshj.common.SecurityUtils
-import net.schmizz.sshj.connection.channel.direct.Session
-import net.schmizz.sshj.transport.kex.ECDHNistP
-import net.schmizz.sshj.transport.verification.HostKeyVerifier
-import net.schmizz.sshj.userauth.keyprovider.KeyProvider
+import com.jcraft.jsch.ChannelExec
+import com.jcraft.jsch.HostKey
+import com.jcraft.jsch.HostKeyRepository
+import com.jcraft.jsch.Identity
+import com.jcraft.jsch.IdentityRepository
+import com.jcraft.jsch.JSch
+import com.jcraft.jsch.Session
+import com.jcraft.jsch.UserInfo
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
+import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.MessageDigest
-import java.security.PublicKey
+import java.security.Signature
+import java.security.interfaces.ECPublicKey
 import java.util.Base64
+import java.util.Vector
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 const val MAX_JSONL_FRAME_BYTES = 1_048_576
 const val RADAR_COMMAND = "codex-radar mobile rpc"
+private const val ECDSA_P256 = "ecdsa-sha2-nistp256"
 
 data class SpikeHostProfile(
     val id: String,
@@ -39,39 +44,68 @@ data class SpikeHostProfile(
 
 data class PresentedHostKey(val algorithm: String, val sha256: String)
 
-/** Exact-pin verifier. Unknown and changed keys both stop key exchange before authentication. */
-class ExactHostKeyVerifier(private val profile: SpikeHostProfile) : HostKeyVerifier {
-    @Volatile var presented: PresentedHostKey? = null
-        private set
+private fun sshString(value: ByteArray): ByteArray =
+    ByteBuffer.allocate(Int.SIZE_BYTES + value.size).putInt(value.size).put(value).array()
 
-    override fun verify(hostname: String, port: Int, key: PublicKey): Boolean {
-        val identity = PresentedHostKey(KeyType.fromKey(key).toString(), sshSha256(key))
-        presented = identity
-        return hostname == profile.host &&
-            port == profile.port &&
-            profile.pinnedAlgorithm == identity.algorithm &&
-            profile.pinnedSha256 == identity.sha256
-    }
+private fun concat(vararg values: ByteArray): ByteArray =
+    ByteArrayOutputStream(values.sumOf { it.size }).apply { values.forEach(::write) }.toByteArray()
 
-    override fun findExistingAlgorithms(hostname: String, port: Int): List<String> =
-        if (hostname == profile.host && port == profile.port && profile.pinnedAlgorithm != null) {
-            listOf(profile.pinnedAlgorithm)
-        } else {
-            emptyList()
-        }
-
-    companion object {
-        fun sshSha256(key: PublicKey): String {
-            val blob = Buffer.PlainBuffer().putPublicKey(key).compactData
-            val digest = MessageDigest.getInstance("SHA-256").digest(blob)
-            return "SHA256:" + Base64.getEncoder().withoutPadding().encodeToString(digest)
-        }
-    }
+private fun fixedUnsigned(value: BigInteger, size: Int): ByteArray {
+    val source = value.toByteArray().dropWhile { it == 0.toByte() }.toByteArray()
+    require(source.size <= size)
+    return ByteArray(size - source.size) + source
 }
 
-/** One non-exportable AndroidKeyStore P-256 key, deterministically owned by immutable profile id. */
-class AndroidKeystoreP256(private val profileId: String) : KeyProvider {
-    val alias: String = "codex-radar-a3-" + MessageDigest.getInstance("SHA-256")
+fun ecPublicBlob(key: ECPublicKey): ByteArray {
+    val point = byteArrayOf(0x04) +
+        fixedUnsigned(key.w.affineX, 32) +
+        fixedUnsigned(key.w.affineY, 32)
+    return concat(
+        sshString(ECDSA_P256.toByteArray(Charsets.US_ASCII)),
+        sshString("nistp256".toByteArray(Charsets.US_ASCII)),
+        sshString(point),
+    )
+}
+
+private fun positiveMpInt(value: ByteArray): ByteArray {
+    var first = 0
+    while (first < value.lastIndex && value[first] == 0.toByte()) first++
+    val unsigned = value.copyOfRange(first, value.size)
+    return if ((unsigned[0].toInt() and 0x80) != 0) byteArrayOf(0) + unsigned else unsigned
+}
+
+private data class DerLength(val value: Int, val next: Int)
+
+private fun derLength(value: ByteArray, offset: Int): DerLength {
+    val first = value[offset].toInt() and 0xff
+    if ((first and 0x80) == 0) return DerLength(first, offset + 1)
+    val count = first and 0x7f
+    require(count in 1..2)
+    var length = 0
+    repeat(count) { length = (length shl 8) or (value[offset + 1 + it].toInt() and 0xff) }
+    return DerLength(length, offset + 1 + count)
+}
+
+/** Convert Android's DER ECDSA result into RFC 5656's SSH signature blob. */
+private fun sshEcdsaSignature(der: ByteArray): ByteArray {
+    require(der.isNotEmpty() && der[0] == 0x30.toByte())
+    val sequence = derLength(der, 1)
+    require(sequence.next + sequence.value == der.size)
+    require(der[sequence.next] == 0x02.toByte())
+    val rLength = derLength(der, sequence.next + 1)
+    val r = der.copyOfRange(rLength.next, rLength.next + rLength.value)
+    val sTag = rLength.next + rLength.value
+    require(der[sTag] == 0x02.toByte())
+    val sLength = derLength(der, sTag + 1)
+    val s = der.copyOfRange(sLength.next, sLength.next + sLength.value)
+    require(sLength.next + sLength.value == der.size)
+    val inner = concat(sshString(positiveMpInt(r)), sshString(positiveMpInt(s)))
+    return concat(sshString(ECDSA_P256.toByteArray(Charsets.US_ASCII)), sshString(inner))
+}
+
+/** One app-generated, non-exportable AndroidKeyStore P-256 identity. */
+class AndroidKeystoreP256(private val profileId: String) : Identity {
+    val alias: String = "codex-radar-a3f-" + MessageDigest.getInstance("SHA-256")
         .digest(profileId.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
         .take(32)
@@ -98,25 +132,88 @@ class AndroidKeystoreP256(private val profileId: String) : KeyProvider {
         return KeyPair(publicKey, privateKey)
     }
 
-    override fun getPrivate(): java.security.PrivateKey = keyPair().private
-    override fun getPublic(): PublicKey = keyPair().public
-    override fun getType(): KeyType = KeyType.ECDSA256
+    override fun setPassphrase(passphrase: ByteArray?): Boolean = passphrase == null
 
-    /** Public authorization material only; the profile id and private key are never included. */
-    fun openSshPublicKey(): String {
-        val publicKey = keyPair().public
-        val type = KeyType.fromKey(publicKey).toString()
-        val blob = Buffer.PlainBuffer().putPublicKey(publicKey).compactData
-        return "$type ${Base64.getEncoder().encodeToString(blob)} codex-radar-android"
+    override fun getPublicKeyBlob(): ByteArray = ecPublicBlob(keyPair().public as ECPublicKey)
+
+    override fun getSignature(data: ByteArray): ByteArray? = getSignature(data, ECDSA_P256)
+
+    override fun getSignature(data: ByteArray, alg: String): ByteArray? {
+        if (alg != ECDSA_P256) return null
+        return try {
+            val signature = Signature.getInstance("SHA256withECDSA")
+            signature.initSign(keyPair().private)
+            signature.update(data)
+            sshEcdsaSignature(signature.sign())
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    override fun getAlgName(): String = ECDSA_P256
+    override fun getName(): String = "codex-radar-android-keystore"
+    override fun isEncrypted(): Boolean = false
+    override fun clear() = Unit
+
+    /** Public authorization material only; private and profile material are never included. */
+    fun openSshPublicKey(): String =
+        "$ECDSA_P256 ${Base64.getEncoder().encodeToString(publicKeyBlob)} codex-radar-android"
+}
+
+private class SingleIdentityRepository(private val identity: Identity) : IdentityRepository {
+    override fun getName(): String = "android-keystore-only"
+    override fun getStatus(): Int = IdentityRepository.RUNNING
+    override fun getIdentities(): Vector<Identity> = Vector<Identity>().apply { add(identity) }
+    override fun add(identity: ByteArray?): Boolean = false
+    override fun remove(blob: ByteArray?): Boolean = false
+    override fun removeAll() = Unit
+}
+
+/**
+ * Memory-only exact-pin repository. Unknown and changed keys are rejected by
+ * StrictHostKeyChecking before JSch begins user authentication.
+ */
+class ExactHostKeyRepository(private val profile: SpikeHostProfile) : HostKeyRepository {
+    @Volatile var presented: PresentedHostKey? = null
+        private set
+
+    override fun check(host: String, key: ByteArray): Int {
+        val current = PresentedHostKey(
+            algorithm = HostKey(host, key).type,
+            sha256 = sshSha256(key),
+        )
+        presented = current
+        if (profile.pinnedAlgorithm == null || profile.pinnedSha256 == null) {
+            return HostKeyRepository.NOT_INCLUDED
+        }
+        return if (
+            current.algorithm == profile.pinnedAlgorithm &&
+            current.sha256 == profile.pinnedSha256
+        ) {
+            HostKeyRepository.OK
+        } else {
+            HostKeyRepository.CHANGED
+        }
+    }
+
+    override fun add(hostkey: HostKey?, ui: UserInfo?) = Unit
+    override fun remove(host: String?, type: String?) = Unit
+    override fun remove(host: String?, type: String?, key: ByteArray?) = Unit
+    override fun getKnownHostsRepositoryID(): String = "memory-exact-pin"
+    override fun getHostKey(): Array<HostKey> = emptyArray()
+    override fun getHostKey(host: String?, type: String?): Array<HostKey> = emptyArray()
+
+    companion object {
+        fun sshSha256(blob: ByteArray): String {
+            val digest = MessageDigest.getInstance("SHA-256").digest(blob)
+            return "SHA256:" + Base64.getEncoder().withoutPadding().encodeToString(digest)
+        }
     }
 }
 
 class ProtocolViolation(val code: String) : Exception(code)
 
-/**
- * Strict JSONL request/response boundary. It validates a complete frame before exposing it,
- * and any framing/id/version violation poisons this session.
- */
+/** Strict JSONL boundary: validate a complete bounded frame before exposing it. */
 class BoundedJsonlSession(
     private val input: InputStream,
     private val output: OutputStream,
@@ -172,7 +269,7 @@ class BoundedJsonlSession(
 
     fun readFrame(): JSONObject {
         if (failed) throw ProtocolViolation("connection_invalid")
-        val bytes = java.io.ByteArrayOutputStream(minOf(4096, maxBytes))
+        val bytes = ByteArrayOutputStream(minOf(4096, maxBytes))
         while (true) {
             val value = input.read()
             if (value == -1) fail("unexpected_eof")
@@ -206,10 +303,7 @@ sealed class SpikeResult {
     data class Failed(val code: String) : SpikeResult()
 }
 
-/**
- * Owns post-connect termination. Remote EOF/exit, SSH loss, or oversized
- * diagnostic input closes every resource exactly once; stderr bytes are discarded.
- */
+/** Owns remote EOF/loss termination and a bounded, discarded stderr drain. */
 class PostConnectLifecycle(
     private val closeOwnedResources: () -> Unit,
     private val maxDiagnosticBytes: Int = 8_192,
@@ -238,7 +332,7 @@ class PostConnectLifecycle(
             if (!terminated.get()) sshLost()
         }
     }.apply {
-        name = "codex-radar-a3-stderr"
+        name = "codex-radar-a3f-stderr"
         isDaemon = true
         start()
     }
@@ -265,76 +359,66 @@ class PostConnectLifecycle(
 }
 
 /**
- * Compatibility-spike transport only. It is intentionally not wired into MainActivity.
- * Calling close on background/disconnect closes command, session, and SSH in ownership order.
+ * mwiede/jsch fallback spike only. It is intentionally not wired into MainActivity.
+ * One foreground connection owns one non-PTY exact-command channel.
  */
-class SshjRadarSpike : Closeable {
-    private var ssh: SSHClient? = null
+class JschRadarSpike : Closeable {
     private var session: Session? = null
-    private var command: Session.Command? = null
+    private var command: ChannelExec? = null
     private var protocol: BoundedJsonlSession? = null
     private var lifecycle: PostConnectLifecycle? = null
 
     fun connect(profile: SpikeHostProfile): SpikeResult {
         close()
         lifecycle = null
-        val verifier = ExactHostKeyVerifier(profile)
+        val repository = ExactHostKeyRepository(profile)
         var stage = "host"
         return try {
-            // This SSHJ config disables forced BC selection before crypto initialization.
-            // Android/JCA can then route this non-exportable key to its owning Keystore provider.
-            val config = DefaultSecurityProviderConfig()
-            if (SecurityUtils.getSecurityProvider() != null) {
-                return SpikeResult.Failed("provider_conflict")
+            val identity = AndroidKeystoreP256(profile.id)
+            val jsch = JSch().apply {
+                setIdentityRepository(SingleIdentityRepository(identity))
+                setHostKeyRepository(repository)
             }
-            // Android's default JCA provider does not expose SSHJ's Curve25519 primitive.
-            // Keep the spike on the standard, host-supported ECDH P-256 exchange.
-            config.keyExchangeFactories = listOf(ECDHNistP.Factory256())
-            val client = SSHClient(config)
-            ssh = client
-            client.addHostKeyVerifier(verifier)
-            client.connect(profile.host, profile.port)
-            if (profile.pinnedAlgorithm == null || profile.pinnedSha256 == null) {
-                close()
-                return SpikeResult.HostReviewRequired(
-                    verifier.presented ?: return SpikeResult.Failed("host_key_unavailable"),
-                )
+            val ownedSession = jsch.getSession(profile.user, profile.host, profile.port).apply {
+                setConfig("StrictHostKeyChecking", "yes")
+                setConfig("PreferredAuthentications", "publickey")
+                setConfig("FingerprintHash", "sha-256")
             }
-            val key = AndroidKeystoreP256(profile.id)
-            stage = "authentication"
-            client.authPublickey(profile.user, key)
-            stage = "process"
-            val ownedSession = client.startSession()
             session = ownedSession
-            val ownedCommand = ownedSession.exec(RADAR_COMMAND)
+            stage = "authentication"
+            ownedSession.connect(10_000)
+
+            val ownedCommand = ownedSession.openChannel("exec") as ChannelExec
             command = ownedCommand
-            val ownedProtocol = BoundedJsonlSession(ownedCommand.inputStream, ownedCommand.outputStream)
+            ownedCommand.setPty(false)
+            ownedCommand.setCommand(RADAR_COMMAND)
+            val ownedLifecycle = PostConnectLifecycle(::releaseOwnedResources)
+            lifecycle = ownedLifecycle
+            // Start draining before exec/channel connect so remote diagnostics cannot block startup.
+            ownedLifecycle.drainStderr(ownedCommand.extInputStream)
+            stage = "process"
+            ownedCommand.connect(10_000)
+
+            val ownedProtocol = BoundedJsonlSession(
+                ownedCommand.inputStream,
+                ownedCommand.outputStream,
+            )
             protocol = ownedProtocol
             stage = "protocol"
             val state = ownedProtocol.initializeAndReadState()
-            val ownedLifecycle = PostConnectLifecycle(::releaseOwnedResources)
-            lifecycle = ownedLifecycle
-            client.transport.disconnectListener = net.schmizz.sshj.transport.DisconnectListener { _, _ ->
-                Thread {
-                    ownedLifecycle.sshLost()
-                }.apply {
-                    name = "codex-radar-a3-disconnect"
-                    isDaemon = true
-                    start()
-                }
-            }
-            ownedLifecycle.drainStderr(ownedCommand.errorStream)
             Thread {
-                try {
-                    ownedCommand.join()
-                } catch (_: Exception) {
-                    ownedLifecycle.sshLost()
-                    return@Thread
+                while (!ownedCommand.isClosed && ownedSession.isConnected) {
+                    try {
+                        Thread.sleep(25)
+                    } catch (_: InterruptedException) {
+                        ownedLifecycle.sshLost()
+                        return@Thread
+                    }
                 }
-                if (client.transport.isRunning) ownedLifecycle.remoteEnded()
+                if (ownedSession.isConnected) ownedLifecycle.remoteEnded()
                 else ownedLifecycle.sshLost()
             }.apply {
-                name = "codex-radar-a3-command"
+                name = "codex-radar-a3f-command"
                 isDaemon = true
                 start()
             }
@@ -344,18 +428,24 @@ class SshjRadarSpike : Closeable {
             SpikeResult.Failed("protocol_failed")
         } catch (_: Exception) {
             val unknown = profile.pinnedAlgorithm == null || profile.pinnedSha256 == null
-            val presented = verifier.presented
+            val presented = repository.presented
             close()
-            if (unknown && presented != null) SpikeResult.HostReviewRequired(presented)
-            else if (
+            if (unknown && presented != null) {
+                SpikeResult.HostReviewRequired(presented)
+            } else if (
                 presented != null &&
-                (profile.pinnedAlgorithm != presented.algorithm || profile.pinnedSha256 != presented.sha256)
+                (profile.pinnedAlgorithm != presented.algorithm ||
+                    profile.pinnedSha256 != presented.sha256)
             ) {
                 SpikeResult.Failed("host_key_mismatch")
             } else {
                 SpikeResult.Failed(
                     when (stage) {
-                        "authentication" -> "authentication_failed"
+                        "authentication" -> if (presented == null) {
+                            "ssh_connection_failed"
+                        } else {
+                            "authentication_failed"
+                        }
                         "process" -> "process_launch_failed"
                         "protocol" -> "protocol_failed"
                         else -> "ssh_connection_failed"
@@ -389,13 +479,10 @@ class SshjRadarSpike : Closeable {
 
     private fun releaseOwnedResources() {
         protocol?.close()
-        runCatching { command?.close() }
-        runCatching { session?.close() }
-        runCatching { ssh?.disconnect() }
-        runCatching { ssh?.close() }
+        runCatching { command?.disconnect() }
+        runCatching { session?.disconnect() }
         protocol = null
         command = null
         session = null
-        ssh = null
     }
 }

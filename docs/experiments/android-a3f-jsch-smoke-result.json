@@ -1,0 +1,29 @@
+{
+  "contract": "codex-radar.android-a3f-jsch-smoke",
+  "version": 1,
+  "surface": "Android API 36 emulator and disposable loopback POSIX sshd",
+  "dependency": "com.github.mwiede:jsch:2.28.5",
+  "host_key_matrix": {
+    "rsa-sha2": "passed",
+    "ecdsa-sha2-nistp256": "passed",
+    "ssh-ed25519": "failed_before_host_verifier"
+  },
+  "scenarios": {
+    "keystore_ec_p256_non_exportable": "passed",
+    "unknown_host_stops_before_authentication": "passed",
+    "exact_pin_reconnect": "passed",
+    "changed_pin_hard_failure": "passed",
+    "exact_command_without_pty": "passed",
+    "initialize_and_state_read_through_a2_parser": "passed",
+    "remote_eof_cleanup": "passed",
+    "explicit_background_cleanup": "passed",
+    "forced_ssh_loss_cleanup": "passed",
+    "bounded_stderr_discard": "passed"
+  },
+  "privacy": {
+    "private_key_exported": false,
+    "host_or_fingerprint_retained": false,
+    "raw_stderr_or_exception_text_retained": false,
+    "real_credentials_or_personal_radar_data": false
+  }
+}

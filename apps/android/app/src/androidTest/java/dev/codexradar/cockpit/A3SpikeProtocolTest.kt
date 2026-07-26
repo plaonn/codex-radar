@@ -9,6 +9,7 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.KeyPairGenerator
+import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -22,10 +23,11 @@ class A3SpikeProtocolTest {
     @Test fun host_key_requires_explicit_pin_then_matches_exact_identity() {
         val generator = KeyPairGenerator.getInstance("EC")
         generator.initialize(ECGenParameterSpec("secp256r1"))
-        val key = generator.generateKeyPair().public
+        val key = generator.generateKeyPair().public as ECPublicKey
+        val blob = ecPublicBlob(key)
         val unknown = SpikeHostProfile("immutable", "host.test", 22, "operator")
-        val review = ExactHostKeyVerifier(unknown)
-        assertFalse(review.verify("host.test", 22, key))
+        val review = ExactHostKeyRepository(unknown)
+        assertEquals(com.jcraft.jsch.HostKeyRepository.NOT_INCLUDED, review.check("host.test", blob))
         val presented = requireNotNull(review.presented)
         assertTrue(presented.sha256.startsWith("SHA256:"))
 
@@ -33,9 +35,11 @@ class A3SpikeProtocolTest {
             pinnedAlgorithm = presented.algorithm,
             pinnedSha256 = presented.sha256,
         )
-        assertTrue(ExactHostKeyVerifier(pinned).verify("host.test", 22, key))
-        assertFalse(ExactHostKeyVerifier(pinned.copy(pinnedSha256 = "SHA256:changed")).verify("host.test", 22, key))
-        assertFalse(ExactHostKeyVerifier(pinned).verify("other.test", 22, key))
+        assertEquals(com.jcraft.jsch.HostKeyRepository.OK, ExactHostKeyRepository(pinned).check("host.test", blob))
+        assertEquals(
+            com.jcraft.jsch.HostKeyRepository.CHANGED,
+            ExactHostKeyRepository(pinned.copy(pinnedSha256 = "SHA256:changed")).check("host.test", blob),
+        )
     }
 
     @Test fun outbound_accepts_max_and_rejects_max_plus_one_before_write() {
