@@ -29,7 +29,7 @@ Task admission rules:
 | M2P | `0.4.19` POSIX public-beta publication | complete | Reopen only for release verification drift |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
-| M4A | Android foreground cockpit MVP | active | Adopt A3 foreground SSH transport after A2 acceptance |
+| M4A | Android foreground cockpit MVP | active | Adopt a bounded A3.0 foreground SSH compatibility spike after A2 integration |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -85,7 +85,7 @@ Task admission rules:
 
 ## M4A: Android Foreground Cockpit MVP
 
-- Status: `active`; A1 packaged host read protocol is accepted and complete in helper runtime `0.4.12`, and A2 provides the fixture-only native Android cockpit. A3 foreground SSH transport remains unclaimed pending parent acceptance/readiness disposition.
+- Status: `active`; A1 packaged host read protocol is accepted and complete in helper runtime `0.4.12`, and A2 is integrated as the fixture-only native Android cockpit. A3.0 foreground SSH compatibility spike remains unclaimed and requires its separately bounded adoption; A3.1 and A4 remain gated behind its accepted result.
 - Root outcome: an Android app can use a user-owned foreground SSH connection to inspect host-local Radar projects, thread status, bounded redacted preview, and new attention transitions without opening a server port or gaining remote write authority.
 - Entry evidence: M4 Stage 0 negotiation/reconnect semantics are complete, shared display-state/preview contracts are active, and `v0.4.19` is the current POSIX public-beta baseline.
 - Design contract: [Android foreground cockpit MVP](proposals/android-foreground-cockpit-mvp.md).

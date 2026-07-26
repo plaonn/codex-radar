@@ -217,6 +217,8 @@ dependency, credential handling, background component, or remote write path.
 ## Current Disposition
 
 The MVP design is active. A1 is complete under its separately adopted execution
-contract. A2 is implemented under its fixture-only task and awaits parent
-acceptance/A3-readiness disposition. A3 live SSH, credential handling,
-background behavior, signing, and publication remain unauthorized.
+contract, and A2 is integrated as the fixture-only cockpit. A3.0 remains an
+unclaimed bounded compatibility spike; its accepted result is required before
+A3.1 production transport integration, while A4 remains separately gated.
+Live SSH, credential handling, background behavior, signing, and publication
+remain unauthorized.
