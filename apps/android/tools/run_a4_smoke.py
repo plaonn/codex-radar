@@ -410,6 +410,7 @@ def main() -> int:
             run([str(ANDROID / "gradlew"), "connectedDebugAndroidTest"], cwd=ANDROID)
             stage = "a4-live-contract"
             run(["adb", "-s", emulator_serial, "logcat", "-c"])
+            stage = "keystore-identity"
             public_key = prepare_public_key(emulator_serial)
             user = pwd.getpwuid(os.getuid()).pw_name
             state, codex_home = temp / "state", temp / "codex-home"
@@ -418,6 +419,7 @@ def main() -> int:
             authorized_keys.write_text(public_key + "\n", encoding="utf-8")
             authorized_keys.chmod(0o600)
             wrong_key = temp / "wrong-client"
+            stage = "disposable-key-material"
             run(["ssh-keygen", "-q", "-N", "", "-t", "ecdsa", "-b", "256", "-f", str(wrong_key)])
             wrong_authorized = temp / "wrong_authorized_keys"
             wrong_authorized.write_text(
@@ -434,6 +436,7 @@ def main() -> int:
             write_failure_wrapper(oversized_wrapper, "oversized")
 
             endpoints: dict[str, int] = {}
+            stage = "loopback-sshd"
             for name, keys, wrapper in (
                 ("normal", authorized_keys, normal_wrapper),
                 ("auth", wrong_authorized, normal_wrapper),
@@ -454,6 +457,7 @@ def main() -> int:
                 servers.append(start_sshd(config, temp / f"sshd-{name}.log"))
                 endpoints[name] = port
 
+            stage = "foreground-contract"
             flags: list[str] = []
             for key, value in (
                 ("a4_host", HOST_ALIAS),
@@ -482,6 +486,7 @@ def main() -> int:
             )
 
             normal_server, normal_handle = servers.pop(0)
+            stage = "host-key-mismatch"
             stop_server(normal_server)
             normal_handle.close()
             replacement_key = temp / "host-ecdsa-replacement"
@@ -526,6 +531,7 @@ def main() -> int:
                 raise RuntimeError("a4_host_key_mismatch_instrumentation_failed")
             results["same_endpoint_host_key_mismatch_hard_failure"] = "passed"
 
+            stage = "process-cleanup"
             for server, handle in servers:
                 stop_server(server)
                 handle.close()
@@ -537,6 +543,7 @@ def main() -> int:
             if observations.count("process-stopped") != observations.count("process-started"):
                 raise RuntimeError("foreground_process_cleanup_incomplete")
 
+            stage = "privacy-negative-scan"
             app_data = app_private_bytes(emulator_serial).decode("utf-8", errors="replace")
             logcat = run(
                 ["adb", "-s", emulator_serial, "logcat", "-d"], capture_output=True
@@ -548,6 +555,7 @@ def main() -> int:
             results["privacy_negative_scan"] = "passed"
             results["disposable_process_and_material_cleanup"] = "passed"
 
+            stage = "public-result"
             emulator_version = run(
                 ["emulator", "-version"], capture_output=True
             ).stdout.splitlines()[0]
