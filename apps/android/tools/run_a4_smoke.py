@@ -51,7 +51,14 @@ def wait_for_boot(serial: str, timeout: float = 180.0) -> None:
         )
         if completed.returncode == 0 and completed.stdout.strip() == "1":
             run(["adb", "-s", serial, "shell", "input", "keyevent", "82"])
-            return
+            package_manager = subprocess.run(
+                ["adb", "-s", serial, "shell", "cmd", "package", "list", "packages"],
+                capture_output=True,
+                text=True,
+            )
+            if package_manager.returncode == 0 and "package:android" in package_manager.stdout:
+                time.sleep(5)
+                return
         time.sleep(1)
     raise RuntimeError("emulator_boot_timeout")
 
