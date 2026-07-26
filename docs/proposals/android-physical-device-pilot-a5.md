@@ -5,9 +5,9 @@
 The first post-MVP Android use gate is split into two separately accepted
 packages:
 
-1. **A5.0 physical-device compatibility smoke** uses a USB-connected Android
-   device, `adb reverse`, and a disposable loopback-only SSH host with synthetic
-   Radar state.
+1. **A5.0 physical-device compatibility smoke** uses one explicitly authorized
+   physical Android device over USB ADB or paired wireless ADB, `adb reverse`,
+   and a disposable loopback-only SSH host with synthetic Radar state.
 2. **A5.1 personal-host pilot** uses one user-selected existing POSIX SSH host
    only after A5.0 is accepted and the user separately authorizes the real-host
    actions.
@@ -37,7 +37,7 @@ read-only foreground workflow is useful against one real user-owned host.
 
 ```text
 M4A accepted emulator evidence
-  -> A5.0 USB physical-device smoke
+  -> A5.0 authorized-ADB physical-device smoke
   -> explicit A5.0 acceptance
   -> fresh user authorization and host selection
   -> A5.1 personal-host read-only pilot
@@ -46,15 +46,18 @@ M4A accepted emulator evidence
 
 Completing one stage never authorizes the next stage.
 
-## A5.0: USB Physical-Device Compatibility Smoke
+## A5.0: ADB Physical-Device Compatibility Smoke
 
 ### Entry Conditions
 
 - M4A remains accepted with no unresolved Android transport or privacy
   regression.
-- The user connects one compatible Android device by USB, enables USB
-  debugging, accepts the workstation authorization prompt, and explicitly
-  starts the bounded device run.
+- The user connects one compatible Android device through either:
+  - USB debugging with the workstation authorization prompt accepted; or
+  - Android 11+ wireless debugging explicitly paired to the workstation on a
+    user-approved local network.
+- The user explicitly starts the bounded device run after the selected ADB
+  transport reports the device as authorized.
 - The harness resolves exactly one hardware device and fails closed when there
   are zero or multiple eligible devices.
 - No other Android or ADB writer owns the same device.
@@ -66,7 +69,8 @@ fingerprint, or personal path.
 
 ```text
 physical Android device
-  -> USB adb reverse tcp:<device-port> tcp:<host-port>
+  -> authorized ADB transport
+  -> adb reverse tcp:<device-port> tcp:<host-port>
   -> development-host loopback
   -> disposable user-mode sshd
   -> exact non-PTY command: codex-radar mobile rpc
@@ -76,13 +80,19 @@ physical Android device
 
 - Bind the disposable SSH server only to host loopback on an ephemeral port.
 - Map a device-local test port to that loopback port with `adb reverse`.
+- Treat USB and paired wireless ADB as harness control transports only.
+  Wireless ADB does not turn this smoke into a normal Wi-Fi/VPN/Internet SSH
+  reachability test.
 - Configure the temporary app profile for `127.0.0.1:<device-port>`.
 - Generate server keys, `authorized_keys`, configuration, Radar state, and
   transcript fixtures in one disposable directory.
 - Use the installed helper runtime `0.4.12` and the production JSch `2.28.5`
   transport.
-- Stop the SSH process, remove the reverse mapping and disposable directory,
-  clear the debug app, and release the device on success or failure.
+- Stop the SSH process, remove the harness-owned reverse mapping and disposable
+  directory, clear the debug app, and release the device on success or failure.
+- Do not revoke, forget, or persistently alter a pre-existing user-authorized
+  ADB pairing. Wireless endpoint addresses, pairing data, and device identifiers
+  must not enter retained logs or evidence.
 
 The harness must not enable system Remote Login, bind a LAN or public
 interface, edit global SSH or firewall configuration, use the operator's
@@ -91,7 +101,8 @@ default Codex/Radar state, or require elevated privileges.
 ### Installation Boundary
 
 - Build the current debug APK with the normal Android debug signing identity.
-- Install or replace only the debug application on the exact USB device.
+- Install or replace only the debug application on the exact selected physical
+  device.
 - Do not generate, import, or request a release signing key.
 - Do not upload or distribute the APK.
 - Exercise a same-identity debug replace/update to observe profile and
@@ -194,9 +205,10 @@ authorized by this A5 design.
 
 ## Decision Ownership
 
-- The user owns device access, USB-debugging authorization, real-host
-  selection, host configuration, fingerprint acceptance, signing keys,
-  distribution accounts, and any support or publication commitment.
+- The user owns device access, USB or wireless ADB authorization, local-network
+  trust, real-host selection, host configuration, fingerprint acceptance,
+  signing keys, distribution accounts, and any support or publication
+  commitment.
 - Codex may prepare and run the disposable A5.0 harness only after its entry
   conditions are satisfied and an exact task is claimed.
 - A5.1 requires a new exact task and fresh user authorization even after A5.0
