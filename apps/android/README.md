@@ -51,3 +51,20 @@ It requires the `Medium_Phone_API_36.1` AVD, `adb`, `emulator`, `uv`,
 `ssh-keygen`, and `/usr/sbin/sshd`. It refuses to share an already-running
 Android device and always removes its emulator, SSH processes, keys, installed
 helper, and synthetic state.
+
+The bounded A5.0 physical-device harness accepts exactly one explicitly
+authorized hardware device over USB ADB or an existing paired wireless ADB
+connection:
+
+```sh
+cd apps/android
+python3 tools/run_a5_smoke.py
+```
+
+It refuses pre-existing debug app packages, uses `adb reverse` only for
+device-to-loopback test routing, and removes only its own reverse mappings,
+packages, app state, SSH processes, and synthetic data. It never revokes an
+existing wireless pairing. Public output omits the device serial, wireless
+endpoint, model name, host username, paths, ports, fingerprints, and key
+material. A paired-wireless run proves the physical-device boundary only; it
+does not prove ordinary Wi-Fi, VPN, or Internet SSH reachability.
