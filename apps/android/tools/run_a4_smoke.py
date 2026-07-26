@@ -117,7 +117,11 @@ def stop_emulator(process: subprocess.Popen[str], serial: str, log: object) -> N
 def build_and_install_helper(temp: Path) -> tuple[Path, str]:
     dist = temp / "dist"
     dist.mkdir()
-    run(["uv", "build", "--wheel", "--out-dir", str(dist)], cwd=ROOT)
+    run(
+        ["uv", "build", "--wheel", "--out-dir", str(dist)],
+        cwd=ROOT,
+        capture_output=True,
+    )
     wheel = next(dist.glob("codex_radar-*.whl"))
     bundle = dist / "codex-radar-helper.zip"
     run(
@@ -130,6 +134,7 @@ def build_and_install_helper(temp: Path) -> tuple[Path, str]:
             str(bundle),
         ],
         cwd=ROOT,
+        capture_output=True,
     )
     extracted = temp / "bundle"
     with zipfile.ZipFile(bundle) as archive:
@@ -146,7 +151,8 @@ def build_and_install_helper(temp: Path) -> tuple[Path, str]:
             str(bin_dir),
             "install",
             str(bundle_dir),
-        ]
+        ],
+        capture_output=True,
     )
     help_text = run([str(bin_dir / "codex-radar"), "--help"], capture_output=True).stdout
     if "mobile" not in help_text:
@@ -364,7 +370,6 @@ def instrument_with_transitions(
     returncode = process.wait(timeout=60)
     text = "".join(output)
     if returncode != 0 or "OK (1 test)" not in text:
-        print(text, file=sys.stderr)
         raise RuntimeError("a4_foreground_instrumentation_failed")
     return text
 
@@ -588,4 +593,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except Exception as exception:
+        print(f"a4_smoke_failed:{type(exception).__name__}", file=sys.stderr)
+        raise SystemExit(1) from None
