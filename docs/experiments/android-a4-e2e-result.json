@@ -11,7 +11,7 @@
   "emulator": "Android emulator version 36.1.9.0 (build_id 13823996) (CL:N/A)",
   "helper_version": "0.4.12",
   "host_alias": "10.0.2.2",
-  "observed_at": "2026-07-26T15:55:58+00:00",
+  "observed_at": "2026-07-26T16:05:08+00:00",
   "operating_system_family": "Darwin",
   "privacy": {
     "private_key_exported": false,
@@ -19,7 +19,7 @@
     "real_credentials_or_personal_data": false,
     "screenshots_retained": false
   },
-  "repository_commit": "087a79573365860d959fb5d8d50215fdffe21d3a",
+  "repository_commit": "d48555314fcf9083e34d38fcd321f74043b9715f",
   "scenarios": {
     "android_keystore_authentication": "passed",
     "authentication_failure_sanitized": "passed",
