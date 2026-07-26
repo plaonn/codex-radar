@@ -4,7 +4,7 @@ Observed 2026-07-26 on a fresh, wipe-data Android API 36 emulator against only
 loopback-bound disposable user-mode SSH servers and synthetic Radar/Codex
 state.
 
-- Source under test: `3f4a76da6679dfc4fbd8b09a658d6a88cfef751d`.
+- Source under test: `c025a5cc1089b84b051c23e7b76c050b5ad80ca9`.
 - Android: `Medium_Phone_API_36.1`, emulator `36.1.9.0`, app
   `0.2.0-a3.1`.
 - Host: OpenSSH `10.2p1` on loopback, reached only through the documented
