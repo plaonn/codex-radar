@@ -3,10 +3,11 @@ package dev.codexradar.cockpit.domain
 /** Opaque host-owned identity. It is never interpreted as a path or persisted. */
 @JvmInline value class SessionId(val value: String)
 
-enum class ConnectionPhase { DISCONNECTED, CONNECTING, CONNECTED, ERROR }
+enum class ConnectionPhase { DISCONNECTED, CONNECTING, REVIEW_HOST, CONNECTED, ERROR }
 enum class ThreadStatus { WAITING_APPROVAL, RUNNING, TOOL_RUNNING, DONE, UNKNOWN }
 
 data class HostProfile(val label: String, val host: String, val port: Int, val user: String)
+data class HostKeyReview(val algorithm: String, val sha256: String)
 data class RadarSession(
     val id: SessionId,
     val project: String,
@@ -26,6 +27,7 @@ data class CockpitState(
     val preview: Preview? = null,
     val previewErrorCode: String? = null,
     val attention: Attention? = null,
+    val hostKeyReview: HostKeyReview? = null,
     val errorCode: String? = null,
 ) {
     /** Attention is first; remaining active threads retain project grouping. */
@@ -39,6 +41,7 @@ data class CockpitState(
 
 sealed interface CockpitEvent {
     data class Connect(val profile: HostProfile) : CockpitEvent
+    data class ReviewHostKey(val review: HostKeyReview) : CockpitEvent
     data class Connected(val sessions: List<RadarSession>) : CockpitEvent
     data class Failed(val code: String) : CockpitEvent
     data object Disconnect : CockpitEvent
@@ -50,9 +53,10 @@ sealed interface CockpitEvent {
 
 object CockpitReducer {
     fun reduce(old: CockpitState, event: CockpitEvent): CockpitState = when (event) {
-        is CockpitEvent.Connect -> old.copy(phase = ConnectionPhase.CONNECTING, profile = event.profile, errorCode = null, attention = null, preview = null, previewErrorCode = null)
-        is CockpitEvent.Connected -> old.copy(phase = ConnectionPhase.CONNECTED, sessions = event.sessions, errorCode = null)
-        is CockpitEvent.Failed -> old.copy(phase = ConnectionPhase.ERROR, errorCode = event.code, preview = null, previewErrorCode = null, attention = null)
+        is CockpitEvent.Connect -> old.copy(phase = ConnectionPhase.CONNECTING, profile = event.profile, errorCode = null, attention = null, hostKeyReview = null, preview = null, previewErrorCode = null)
+        is CockpitEvent.ReviewHostKey -> old.copy(phase = ConnectionPhase.REVIEW_HOST, hostKeyReview = event.review, errorCode = null, attention = null, preview = null, previewErrorCode = null)
+        is CockpitEvent.Connected -> old.copy(phase = ConnectionPhase.CONNECTED, sessions = event.sessions, hostKeyReview = null, errorCode = null)
+        is CockpitEvent.Failed -> old.copy(phase = ConnectionPhase.ERROR, errorCode = event.code, hostKeyReview = null, preview = null, previewErrorCode = null, attention = null)
         CockpitEvent.Disconnect -> CockpitState(phase = ConnectionPhase.DISCONNECTED, profile = old.profile)
         is CockpitEvent.Select -> if (old.sessions.any { it.id == event.sessionId }) old.copy(selected = event.sessionId, preview = null, previewErrorCode = null) else old
         is CockpitEvent.PreviewLoaded -> if (old.selected == event.preview.sessionId) old.copy(preview = event.preview, previewErrorCode = null) else old

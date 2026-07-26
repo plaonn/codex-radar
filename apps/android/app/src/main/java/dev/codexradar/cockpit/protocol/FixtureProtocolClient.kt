@@ -17,11 +17,14 @@ import org.json.JSONArray
  * A2-only transport. It replays the checked-in golden exchange and deliberately
  * has no socket, process, credential, or persistence capability.
  */
-class FixtureProtocolClient(private val context: Context) {
+class FixtureProtocolClient(private val context: Context) : CockpitProtocolClient {
     private val maxRequestFrameBytes = 1_048_576
     private var attentionBaselineEstablished = false
+    private var connectedSessions: List<RadarSession> = emptyList()
 
-    fun connect(profile: HostProfile, emit: (CockpitEvent) -> Unit) {
+    private val profile = HostProfile("Fixture host", "fixture.invalid", 22, "fixture")
+
+    override fun connect(emit: (CockpitEvent) -> Unit) {
         emit(CockpitEvent.Connect(profile))
         attentionBaselineEstablished = false
         Handler(Looper.getMainLooper()).post {
@@ -37,36 +40,41 @@ class FixtureProtocolClient(private val context: Context) {
                 val state = resultFor(root, "state/read")
                 check(state.getString("contract") == "codex-radar.display-state")
                 check(state.getInt("version") == 1)
-                emit(CockpitEvent.Connected(parseSessions(state.getJSONArray("sessions"))))
+                connectedSessions = MobileProtocolParser.parseSessions(state.getJSONArray("sessions"))
+                emit(CockpitEvent.Connected(connectedSessions))
             } catch (_: Exception) {
                 emit(CockpitEvent.Failed("fixture_unavailable"))
             }
         }
     }
 
-    fun readPreview(session: RadarSession, limit: Int, emit: (CockpitEvent) -> Unit) {
+    override fun readPreview(session: RadarSession, limit: Int, emit: (CockpitEvent) -> Unit) {
         val bounded = limit.coerceIn(1, 200)
         try {
             val result = resultFor(loadFixture(), "preview/read")
             check(result.getString("contract") == "codex-radar.transcript-preview")
             check(result.getInt("version") in 1..2)
             check(result.getString("session_id") == session.id.value)
-            val lines = result.getJSONArray("messages").strings("text")
-            emit(CockpitEvent.PreviewLoaded(Preview(session.id, lines.take(bounded), bounded)))
+            emit(CockpitEvent.PreviewLoaded(MobileProtocolParser.parsePreview(result, session.id, bounded)))
         } catch (_: Exception) {
             emit(CockpitEvent.PreviewFailed("fixture_preview_unavailable"))
         }
     }
 
     /** First poll establishes a baseline. A later fixture poll emits one foreground-only event. */
-    fun pollAttention(sessions: List<RadarSession>, emit: (CockpitEvent) -> Unit) {
+    override fun pollAttention(emit: (CockpitEvent) -> Unit) {
         if (!attentionBaselineEstablished) {
             attentionBaselineEstablished = true
             return
         }
-        sessions.firstOrNull { it.requiresAttention }?.let {
+        connectedSessions.firstOrNull { it.requiresAttention }?.let {
             emit(CockpitEvent.AttentionReceived(Attention(it.id, it.project, it.status)))
         }
+    }
+
+    override fun disconnect() {
+        attentionBaselineEstablished = false
+        connectedSessions = emptyList()
     }
 
     private fun loadFixture(): JSONObject {
@@ -84,24 +92,6 @@ class FixtureProtocolClient(private val context: Context) {
 
     /** Test values preserve host-supplied display fields without adding transport semantics. */
     companion object {
-        private fun parseSessions(values: JSONArray): List<RadarSession> = (0 until values.length()).map { index ->
-            val value = values.getJSONObject(index)
-            RadarSession(
-                id = SessionId(value.getString("session_id")),
-                project = value.getString("project"),
-                title = value.getString("session_id"),
-                status = when (value.getString("display_status")) {
-                    "waiting_approval" -> ThreadStatus.WAITING_APPROVAL
-                    "running" -> ThreadStatus.RUNNING
-                    "tool_running" -> ThreadStatus.TOOL_RUNNING
-                    "done" -> ThreadStatus.DONE
-                    else -> ThreadStatus.UNKNOWN
-                },
-                archived = value.optString("archive_state") == "archived",
-                requiresAttention = value.getBoolean("requires_attention"),
-            )
-        }
-        private fun JSONArray.strings(key: String): List<String> = (0 until length()).map { getJSONObject(it).getString(key) }
         fun scriptedSessions(): List<RadarSession> = listOf(
             RadarSession(SessionId("opaque-approval"), "Alpha", "Approval needed", ThreadStatus.WAITING_APPROVAL, requiresAttention = true),
             RadarSession(SessionId("opaque-running"), "Alpha", "Build", ThreadStatus.RUNNING),

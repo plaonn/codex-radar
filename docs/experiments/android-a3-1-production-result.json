@@ -1,0 +1,36 @@
+{
+  "contract": "codex-radar.android-a3.1-production-smoke",
+  "version": 1,
+  "observed_at": "2026-07-26",
+  "surface": "Android API 36 emulator and disposable loopback macOS sshd",
+  "dependency": "com.github.mwiede:jsch:2.28.5",
+  "runtime_transitive_dependencies": [],
+  "bouncy_castle_present": false,
+  "host_key_matrix": {
+    "rsa-sha2": "passed",
+    "ecdsa-sha2-nistp256": "passed",
+    "ssh-ed25519": "failed_before_authentication:unsupported_host_key"
+  },
+  "scenarios": {
+    "keystore_ec_p256_non_exportable": "passed",
+    "public_key_only_export": "passed",
+    "unknown_key_review_before_authentication": "passed",
+    "exact_pin_reconnect_and_mismatch": "passed",
+    "exact_command_without_pty": "passed",
+    "protocol_initialize_state_preview_attention_baseline": "passed",
+    "strict_utf8_and_1_mib_framing": "passed",
+    "remote_eof_explicit_close_ssh_loss": "passed",
+    "immediate_eof_terminal_order": "passed",
+    "sanitized_auth_process_protocol_failures": "passed",
+    "bounded_discarded_stderr": "passed",
+    "fixture_ui_and_profile_key_lifecycle": "passed",
+    "production_app_data_and_logcat_negative_scan": "passed"
+  },
+  "privacy": {
+    "real_credentials_or_personal_data": false,
+    "private_key_exported": false,
+    "protocol_or_preview_persisted": false,
+    "stderr_or_exception_text_retained": false,
+    "global_host_or_codex_configuration_changed": false
+  }
+}

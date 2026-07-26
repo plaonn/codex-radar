@@ -1,5 +1,6 @@
 package dev.codexradar.cockpit
 
+import android.content.Intent
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -12,7 +13,12 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityTest {
-    @get:Rule val activityRule = ActivityScenarioRule(MainActivity::class.java)
+    @get:Rule val activityRule = ActivityScenarioRule<MainActivity>(
+        Intent(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            MainActivity::class.java,
+        ).putExtra(MainActivity.EXTRA_FIXTURE_MODE, true),
+    )
 
     @Test fun fixture_ui_covers_connection_grouping_attention_preview_error_and_reconnect() {
         activityRule.scenario.onActivity { activity ->

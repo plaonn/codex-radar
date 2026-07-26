@@ -138,6 +138,23 @@ preview, fresh-baseline foreground attention banner/tap을 제공한다. Manifes
 network/background permission이나 component를 선언하지 않으며 SSH,
 credential, persistence, remote-write implementation을 포함하지 않는다.
 
+Android A3.1 production transport는 같은 domain/parser/UI boundary 뒤에
+`com.github.mwiede:jsch:2.28.5`를 둔다. 앱은 immutable selected profile
+하나, profile별 non-exportable AndroidKeyStore EC P-256 identity, public-key
+only export, exact host-key algorithm/SHA-256/blob pin을 소유한다. Session-local
+host-key allowlist는 RSA SHA-2와 ECDSA P-256이며 Ed25519-only negotiation은
+인증 전 `unsupported_host_key`로 종료한다. Unknown key는 algorithm과
+SHA-256 fingerprint를 명시적으로 승인해야 새 연결에서 인증을 시작하고,
+pin mismatch는 hard failure다. Exec channel은 PTY 없이 정확히
+`codex-radar mobile rpc`만 실행한다. stderr는 protocol initialize 전에
+즉시 drain/discard하며 8 KiB를 넘으면 연결을 닫는다. Android inbound
+JSONL도 strict UTF-8/1 MiB framing을 적용한다. `onStop`, disconnect, EOF,
+SSH loss는 resource를 닫고 reconnect는 새 SSH/process/protocol/baseline을
+만들며 replay하지 않는다. SharedPreferences에는 endpoint, Keystore alias,
+reviewed host pin만 저장하며 protocol state/preview/diagnostic은 저장하거나
+log하지 않는다. Background component, notification, provider mutation,
+remote write, signing/publication은 범위 밖이다.
+
 - Display state schema: [schemas/display-state-v1.schema.json](schemas/display-state-v1.schema.json).
 - Transcript preview schemas: immutable [v1](schemas/transcript-preview-v1.schema.json) and timestamped [v2](schemas/transcript-preview-v2.schema.json).
 - Display state는 raw `cwd`, transcript/rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다.

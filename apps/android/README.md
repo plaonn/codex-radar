@@ -1,33 +1,39 @@
-# Android fixture cockpit (A2)
+# Android foreground cockpit (A3.1)
 
-This is the fixture-only A2 shell for the foreground, read-only Radar cockpit.
-It does not contain SSH, credentials, host trust, a process launcher, a network
-listener, a background service, notifications, remote writes, logging, or
-preview persistence. A3 owns SSH and credential work under a separate contract.
+This native Android cockpit owns one foreground-only SSH connection to one
+immutable selected profile and launches the exact non-PTY command
+`codex-radar mobile rpc`. It has no background service, notifications, remote
+writes, listener, raw transcript access, or preview persistence.
 
-## Stack
+The production transport uses `com.github.mwiede:jsch:2.28.5` (Revised BSD).
+Its bundled JZlib code is Revised BSD and jBCrypt code is ISC; see
+`THIRD_PARTY_NOTICES.md`. Runtime dependency inspection must remain free of
+Bouncy Castle. The session-local host-key allowlist is RSA SHA-2 and ECDSA
+P-256. Ed25519-only hosts fail before authentication as
+`unsupported_host_key`.
 
-- Kotlin + native platform Views: small, account-free Android surface.
-- `minSdk 26`: covers supported platform APIs without compatibility UI layers.
-- `compileSdk 36`, `targetSdk 35`: installed SDK compatible build baseline.
-- Kotlin and AndroidX test libraries are Apache-2.0; JUnit 4 is EPL-1.0.
-- AGP `8.10.1` + Gradle `8.11.1` support compile SDK 36 on JDK 17.
+Each profile owns an AndroidKeyStore EC P-256 identity. The private key is
+non-exportable; the UI exposes only the OpenSSH public key. First contact shows
+the presented algorithm plus SHA-256 fingerprint, then persists the exact
+algorithm, digest, and key blob only after approval. A mismatch is a hard
+failure. Repair explicitly removes the pin and requires a fresh review.
 
-`tools/check_fixture_drift.py` derives the runtime asset and JVM-test resource
-from the canonical RPC framing plus `display-state-v1` and `transcript-preview-v2`
-goldens. `--check` rejects byte/hash drift; the script does not reinterpret
-host protocol semantics.
+JSONL is strict UTF-8, capped at 1 MiB per frame, and protocol data remains in
+memory. Stderr is drained immediately and discarded with an 8 KiB diagnostic
+cap before protocol initialization. Backgrounding, disconnect, EOF, and SSH
+loss close all resources. Reconnect creates fresh SSH/RPC state and does not
+replay missed attention events.
 
-## Commands
+The deterministic A2 fixture remains available only through the explicit
+instrumentation intent extra `dev.codexradar.FIXTURE_MODE`.
+
+## Verification
 
 ```sh
 cd apps/android
-python3 tools/check_fixture_drift.py        # regenerate after host fixture update
-./gradlew checkFixtureDrift                 # verify derived copies only
+python3 tools/check_fixture_drift.py --check
 python3 tools/privacy_negative_check.py
-./gradlew test lint assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug compileDebugAndroidTestKotlin
 ./gradlew connectedDebugAndroidTest
+./gradlew app:dependencies --configuration debugRuntimeClasspath
 ```
-
-`connectedDebugAndroidTest` requires a locally booted emulator. The app's
-fixture profile is presentation-only and deliberately cannot connect to a host.

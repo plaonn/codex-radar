@@ -216,9 +216,9 @@ dependency, credential handling, background component, or remote write path.
 
 ## Current Disposition
 
-The MVP design is active. A1 is complete under its separately adopted execution
-contract, and A2 is integrated as the fixture-only cockpit. A3.0 remains an
-unclaimed bounded compatibility spike; its accepted result is required before
-A3.1 production transport integration, while A4 remains separately gated.
-Live SSH, credential handling, background behavior, signing, and publication
-remain unauthorized.
+The MVP design is active. A1 and A2 are integrated. A3.0F was accepted and
+selected `mwiede/jsch` 2.28.5 without Bouncy Castle; A3.1 integrates that
+foreground transport under the adopted production contract. A4 remains
+separately gated on explicit A3.1 acceptance. Background behavior, signing,
+publication, remote writes, and credential-policy expansion remain
+unauthorized.
