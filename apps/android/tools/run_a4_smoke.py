@@ -397,13 +397,18 @@ def main() -> int:
     servers: list[tuple[subprocess.Popen[str], object]] = []
     results: dict[str, str] = {}
     temp_path = ""
+    stage = "initialize"
     with tempfile.TemporaryDirectory(prefix="codex-radar-a4-") as raw:
         temp_path = raw
         temp = Path(raw)
         try:
+            stage = "emulator"
             emulator_process, emulator_serial, emulator_log = start_emulator(temp)
+            stage = "packaged-helper"
             bin_dir, helper_version = build_and_install_helper(temp)
+            stage = "connected-android-tests"
             run([str(ANDROID / "gradlew"), "connectedDebugAndroidTest"], cwd=ANDROID)
+            stage = "a4-live-contract"
             run(["adb", "-s", emulator_serial, "logcat", "-c"])
             public_key = prepare_public_key(emulator_serial)
             user = pwd.getpwuid(os.getuid()).pw_name
@@ -581,6 +586,8 @@ def main() -> int:
                 },
             }
             print(json.dumps(result, indent=2, sort_keys=True))
+        except subprocess.CalledProcessError as exception:
+            raise RuntimeError(f"a4_stage_failed:{stage}") from exception
         finally:
             for server, handle in servers:
                 stop_server(server)
@@ -596,5 +603,8 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exception:
-        print(f"a4_smoke_failed:{type(exception).__name__}", file=sys.stderr)
+        message = str(exception)
+        if not re.fullmatch(r"a4_[a-z0-9_-]+(?::[a-z0-9_-]+)?", message):
+            message = type(exception).__name__
+        print(f"a4_smoke_failed:{message}", file=sys.stderr)
         raise SystemExit(1) from None
