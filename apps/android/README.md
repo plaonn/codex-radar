@@ -1,9 +1,15 @@
 # Android fixture cockpit (A2)
 
-This is the fixture-only A2 shell for the foreground, read-only Radar cockpit.
-It does not contain SSH, credentials, host trust, a process launcher, a network
-listener, a background service, notifications, remote writes, logging, or
-preview persistence. A3 owns SSH and credential work under a separate contract.
+The production shell is the fixture-only A2 foreground, read-only Radar
+cockpit. It is not wired to SSH, credentials, host trust, a process launcher,
+a network listener, a background service, notifications, remote writes,
+logging, or preview persistence.
+
+The isolated `a3spike` package and instrumentation tests are an A3.0
+compatibility experiment only. They are not wired into `MainActivity`; the
+production UI remains fixture-backed until a separate A3.1 adoption decision.
+See `docs/experiments/android-a3-sshj-compatibility.md` for its verified
+Keystore/SSH boundary and host-key compatibility constraint.
 
 ## Stack
 

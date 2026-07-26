@@ -18,6 +18,10 @@ android {
 
     testOptions { unitTests.isIncludeAndroidResources = true }
 
+    packaging {
+        resources.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -27,6 +31,8 @@ android {
 kotlin { jvmToolchain(17) }
 
 dependencies {
+    implementation("com.hierynomus:sshj:0.40.0")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.80.2")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
