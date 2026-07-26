@@ -18,7 +18,7 @@ for path in list(root.rglob("*.kt")) + list(root.rglob("*.xml")):
         tokens = spike_forbidden
     elif path.name == "AndroidManifest.xml":
         # INTERNET is required only by the isolated spike; no exported/background service is allowed.
-        tokens = forbidden + ("android:service",)
+        tokens = forbidden + ("<service",)
     else:
         tokens = forbidden + ("android.permission.INTERNET",)
     for number, line in enumerate(path.read_text().splitlines(), 1):

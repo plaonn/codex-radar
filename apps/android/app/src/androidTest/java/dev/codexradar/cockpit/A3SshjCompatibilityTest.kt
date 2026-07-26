@@ -12,7 +12,6 @@ import org.junit.runner.RunWith
 import java.security.KeyStore
 import java.security.Signature
 import java.security.interfaces.ECKey
-import java.util.Base64
 
 @RunWith(AndroidJUnit4::class)
 class A3SshjCompatibilityTest {
@@ -35,18 +34,26 @@ class A3SshjCompatibilityTest {
         signature.initSign(pair.private)
         signature.update("a3-keystore-proof".toByteArray())
         assertTrue(signature.sign().isNotEmpty())
-        val publicKey = Base64.getEncoder().encodeToString(pair.public.encoded)
+        val openSsh = provider.openSshPublicKey()
+        assertTrue(openSsh.startsWith("ecdsa-sha2-nistp256 "))
+        assertEquals(3, openSsh.split(" ").size)
+        assertFalse(openSsh.contains(profileId))
+        assertFalse(openSsh.contains("PRIVATE"))
         InstrumentationRegistry.getInstrumentation().sendStatus(
             2,
-            Bundle().apply { putString("a3_public_key_x509", publicKey) },
+            Bundle().apply { putString("a3_public_key_openssh", openSsh) },
         )
     }
 
     @Test fun sshj_keystore_pin_exec_protocol_reconnect_and_cleanup() {
         val host = arguments.getString("a3_host")
         val port = arguments.getString("a3_port")?.toIntOrNull()
+        val lossPort = arguments.getString("a3_loss_port")?.toIntOrNull()
         val user = arguments.getString("a3_user")
-        assumeTrue("disposable sshd arguments required", host != null && port != null && user != null)
+        assumeTrue(
+            "disposable sshd arguments required",
+            host != null && port != null && lossPort != null && user != null,
+        )
         val base = SpikeHostProfile(profileId, host!!, port!!, user!!)
 
         val discoveryTransport = SshjRadarSpike()
@@ -65,13 +72,30 @@ class A3SshjCompatibilityTest {
             (connected as SpikeResult.Connected).state.getJSONArray("sessions"),
         )
         assertTrue(sessions.isNotEmpty())
-        first.onBackground()
+        assertTrue(first.requestRemoteShutdown())
+        assertTrue(first.awaitAutomaticClose(5_000))
+        assertEquals("remote_eof", first.terminalFailureCode())
 
         val reconnect = SshjRadarSpike()
         assertTrue(reconnect.connect(pinned) is SpikeResult.Connected)
-        reconnect.close()
+        reconnect.onBackground()
+        assertTrue(reconnect.awaitAutomaticClose(1_000))
+        assertNull(reconnect.terminalFailureCode())
 
         val mismatch = SshjRadarSpike().connect(pinned.copy(pinnedSha256 = "SHA256:changed"))
         assertEquals(SpikeResult.Failed("host_key_mismatch"), mismatch)
+
+        val lossBase = base.copy(port = lossPort!!)
+        val lossReview = SshjRadarSpike().connect(lossBase)
+        assertTrue(lossReview is SpikeResult.HostReviewRequired)
+        val lossPresented = (lossReview as SpikeResult.HostReviewRequired).presented
+        val lossPinned = lossBase.copy(
+            pinnedAlgorithm = lossPresented.algorithm,
+            pinnedSha256 = lossPresented.sha256,
+        )
+        val lost = SshjRadarSpike()
+        assertTrue(lost.connect(lossPinned) is SpikeResult.Connected)
+        assertTrue(lost.awaitAutomaticClose(5_000))
+        assertEquals("ssh_disconnected", lost.terminalFailureCode())
     }
 }

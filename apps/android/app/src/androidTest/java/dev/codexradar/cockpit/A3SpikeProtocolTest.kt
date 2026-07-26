@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.KeyPairGenerator
 import java.security.spec.ECGenParameterSpec
+import java.util.concurrent.atomic.AtomicInteger
 
 class A3SpikeProtocolTest {
     @Test fun exact_command_is_fixed_and_non_interactive() {
@@ -119,5 +120,40 @@ class A3SpikeProtocolTest {
         )
         assertTrue(values.all { it.code.matches(Regex("[a-z_]+")) })
         assertTrue(values.none { it.code.contains("/") || it.code.contains(":") })
+    }
+
+    @Test fun post_connect_remote_eof_and_ssh_loss_close_exactly_once() {
+        val remoteCloses = AtomicInteger()
+        val remote = PostConnectLifecycle(remoteCloses::incrementAndGet)
+        remote.remoteEnded()
+        remote.sshLost()
+        assertTrue(remote.awaitClosed(100))
+        assertEquals(1, remoteCloses.get())
+        assertEquals("remote_eof", remote.failureCode())
+
+        val lossCloses = AtomicInteger()
+        val loss = PostConnectLifecycle(lossCloses::incrementAndGet)
+        loss.sshLost()
+        loss.remoteEnded()
+        assertTrue(loss.awaitClosed(100))
+        assertEquals(1, lossCloses.get())
+        assertEquals("ssh_disconnected", loss.failureCode())
+    }
+
+    @Test fun stderr_is_discarded_bounded_and_never_exposed() {
+        val exactCloses = AtomicInteger()
+        val exact = PostConnectLifecycle(exactCloses::incrementAndGet, maxDiagnosticBytes = 8)
+        exact.drainStderr(ByteArrayInputStream("safe-msg".toByteArray())).join(1_000)
+        assertEquals(0, exactCloses.get())
+        assertNull(exact.failureCode())
+        exact.explicitClose()
+
+        val oversizedCloses = AtomicInteger()
+        val oversized = PostConnectLifecycle(oversizedCloses::incrementAndGet, maxDiagnosticBytes = 8)
+        oversized.drainStderr(ByteArrayInputStream("safe-msg+".toByteArray())).join(1_000)
+        assertTrue(oversized.awaitClosed(100))
+        assertEquals(1, oversizedCloses.get())
+        assertEquals("diagnostic_too_large", oversized.failureCode())
+        assertFalse(oversized.failureCode()!!.contains("safe-msg"))
     }
 }

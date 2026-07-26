@@ -1,0 +1,33 @@
+{
+  "contract": "codex-radar.android-a3-sshj-smoke",
+  "version": 1,
+  "surface": "Android API 36 emulator and disposable loopback POSIX sshd",
+  "harness": "two-phase public-key preparation then focused instrumentation",
+  "result": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "scenarios": {
+    "keystore_ec_p256_non_exportable": "passed",
+    "openssh_public_key_export": "passed",
+    "unknown_host_stops_before_authentication": "passed",
+    "exact_pin_authenticates_and_reconnects": "passed",
+    "changed_pin_stops_before_authentication": "passed",
+    "exact_command_without_pty": "passed",
+    "initialize_and_state_read_through_a2_parser": "passed",
+    "remote_shutdown_and_eof_auto_close": "passed",
+    "explicit_background_close": "passed",
+    "forced_ssh_loss_auto_close": "passed",
+    "bounded_stderr_discard": "passed",
+    "owned_remote_processes_closed": "passed"
+  },
+  "privacy": {
+    "real_credentials_or_personal_radar_data": false,
+    "raw_stderr_or_exception_text_retained": false,
+    "host_or_fingerprint_retained": false,
+    "private_key_exported": false
+  },
+  "compatibility_constraint": "RSA host key only for this SSHJ Android proof; no A3.1 adoption"
+}
