@@ -29,7 +29,7 @@ Task admission rules:
 | M2P | `0.4.19` POSIX public-beta publication | complete | Reopen only for release verification drift |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
-| M4A | Android foreground cockpit MVP | active | Run the admitted Android-to-POSIX end-to-end smoke A4 |
+| M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -85,7 +85,7 @@ Task admission rules:
 
 ## M4A: Android Foreground Cockpit MVP
 
-- Status: `active`; A1, A2, and A3.1 are integrated and accepted. A3.1 uses `mwiede/jsch` `2.28.5` with RSA SHA-2 and ECDSA P-256 support, no Bouncy Castle provider, and a stable pre-authentication `unsupported_host_key` result for Ed25519-only hosts. The bounded A4 emulator-to-disposable-POSIX-host smoke is ready for a separate claim.
+- Status: `complete`; A1, A2, and A3.1 are integrated and accepted, and the superseding A4 emulator-to-disposable-POSIX-host smoke is accepted as satisfying the M4A exit criterion. A3.1 uses `mwiede/jsch` `2.28.5` with RSA SHA-2 and ECDSA P-256 support, no Bouncy Castle provider, and a stable pre-authentication `unsupported_host_key` result for Ed25519-only hosts.
 - Root outcome: an Android app can use a user-owned foreground SSH connection to inspect host-local Radar projects, thread status, bounded redacted preview, and new attention transitions without opening a server port or gaining remote write authority.
 - Entry evidence: M4 Stage 0 negotiation/reconnect semantics are complete, shared display-state/preview contracts are active, and `v0.4.19` is the current POSIX public-beta baseline.
 - Design contract: [Android foreground cockpit MVP](proposals/android-foreground-cockpit-mvp.md).
@@ -93,11 +93,12 @@ Task admission rules:
   1. complete: productize the Stage 0 semantics as `codex-radar mobile rpc` in helper runtime `0.4.12`, including a 1 MiB inbound-frame bound, without changing R12 `thread rpc`;
   2. complete: build the isolated Kotlin/platform-Views app in `apps/android/` with a fixture transport, protocol/domain/UI state separation, mechanical host-fixture derivation and drift guard, unit/UI tests, and no live SSH or production signing;
   3. complete: add foreground SSH transport, explicit host-key verification, key-based authentication, reconnect, and sanitized failure handling;
-  4. complete a real Android-to-POSIX-host smoke covering state, preview, attention, disconnect, and reconnect.
+  4. complete: run the Android-to-POSIX-host smoke covering state, preview, attention, disconnect, reconnect, failure cleanup, and privacy-negative evidence.
 - A3.1 acceptance evidence: integrated commit `e96c27d97b6b821d05bc5a9bf7e0299aa6dd9ddb`, [production evidence](experiments/android-a3-1-production.md), and [post-main CI run `30197311626`](https://github.com/plaonn/codex-radar/actions/runs/30197311626).
+- A4 acceptance evidence: exact verified source `afefc5b8c5fddd61b889dc27e1129ee746d6df8f`, final integrated main `835c65821e52c61d9888ca7cc52c4d723dd3689b`, [end-to-end evidence](experiments/android-a4-e2e.md), and [final post-main CI run `30210061264`](https://github.com/plaonn/codex-radar/actions/runs/30210061264). All 14 contracted scenarios and seven injected cleanup-failure checks passed after the earlier artifact-retention and cleanup findings were remediated and independently re-reviewed.
 - Exit criterion: a real Android device or emulator connects to one user-selected POSIX host over SSH, launches the packaged read-only protocol, groups threads by project, shows attention/status and bounded preview, reports foreground attention transitions, and safely reconciles current state after reconnect.
 - Non-goals: background service or push delivery, OS notifications, remote thread resume/send/archive, shared read state, multi-host aggregation, remote HTTP listener, Play Store/public APK publication, Native Windows validation, and R12 read/write protocol unification.
-- Decision boundary: the user approved the MVP product phase and this design contract only. Implementation claim, Android signing/publication, support commitments, paid services, background execution, credential policy expansion, and any remote write action require their own contract or approval.
+- Decision boundary: the Android foreground cockpit MVP phase is complete for the accepted emulator plus disposable POSIX-host evidence boundary. This completion does not activate or authorize physical-device support, Android signing/publication, APK/AAB/store delivery, public support commitments, production hosts or credentials, paid services, background execution, credential-policy expansion, Ed25519 support, or any remote write action. Each requires a separate trigger and contract.
 
 ## M5: Distribution Channel Expansion
 

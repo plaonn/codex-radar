@@ -216,9 +216,15 @@ dependency, credential handling, background component, or remote write path.
 
 ## Current Disposition
 
-The MVP design is active. A1 and A2 are integrated. A3.0F was accepted and
-selected `mwiede/jsch` 2.28.5 without Bouncy Castle; A3.1 integrates that
-foreground transport under the adopted production contract. A4 remains
-separately gated on explicit A3.1 acceptance. Background behavior, signing,
-publication, remote writes, and credential-policy expansion remain
-unauthorized.
+The MVP phase is complete for the accepted Android emulator plus disposable
+POSIX-host boundary. A1 and A2 are integrated. A3.0F selected
+`mwiede/jsch` 2.28.5 without Bouncy Castle, A3.1 integrates that foreground
+transport under the adopted production contract, and the superseding A4 smoke
+at final integrated main
+`835c65821e52c61d9888ca7cc52c4d723dd3689b` satisfies the M4A exit
+criterion.
+
+Physical-device support, background behavior, signing, publication,
+APK/AAB/store delivery, public support, production host or credential use,
+Ed25519 support, remote writes, and credential-policy expansion remain
+unauthorized and require separate triggers and contracts.

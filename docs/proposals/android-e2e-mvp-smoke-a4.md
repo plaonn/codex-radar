@@ -10,6 +10,11 @@ The required M4A completion authority is a reproducible Android emulator smoke
 against a disposable POSIX SSH host. A physical Android-device smoke is
 deferred to the separate Android signing or publication gate.
 
+The superseding A4 result is accepted as satisfying the M4A exit criterion.
+The exact verified source is
+`afefc5b8c5fddd61b889dc27e1129ee746d6df8f`; final integrated main is
+`835c65821e52c61d9888ca7cc52c4d723dd3689b`.
+
 ## Root Outcome
 
 Prove that the accepted Android app, foreground SSH transport, packaged
@@ -243,6 +248,38 @@ A4 is complete only when:
 A passing A4 smoke does not authorize Android signing, APK/AAB/store
 publication, background notifications, physical-device support claims, remote
 writes, Native Windows completion, or a new public release.
+
+## Acceptance Result
+
+Disposition: `ACCEPT`. A4 is accepted as the M4A exit evidence.
+
+The fresh API 36 emulator run passed all 14 contracted scenarios through the
+production JSch `2.28.5` transport, loopback-only OpenSSH `10.2p1`, installed
+helper `0.4.12`, and exact non-PTY `codex-radar mobile rpc`. Seven injected
+failure tests also passed for emulator and SSH startup ownership,
+instrumentation timeout and transition-exception cleanup, bounded app-data
+scan, retained-artifact privacy rejection, and artifact-deletion
+postconditions.
+
+The first closure was re-opened after review found incomplete deterministic
+cleanup and retained public-key status in Android-test artifacts. Those
+findings were remediated, the exact source was rerun, canonical evidence was
+sanitized, and the final independent re-review reported no blocker. The
+bounded output-retention incident was dispositioned as valid with existing
+coverage and no additional durable change required.
+
+Local Android acceptance checks, 189 Python tests with 5 skipped, and Python
+compileall passed. Final post-main GitHub Actions run
+[`30210061264`](https://github.com/plaonn/codex-radar/actions/runs/30210061264)
+passed for integrated main
+`835c65821e52c61d9888ca7cc52c4d723dd3689b`. Public-safe evidence is
+recorded in [Android A4 end-to-end smoke evidence](../experiments/android-a4-e2e.md).
+
+M4A completion is limited to this emulator plus disposable POSIX-host
+boundary. It does not establish a physical-device result, signing or
+publication readiness, APK/AAB/store delivery, public Android support,
+background or push behavior, production-host or credential use, remote-write
+authority, Ed25519 support, VSIX or hook changes, or Native Windows completion.
 
 ## Authority and Stop Conditions
 
