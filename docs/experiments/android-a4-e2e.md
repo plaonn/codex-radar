@@ -4,7 +4,7 @@ Observed 2026-07-26 on a fresh, wipe-data Android API 36 emulator against only
 loopback-bound disposable user-mode SSH servers and synthetic Radar/Codex
 state.
 
-- Source under test: `d48555314fcf9083e34d38fcd321f74043b9715f`.
+- Source under test: `afefc5b8c5fddd61b889dc27e1129ee746d6df8f`.
 - Android: `Medium_Phone_API_36.1`, emulator `36.1.9.0`, app
   `0.2.0-a3.1`.
 - Host: OpenSSH `10.2p1` on loopback, reached only through the documented
@@ -34,8 +34,9 @@ Generic connected tests gate disposable public-key status export. Their result
 artifacts are scanned for key/status and privacy canaries, then removed before
 the live contract proceeds. Injected failure tests also verify cleanup when
 emulator or SSH startup fails, instrumentation exceeds its deadline or
-transition processing fails, an app-storage scan times out, or an artifact
-privacy scan rejects retained output.
+transition processing fails, an app-storage scan times out, an artifact
+privacy scan rejects retained output, or artifact deletion leaves a result
+root behind.
 
 Acceptance commands:
 
