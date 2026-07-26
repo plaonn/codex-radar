@@ -497,8 +497,7 @@ def scan_and_remove_android_test_artifacts() -> None:
         if leaked:
             raise RuntimeError("a4_android_test_artifact_privacy_failed")
     finally:
-        for root in roots:
-            shutil.rmtree(root, ignore_errors=True)
+        remove_android_test_artifacts()
 
 
 def main() -> int:

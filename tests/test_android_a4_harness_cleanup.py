@@ -166,6 +166,28 @@ class A4HarnessCleanupTest(unittest.TestCase):
                 (android / "app" / "build" / "outputs" / "androidTest-results").exists()
             )
 
+    def test_artifact_cleanup_rejects_a_retained_result_root(self):
+        with tempfile.TemporaryDirectory() as raw:
+            android = Path(raw)
+            output = (
+                android
+                / "app"
+                / "build"
+                / "outputs"
+                / "androidTest-results"
+                / "result.txt"
+            )
+            output.parent.mkdir(parents=True)
+            output.write_text("public-safe", encoding="utf-8")
+            with (
+                mock.patch.object(A4, "ANDROID", android),
+                mock.patch.object(A4.shutil, "rmtree"),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError, "a4_android_test_artifact_cleanup_failed"
+                ):
+                    A4.scan_and_remove_android_test_artifacts()
+
 
 if __name__ == "__main__":
     unittest.main()
