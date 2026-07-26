@@ -268,6 +268,30 @@ A3.1 acceptance requires integration into `main`, applicable local checks, and
 successful post-integration CI. A3.1 completion does not start A4; parent
 collection must explicitly accept the integration before A4 may be claimed.
 
+### A3.1 Acceptance Result
+
+A3.1 is accepted at integrated commit
+`e96c27d97b6b821d05bc5a9bf7e0299aa6dd9ddb`.
+
+The production transport, profile and trust UI, Android Keystore identity,
+bounded protocol client, lifecycle handling, disposable-host smoke, privacy
+checks, and retained fixture boundary satisfy the adoption gate. RSA SHA-2 and
+ECDSA P-256 passed the production boundary; Ed25519-only hosts fail before
+authentication with the stable `unsupported_host_key` category. The runtime
+dependency graph contains `mwiede/jsch` `2.28.5` without Bouncy Castle or
+another transitive runtime dependency, and the required BSD/ISC notices are
+retained.
+
+Applicable local checks passed, and post-integration GitHub Actions run
+[`30197311626`](https://github.com/plaonn/codex-radar/actions/runs/30197311626)
+completed successfully for the exact accepted commit. Public-safe evidence is
+recorded in [Android A3.1 production transport evidence](../experiments/android-a3-1-production.md).
+
+Disposition: `ACCEPT`. The separately designed A4 smoke is ready for a fresh
+claim. This acceptance does not claim A4, Android signing or publication,
+physical-device support, background behavior, Ed25519 support, remote write
+authority, or production-host validation.
+
 ## Verification
 
 - Android unit tests cover profile-key lifecycle, host pin persistence,
