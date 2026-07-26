@@ -29,7 +29,7 @@ Task admission rules:
 | M2P | `0.4.19` POSIX public-beta publication | complete | Reopen only for release verification drift |
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
-| M4A | Android foreground cockpit MVP | active | Compare the approved fallback SSH library before A3.1 adoption |
+| M4A | Android foreground cockpit MVP | active | Integrate the adopted `mwiede/jsch` foreground transport in A3.1 |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -85,7 +85,7 @@ Task admission rules:
 
 ## M4A: Android Foreground Cockpit MVP
 
-- Status: `active`; A1 packaged host read protocol and A2 fixture cockpit are integrated. The A3.0 SSHJ spike passed its Keystore, trust, command, protocol, lifecycle, and privacy checks but exposed an RSA-host-key-only Android compatibility boundary. A bounded `mwiede/jsch` comparison is required before A3.1 library adoption; A3.1 and A4 remain gated.
+- Status: `active`; A1 packaged host read protocol and A2 fixture cockpit are integrated. The accepted A3.0F comparison selected `mwiede/jsch` `2.28.5` for A3.1 after full-boundary RSA SHA-2 and ECDSA P-256 success without a Bouncy Castle provider or trust-policy weakening. Ed25519-only hosts remain explicitly unsupported and must fail before authentication. A3.1 is ready for a separately claimed production integration; A4 remains gated on accepted A3.1 integration.
 - Root outcome: an Android app can use a user-owned foreground SSH connection to inspect host-local Radar projects, thread status, bounded redacted preview, and new attention transitions without opening a server port or gaining remote write authority.
 - Entry evidence: M4 Stage 0 negotiation/reconnect semantics are complete, shared display-state/preview contracts are active, and `v0.4.19` is the current POSIX public-beta baseline.
 - Design contract: [Android foreground cockpit MVP](proposals/android-foreground-cockpit-mvp.md).

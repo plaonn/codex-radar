@@ -7,13 +7,17 @@ the credential and trust policy for A3, but it does not claim implementation.
 A3 remains dependent on accepted A2 fixture-cockpit completion.
 
 The first implementation candidate was SSHJ `0.40.0`, introduced through a
-bounded Android compatibility spike before production transport code is
+bounded Android compatibility spike before production transport code was
 adopted. That spike proved the credential, trust, process, protocol, lifecycle,
-and privacy boundaries on Android, but only with an RSA host key. Before A3.1,
-the already-approved `mwiede/jsch` fallback must be compared under the same
-boundary. The MVP continues to use only app-generated, non-exportable Android
-Keystore keys. Importing an existing private key, storing a software private
-key, password authentication, and passphrase-file handling are excluded.
+and privacy boundaries on Android, but only with an RSA host key. The accepted
+A3.0F fallback comparison then proved the same full boundary with
+`mwiede/jsch` `2.28.5` for RSA SHA-2 and ECDSA P-256 host keys without adding
+or selecting Bouncy Castle. A3.1 therefore adopts `mwiede/jsch` `2.28.5`.
+Ed25519-only hosts are outside the MVP compatibility boundary and must fail
+before authentication. The MVP continues to use only app-generated,
+non-exportable Android Keystore keys. Importing an existing private key,
+storing a software private key, password authentication, and passphrase-file
+handling are excluded.
 
 ## Root Outcome
 
@@ -35,7 +39,29 @@ without opening a listener or gaining remote-write authority.
 
 ## SSH Dependency Decision
 
-### Primary Candidate
+### Adopted Dependency
+
+A3.1 uses `com.github.mwiede:jsch:2.28.5`.
+
+The accepted A3.0F comparison established:
+
+- full-boundary success with RSA SHA-2 host keys;
+- full-boundary success with `ecdsa-sha2-nistp256` host keys;
+- an honest pre-verifier failure for `ssh-ed25519` on Android because the
+  multi-release JAR's Java 15 Ed25519 replacement was not selected;
+- no JSch transitive runtime dependency and no Bouncy Castle provider
+  installation, selection, mutation, or packaging;
+- preservation of the Android Keystore identity, exact-pin trust, non-PTY
+  command, protocol, framing, stderr, lifecycle, failure-sanitization, and
+  privacy contracts.
+
+The MVP supported-host boundary is therefore RSA SHA-2 and ECDSA P-256.
+Ed25519-only servers must return a stable sanitized unsupported-host-key
+failure before authentication. A3.1 must not add a cryptographic provider or
+weaken the verifier to expand that boundary. Revised BSD and bundled Revised
+BSD/ISC notices must be retained in the Android distribution materials.
+
+### First Candidate and Rejected Production Boundary
 
 SSHJ `0.40.0` was used for the first compatibility spike.
 
@@ -57,12 +83,8 @@ It does not establish general host-key compatibility.
 
 ### Alternatives
 
-- `mwiede/jsch` is the fallback if SSHJ cannot operate with an Android
-  Keystore-backed key or has an unresolved Android provider conflict. Its
-  maintained algorithm defaults are useful, but its Android integration
-  evidence and documentation are weaker for this use case. A bounded fallback
-  comparison is now required because SSHJ's Android host-key parsing failed for
-  both tested non-RSA host-key families before the verifier boundary.
+- SSHJ remains accepted experiment evidence but is not selected for A3.1
+  because its verified Android production boundary was RSA-host-key-only.
 - Apache MINA sshd is rejected for the MVP because its own Android notes say
   active Android support is not a project goal and identify provider and I/O
   uncertainty.
@@ -190,23 +212,61 @@ configuration on a hardened host. The design disposition is therefore
 `FALLBACK`: run one bounded `mwiede/jsch` comparison before choosing the A3.1
 transport dependency.
 
-The comparison must preserve the same non-exportable Keystore key, explicit
+The comparison had to preserve the same non-exportable Keystore key, explicit
 fingerprint review and exact pin, exact non-PTY command, JSONL bounds,
-sanitized failures, cleanup, and privacy rules. It must test RSA plus at least
-one modern non-RSA host-key family. If it cannot do so without exportable key
-material, blind trust, unsafe provider mutation, or another contract
-weakening, return to design rather than adopting it.
+sanitized failures, cleanup, and privacy rules. It had to test RSA plus at
+least one modern non-RSA host-key family. If it could not do so without
+exportable key material, blind trust, unsafe provider mutation, or another
+contract weakening, the result would have returned to design rather than
+being adopted.
+
+### A3.0F Result and Production Dependency Disposition
+
+The pushed A3.0F evidence at
+`codex/android-jsch-a3-fallback-spike` commits `eb633e8`, `b71754f`, and
+`c26be77ef1aab789de3661877271cf318dfb8008` is accepted.
+
+On an Android API 36 emulator and disposable loopback SSH host,
+`mwiede/jsch` `2.28.5` passed the full contracted boundary with RSA SHA-2 and
+ECDSA P-256 host keys. Ed25519 was attempted and failed before the verifier;
+the experiment did not add Bouncy Castle, change providers, weaken host trust,
+or change the server. The branch CI run
+[`30194178747`](https://github.com/plaonn/codex-radar/actions/runs/30194178747)
+passed all jobs.
+
+Disposition: `ACCEPT`. A3.1 adopts `mwiede/jsch` `2.28.5` with the explicit
+RSA SHA-2 plus ECDSA P-256 supported-host boundary. Ed25519-only hosts remain
+unsupported and fail closed before authentication.
 
 ## A3.1 Adoption Gate
 
-Only after the fallback comparison is collected and its result explicitly
-selects a production dependency may the fixture transport be replaced or
-complemented by the foreground SSH transport in the production Android app.
-A3.1 must preserve the A2 protocol/domain/UI contracts and add
-unit/integration tests for lifecycle, trust, framing, and failure mapping.
-Whichever library is selected, stderr draining must start immediately after
-exec and before protocol initialization so a remote diagnostic cannot block
-the command lifecycle.
+The fallback comparison is collected and `mwiede/jsch` `2.28.5` is selected,
+so A3.1 is ready for a separately claimed production integration. It may
+replace or complement the fixture transport behind the existing A2
+protocol/domain/UI boundary.
+
+A3.1 must:
+
+- wire the adopted dependency into the production foreground transport;
+- persist immutable profile identity, app-owned Keystore alias, and exact host
+  pin without persisting private-key material or raw remote data;
+- support the explicit RSA SHA-2 and ECDSA P-256 host-key boundary;
+- map an Ed25519-only host to a sanitized unsupported-host-key failure before
+  authentication;
+- execute exactly `codex-radar mobile rpc` without PTY, interactive shell, or
+  user-controlled command interpolation;
+- start bounded/discarded stderr draining immediately after exec and before
+  protocol initialization;
+- preserve the 1 MiB inbound and outbound frame bounds, foreground-only
+  lifecycle, fresh reconnect baseline, cleanup, sanitized failures, and
+  privacy-negative guarantees;
+- add unit, disposable-host integration, and emulator/device tests for
+  credential lifecycle, trust, supported/unsupported host keys, framing,
+  disconnect/reconnect, process loss, and failure mapping.
+
+A3.1 acceptance requires integration into `main`, applicable local checks, and
+successful post-integration CI. A3.1 completion does not start A4; parent
+collection must explicitly accept the integration before A4 may be claimed.
 
 ## Verification
 
