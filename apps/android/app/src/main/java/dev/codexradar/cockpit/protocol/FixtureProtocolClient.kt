@@ -37,7 +37,7 @@ class FixtureProtocolClient(private val context: Context) {
                 val state = resultFor(root, "state/read")
                 check(state.getString("contract") == "codex-radar.display-state")
                 check(state.getInt("version") == 1)
-                emit(CockpitEvent.Connected(parseSessions(state.getJSONArray("sessions"))))
+                emit(CockpitEvent.Connected(MobileProtocolParser.parseSessions(state.getJSONArray("sessions"))))
             } catch (_: Exception) {
                 emit(CockpitEvent.Failed("fixture_unavailable"))
             }
@@ -84,23 +84,6 @@ class FixtureProtocolClient(private val context: Context) {
 
     /** Test values preserve host-supplied display fields without adding transport semantics. */
     companion object {
-        private fun parseSessions(values: JSONArray): List<RadarSession> = (0 until values.length()).map { index ->
-            val value = values.getJSONObject(index)
-            RadarSession(
-                id = SessionId(value.getString("session_id")),
-                project = value.getString("project"),
-                title = value.getString("session_id"),
-                status = when (value.getString("display_status")) {
-                    "waiting_approval" -> ThreadStatus.WAITING_APPROVAL
-                    "running" -> ThreadStatus.RUNNING
-                    "tool_running" -> ThreadStatus.TOOL_RUNNING
-                    "done" -> ThreadStatus.DONE
-                    else -> ThreadStatus.UNKNOWN
-                },
-                archived = value.optString("archive_state") == "archived",
-                requiresAttention = value.getBoolean("requires_attention"),
-            )
-        }
         private fun JSONArray.strings(key: String): List<String> = (0 until length()).map { getJSONObject(it).getString(key) }
         fun scriptedSessions(): List<RadarSession> = listOf(
             RadarSession(SessionId("opaque-approval"), "Alpha", "Approval needed", ThreadStatus.WAITING_APPROVAL, requiresAttention = true),
