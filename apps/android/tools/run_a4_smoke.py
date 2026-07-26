@@ -49,6 +49,7 @@ def wait_for_boot(serial: str, timeout: float = 180.0) -> None:
             ["adb", "-s", serial, "shell", "getprop", "sys.boot_completed"],
             capture_output=True,
             text=True,
+            timeout=5,
         )
         if completed.returncode == 0 and completed.stdout.strip() == "1":
             run(["adb", "-s", serial, "shell", "input", "keyevent", "82"])
@@ -56,6 +57,7 @@ def wait_for_boot(serial: str, timeout: float = 180.0) -> None:
                 ["adb", "-s", serial, "shell", "cmd", "package", "list", "packages"],
                 capture_output=True,
                 text=True,
+                timeout=10,
             )
             if package_manager.returncode == 0 and "package:android" in package_manager.stdout:
                 time.sleep(5)
@@ -65,7 +67,9 @@ def wait_for_boot(serial: str, timeout: float = 180.0) -> None:
 
 
 def start_emulator(temp: Path) -> tuple[subprocess.Popen[str], str, object]:
-    if subprocess.run(["adb", "devices"], capture_output=True, text=True).stdout.strip() != "List of devices attached":
+    if subprocess.run(
+        ["adb", "devices"], capture_output=True, text=True, timeout=5
+    ).stdout.strip() != "List of devices attached":
         raise RuntimeError("shared_android_device_detected")
     emulator = shutil.which("emulator")
     if not emulator:
@@ -94,7 +98,11 @@ def start_emulator(temp: Path) -> tuple[subprocess.Popen[str], str, object]:
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
             devices = subprocess.run(
-                ["adb", "devices"], capture_output=True, text=True, check=True
+                ["adb", "devices"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5,
             ).stdout.splitlines()[1:]
             serials = [
                 line.split()[0]
@@ -121,7 +129,15 @@ def start_emulator(temp: Path) -> tuple[subprocess.Popen[str], str, object]:
 
 def stop_emulator(process: subprocess.Popen[str], serial: str, log: object) -> None:
     if serial:
-        subprocess.run(["adb", "-s", serial, "emu", "kill"], capture_output=True, text=True)
+        try:
+            subprocess.run(
+                ["adb", "-s", serial, "emu", "kill"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
     try:
         process.wait(timeout=15)
     except subprocess.TimeoutExpired:
@@ -508,7 +524,11 @@ def main() -> int:
             bin_dir, helper_version = build_and_install_helper(temp)
             stage = "connected-android-tests"
             remove_android_test_artifacts()
-            run([str(ANDROID / "gradlew"), "connectedDebugAndroidTest"], cwd=ANDROID)
+            run(
+                [str(ANDROID / "gradlew"), "connectedDebugAndroidTest"],
+                cwd=ANDROID,
+                timeout=300,
+            )
             stage = "android-test-artifact-privacy"
             scan_and_remove_android_test_artifacts()
             stage = "reinstall-a4-test-packages"
@@ -516,6 +536,7 @@ def main() -> int:
                 [str(ANDROID / "gradlew"), "installDebug", "installDebugAndroidTest"],
                 cwd=ANDROID,
                 capture_output=True,
+                timeout=180,
             )
             stage = "a4-live-contract"
             run(["adb", "-s", emulator_serial, "logcat", "-c"])
@@ -673,7 +694,7 @@ def main() -> int:
                 capture_output=True,
             ).stdout.strip()
             ssh_version = subprocess.run(
-                ["/usr/sbin/sshd", "-V"], capture_output=True, text=True
+                ["/usr/sbin/sshd", "-V"], capture_output=True, text=True, timeout=5
             ).stderr.strip().split(",")[0]
             result = {
                 "contract": "codex-radar.android-a4-end-to-end-smoke",

@@ -32,6 +32,7 @@ HOST_FAMILIES = {
 
 
 def run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    kwargs.setdefault("timeout", 120)
     return subprocess.run(args, check=True, text=True, **kwargs)
 
 
@@ -43,7 +44,11 @@ def free_port() -> int:
 
 def descendants(parent: int) -> list[int]:
     lines = subprocess.run(
-        ["ps", "-axo", "pid=,ppid="], check=True, capture_output=True, text=True
+        ["ps", "-axo", "pid=,ppid="],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=5,
     ).stdout.splitlines()
     by_parent: dict[int, list[int]] = {}
     for line in lines:
@@ -59,7 +64,11 @@ def descendants(parent: int) -> list[int]:
 
 
 def stop_server(server: subprocess.Popen[str]) -> None:
-    for pid in descendants(server.pid):
+    try:
+        child_pids = descendants(server.pid)
+    except (OSError, subprocess.SubprocessError):
+        child_pids = []
+    for pid in child_pids:
         try:
             os.kill(pid, signal.SIGTERM)
         except ProcessLookupError:
