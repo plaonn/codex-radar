@@ -157,6 +157,7 @@ class A4EndToEndSmokeTest {
     }
 
     @Test fun persisted_pin_rejects_restarted_host() {
+        assumeTrue(arguments.getString("a4_mismatch_expected") == "true")
         val stored = requireNotNull(SharedPreferencesHostProfileStore(context).load())
         val originalPin = requireNotNull(stored.pin)
         assertEquals(

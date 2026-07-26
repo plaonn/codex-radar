@@ -403,10 +403,7 @@ def main() -> int:
         try:
             emulator_process, emulator_serial, emulator_log = start_emulator(temp)
             bin_dir, helper_version = build_and_install_helper(temp)
-            run(
-                [str(ANDROID / "gradlew"), "installDebug", "installDebugAndroidTest"],
-                cwd=ANDROID,
-            )
+            run([str(ANDROID / "gradlew"), "connectedDebugAndroidTest"], cwd=ANDROID)
             run(["adb", "-s", emulator_serial, "logcat", "-c"])
             public_key = prepare_public_key(emulator_serial)
             user = pwd.getpwuid(os.getuid()).pw_name
@@ -510,6 +507,9 @@ def main() -> int:
                     "instrument",
                     "-w",
                     "-r",
+                    "-e",
+                    "a4_mismatch_expected",
+                    "true",
                     "-e",
                     "class",
                     f"{TEST_CLASS}#persisted_pin_rejects_restarted_host",

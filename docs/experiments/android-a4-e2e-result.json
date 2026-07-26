@@ -1,0 +1,42 @@
+{
+  "android_api": "36",
+  "android_app_version": "0.2.0-a3.1",
+  "avd": "Medium_Phone_API_36.1",
+  "cleanup": {
+    "disposable_sshd_stopped": true,
+    "global_ssh_or_codex_configuration_changed": false,
+    "temporary_material_selected_for_retention": false
+  },
+  "contract": "codex-radar.android-a4-end-to-end-smoke",
+  "emulator": "Android emulator version 36.1.9.0 (build_id 13823996) (CL:N/A)",
+  "helper_version": "0.4.12",
+  "host_alias": "10.0.2.2",
+  "observed_at": "2026-07-26T15:10:15+00:00",
+  "operating_system_family": "Darwin",
+  "privacy": {
+    "private_key_exported": false,
+    "raw_frames_or_remote_stderr_retained": false,
+    "real_credentials_or_personal_data": false,
+    "screenshots_retained": false
+  },
+  "repository_commit": "3f4a76da6679dfc4fbd8b09a658d6a88cfef751d",
+  "scenarios": {
+    "android_keystore_authentication": "passed",
+    "authentication_failure_sanitized": "passed",
+    "background_disconnect_cleanup": "passed",
+    "disposable_process_and_material_cleanup": "passed",
+    "first_fingerprint_review_and_exact_pin": "passed",
+    "fresh_attention_baseline": "passed",
+    "malformed_frame_failure": "passed",
+    "oversized_frame_failure": "passed",
+    "privacy_negative_scan": "passed",
+    "reconnect_current_state_without_replay": "passed",
+    "running_to_done_attention_and_navigation": "passed",
+    "same_endpoint_host_key_mismatch_hard_failure": "passed",
+    "state_grouping_archive_and_bounded_preview": "passed",
+    "waiting_approval_attention_and_navigation": "passed"
+  },
+  "ssh_client": "com.github.mwiede:jsch:2.28.5",
+  "ssh_server": "OpenSSH_10.2p1",
+  "version": 1
+}
