@@ -30,7 +30,7 @@ Task admission rules:
 | M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
 | M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
-| M4B | Android personal-device pilot | active | Run and collect the authorized-ADB disposable A5.0 physical-device smoke |
+| M4B | Android personal-device pilot | active | Explicitly accept or remediate the completed A5.0 physical-device smoke; A5.1 remains unclaimed |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -103,13 +103,20 @@ Task admission rules:
 
 ## M4B: Android Personal-Device Pilot
 
-- Status: `active`; the bounded A5 design is approved and one physical Android device has been explicitly admitted over paired wireless ADB for A5.0.
+- Status: `active`; the bounded A5.0 run passed on one physical Android API 36
+  arm64-v8a device over paired wireless ADB and awaits explicit parent
+  acceptance. A5.1 remains unclaimed.
 - Root outcome: validate the accepted foreground cockpit on one actual Android device before introducing a personal host or Android signing boundary.
 - Design contract: [Android physical-device pilot A5](proposals/android-physical-device-pilot-a5.md).
 - Ordered packages:
   1. A5.0: use an explicitly authorized USB or paired-wireless ADB transport plus `adb reverse` to connect one physical device to a disposable loopback-only SSH host and synthetic Radar state; validate installation, Android Keystore identity, host pinning, production transport, foreground lifecycle, debug replace/update observation, privacy, and cleanup;
   2. A5.1: only after explicit A5.0 acceptance and fresh user authorization, run the same read-only foreground workflow against one user-selected existing POSIX SSH host.
-- Next admission boundary: run and collect A5.0 on the exactly one authorized physical device. The ADB transport is harness control only and does not count as ordinary Wi-Fi/VPN/Internet SSH reachability evidence.
+- Evidence: [A5.0 physical-device smoke](experiments/android-a5-physical-device.md)
+  tied to exact verified source `b90bba2cbc60418be2175b85e35ee9f89b4d5b60`.
+- Next admission boundary: explicitly accept or remediate A5.0. Only a separate
+  fresh authorization after acceptance may claim A5.1. The ADB transport is
+  harness control only and does not count as ordinary Wi-Fi/VPN/Internet SSH
+  reachability evidence.
 - Exit criterion: A5.0 and A5.1 each have exact-commit evidence and separate explicit acceptance, and the personal-host pilot demonstrates useful foreground state, bounded preview, attention, disconnect, and reconnect without weakening trust, credential, privacy, or remote-write boundaries.
 - Decision boundary: A5 does not authorize release signing, durable APK/AAB delivery, Play Store/public publication, background operation, push/notification, remote writes, Ed25519 support, automated host configuration, production credential capture, or public device-support claims. Signing and distribution require a later A6 proposal and explicit user decision.
 

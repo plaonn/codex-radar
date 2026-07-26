@@ -1,0 +1,47 @@
+{
+  "adb_transport": "paired-wireless",
+  "android_abi": "arm64-v8a",
+  "android_api": "36",
+  "android_app_version": "0.2.0-a3.1",
+  "cleanup": {
+    "debug_packages_removed": true,
+    "disposable_sshd_stopped": true,
+    "global_ssh_or_codex_configuration_changed": false,
+    "harness_reverse_mappings_removed": true,
+    "temporary_material_selected_for_retention": false,
+    "wireless_pairing_preserved": true
+  },
+  "contract": "codex-radar.android-a5-physical-device-smoke",
+  "device_kind": "physical",
+  "helper_version": "0.4.12",
+  "normal_network_ssh_reachability_proven": false,
+  "observed_at": "2026-07-26T23:42:11+00:00",
+  "operating_system_family": "Darwin",
+  "privacy": {
+    "device_identifier_or_wireless_endpoint_retained": false,
+    "private_key_exported": false,
+    "raw_frames_or_remote_stderr_retained": false,
+    "real_credentials_or_personal_data": false,
+    "screenshots_retained": false
+  },
+  "repository_commit": "b90bba2cbc60418be2175b85e35ee9f89b4d5b60",
+  "scenarios": {
+    "authentication_malformed_oversized_failures": "passed",
+    "background_disconnect_reconnect_no_replay": "passed",
+    "changed_host_key_hard_failure": "passed",
+    "forced_ssh_loss_sanitized_cleanup": "passed",
+    "foreground_attention_navigation": "passed",
+    "install_and_profile_launch": "passed",
+    "keystore_non_exportable_identity": "passed",
+    "privacy_negative_scan": "passed",
+    "profile_and_keystore_explicit_cleanup": "passed",
+    "remote_eof_cleanup": "passed",
+    "same_host_key_reconnect_after_loss": "passed",
+    "same_signature_replace_profile_pin_identity_continuity": "passed",
+    "state_grouping_archive_bounded_preview": "passed",
+    "unknown_host_review_exact_pin": "passed"
+  },
+  "ssh_client": "com.github.mwiede:jsch:2.28.5",
+  "ssh_server": "OpenSSH_10.2p1",
+  "version": 1
+}
