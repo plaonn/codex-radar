@@ -6,11 +6,14 @@ This design is approved for the Android foreground cockpit lineage. It fixes
 the credential and trust policy for A3, but it does not claim implementation.
 A3 remains dependent on accepted A2 fixture-cockpit completion.
 
-The first implementation candidate is SSHJ `0.40.0`, introduced through a
+The first implementation candidate was SSHJ `0.40.0`, introduced through a
 bounded Android compatibility spike before production transport code is
-adopted. The MVP uses only app-generated, non-exportable Android Keystore keys.
-Importing an existing private key, storing a software private key, password
-authentication, and passphrase-file handling are excluded.
+adopted. That spike proved the credential, trust, process, protocol, lifecycle,
+and privacy boundaries on Android, but only with an RSA host key. Before A3.1,
+the already-approved `mwiede/jsch` fallback must be compared under the same
+boundary. The MVP continues to use only app-generated, non-exportable Android
+Keystore keys. Importing an existing private key, storing a software private
+key, password authentication, and passphrase-file handling are excluded.
 
 ## Root Outcome
 
@@ -34,7 +37,7 @@ without opening a listener or gaining remote-write authority.
 
 ### Primary Candidate
 
-Use SSHJ `0.40.0` for the first compatibility spike.
+SSHJ `0.40.0` was used for the first compatibility spike.
 
 Reasons:
 
@@ -48,16 +51,18 @@ Reasons:
 - maintained modern algorithm support and documented Android compatibility
   work.
 
-This is a candidate, not a compatibility claim. Android provider selection,
-non-exportable key signing, dependency packaging, and device/emulator behavior
-must be proven by A3.0.
+The A3.0 result proves Android provider selection, non-exportable key signing,
+dependency packaging, and device/emulator behavior for an RSA-host-key server.
+It does not establish general host-key compatibility.
 
 ### Alternatives
 
 - `mwiede/jsch` is the fallback if SSHJ cannot operate with an Android
   Keystore-backed key or has an unresolved Android provider conflict. Its
   maintained algorithm defaults are useful, but its Android integration
-  evidence and documentation are weaker for this use case.
+  evidence and documentation are weaker for this use case. A bounded fallback
+  comparison is now required because SSHJ's Android host-key parsing failed for
+  both tested non-RSA host-key families before the verifier boundary.
 - Apache MINA sshd is rejected for the MVP because its own Android notes say
   active Android support is not a project goal and identify provider and I/O
   uncertainty.
@@ -163,12 +168,45 @@ unsafe provider override, or requires exportable private-key material. The
 spike may evaluate `mwiede/jsch` behind the same boundary, but it may not adopt
 software-key storage or private-key import without a new user decision.
 
+### A3.0 Result and Fallback Disposition
+
+The pushed A3.0 evidence at
+`codex/android-keystore-ssh-a3-spike` commits
+`30d0c38e946544e54b59f6518dbe9f75dcde02a1` and
+`5570ed0b52ac5e0e4d60b8057d395bc7cdcb9849` is accepted as a successful
+bounded SSHJ experiment, but not as A3.1 adoption evidence.
+
+On an Android API 36 emulator, SSHJ authenticated with the non-exportable
+Keystore EC P-256 key and preserved the exact-pin, non-PTY command, bounded
+protocol, cleanup, and privacy contracts when the server presented an RSA host
+key. ECDSA host-key parsing failed because SSHJ requested
+`KeyFactory("ECDSA")` while Android exposes the relevant factory as `EC`.
+Ed25519 also failed before the host-key verifier.
+
+An RSA-only production boundary would be safe when the selected host already
+offers a compatible RSA host key, but it would narrow the root outcome's
+user-selected POSIX-host compatibility and could require prohibited host SSH
+configuration on a hardened host. The design disposition is therefore
+`FALLBACK`: run one bounded `mwiede/jsch` comparison before choosing the A3.1
+transport dependency.
+
+The comparison must preserve the same non-exportable Keystore key, explicit
+fingerprint review and exact pin, exact non-PTY command, JSONL bounds,
+sanitized failures, cleanup, and privacy rules. It must test RSA plus at least
+one modern non-RSA host-key family. If it cannot do so without exportable key
+material, blind trust, unsafe provider mutation, or another contract
+weakening, return to design rather than adopting it.
+
 ## A3.1 Adoption Gate
 
-Only after A3.0 passes and its result is accepted may the fixture transport be
-replaced or complemented by the foreground SSH transport in the production
-Android app. A3.1 must preserve the A2 protocol/domain/UI contracts and add
+Only after the fallback comparison is collected and its result explicitly
+selects a production dependency may the fixture transport be replaced or
+complemented by the foreground SSH transport in the production Android app.
+A3.1 must preserve the A2 protocol/domain/UI contracts and add
 unit/integration tests for lifecycle, trust, framing, and failure mapping.
+Whichever library is selected, stderr draining must start immediately after
+exec and before protocol initialization so a remote diagnostic cannot block
+the command lifecycle.
 
 ## Verification
 
