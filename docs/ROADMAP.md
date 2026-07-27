@@ -27,7 +27,7 @@ Task admission rules:
 | M1 | Shared host-local runtime and VS Code cockpit | operating | Current contract regression or setup reliability evidence |
 | M2 | Next public-beta consolidation | complete | Reopen only for new source divergence |
 | M2P | `0.4.19` POSIX public-beta publication | complete | Reopen only for release verification drift |
-| M3 | Native Windows real-host validation | watching | Deliver a compatible helper bundle to the Windows host and run the bounded smoke |
+| M3 | Native Windows real-host validation | complete | Reopen for a Windows regression or a separately approved support/distribution expansion |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
 | M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
 | M4B | Android personal-device pilot | active | Await a separate explicit A5.1 personal-host authorization and claim |
@@ -69,9 +69,10 @@ Task admission rules:
 
 ## M3: Native Windows Real-Host Validation
 
-- Status: `watching`; platform/helper foundation and CI exist, but the real-host proof is incomplete.
+- Status: `complete`; the exact helper `0.4.8` + VSIX `0.4.18` pair passed the Native Windows hook-to-sidebar smoke on 2026-07-27.
 - Entry condition: a compatible generated helper bundle is available on the separate Native Windows host and the user explicitly starts the documented hook migration/smoke flow.
 - Exit criterion: an actual Codex lifecycle hook updates `%LOCALAPPDATA%\codex-radar\state\sessions.json`, and the VS Code sidebar on the same host shows that exact session without treating WSL2 or CI as substitute evidence.
+- Evidence: [Native Windows real-host validation](experiments/native-windows-real-host.md) records checksum verification, explicit idempotent hook migration, one fresh Codex turn, the resulting `sessions.json` transition, and the same marker in the VS Code Preview without retaining private paths, the full session ID, or transcript content.
 - Decision boundary: helper delivery and smoke are bounded external actions. Release publication, automatic `hooks.json` edits, private transcript/path sharing, and support-complete claims remain outside this milestone.
 
 ## M4: Mobile SSH Read-Protocol Stage 0
@@ -174,7 +175,7 @@ Task admission rules:
 
 ## VS Code Extension Release
 
-- Latest published baseline은 `0.4.19` public beta다. 이후 source version과 release candidate는 M2에서 다시 명시적으로 묶는다. Source tree와 helper asset에는 Native Windows foundation이 포함돼 있지만, 실제 Windows Codex hook smoke 전에는 Windows support-complete 또는 officially validated로 선언하지 않는다.
+- Latest published baseline은 `0.4.19` public beta다. 이후 source version과 release candidate는 M2에서 다시 명시적으로 묶는다. Native Windows real-host proof는 helper `0.4.8` + VSIX `0.4.18` exact pair에서 완료됐지만, published `v0.4.19` asset의 지원 범위는 계속 POSIX로 유지한다. Windows publication이나 지원 범위 확대는 별도 release decision이다.
 - Marketplace publish는 별도 milestone로 유지한다.
 - Public beta release readiness에는 version policy, README/install guide, extension icon/branding, privacy boundary copy, changelog, packaged VSIX, Remote SSH install smoke test를 포함한다.
 - GitHub Release 기반 설치와 upgrade 경로를 public beta 동안 먼저 안정화한다.
@@ -202,8 +203,8 @@ Task admission rules:
 ## Native Windows Validation Gate
 
 - `windows-latest` CI에서 Python unit tests, compileall, extension tests, Windows path/locking/`.cmd` launcher/install/upgrade/rollback lifecycle을 검증한다.
-- 실제 Native Windows 사용자 환경에서 Codex가 generated hook command를 실행하고 `%LOCALAPPDATA%\codex-radar\state\sessions.json`을 갱신하며 VS Code sidebar가 같은 session을 표시하는 end-to-end smoke가 남아 있다.
-- 이 smoke가 끝나기 전에는 foundation/CI-ready로만 보고하고 Windows 지원 완료, release-ready, officially validated라고 표현하지 않는다.
+- 실제 Native Windows 사용자 환경에서 helper `0.4.8`의 generated hook command가 `%LOCALAPPDATA%\codex-radar\state\sessions.json`을 갱신하고 VSIX `0.4.18` Sidebar/Preview가 같은 fresh session marker를 표시하는 end-to-end smoke를 2026-07-27 완료했다.
+- 이 증거는 exact tested pair의 real-host foundation validation을 닫는다. 이후 helper/VSIX의 Windows 회귀 범위는 변경 surface에 비례해 다시 검증하며, Windows release-ready, published support 확대, installer/package-manager distribution은 별도 승인과 release-scoped evidence가 필요하다.
 - WSL2 smoke는 별도 future work이며 Native Windows smoke를 대체하지 않는다.
 
 ## Shared State / Export Direction

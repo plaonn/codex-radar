@@ -63,7 +63,7 @@ See the [session cache v1 schema](docs/schemas/session-cache-v1.schema.json) and
 - VS Code 1.90 or later for the extension.
 - The official Codex extension for `Open in Codex` handoff.
 
-For Remote SSH, install the helper, configure the hook, and install the VSIX on the remote extension host. Codex Radar reads state and transcripts from that host. The source tree now includes a Native Windows helper foundation using `%LOCALAPPDATA%`, stable `.cmd` shims, and `windows-latest` CI. Native Windows support is not declared complete until a real Codex hook-to-sidebar smoke succeeds. WSL2 is outside this milestone's official validation scope.
+For Remote SSH, install the helper, configure the hook, and install the VSIX on the remote extension host. Codex Radar reads state and transcripts from that host. The source tree includes a Native Windows helper foundation using `%LOCALAPPDATA%`, stable `.cmd` shims, and `windows-latest` CI. A real-host hook-to-sidebar smoke passed for the exact helper `0.4.8` + VSIX `0.4.18` pair; the published `v0.4.19` helper remains a POSIX-supported public-beta asset until a separate Windows release/support decision. WSL2 is outside this milestone's official validation scope.
 
 ## Install the Helper
 
@@ -178,7 +178,7 @@ codex-radar completion fish > ~/.config/fish/completions/codex-radar.fish
 ## Current Limitations
 
 - Public beta distribution is through GitHub Releases only, not the VS Code Marketplace or PyPI.
-- The helper foundation supports POSIX and Native Windows Python 3.9+ hosts. The published `v0.4.19` helper asset is supported as a POSIX public-beta path, and Native Windows support remains pending a real Codex hook-to-sidebar smoke.
+- The helper foundation supports POSIX and Native Windows Python 3.9+ hosts. Native Windows real-host validation passed for helper `0.4.8` + VSIX `0.4.18`; the published `v0.4.19` helper asset remains supported only as a POSIX public-beta path until a separate Windows release/support decision.
 - WSL2 is not in the official validation scope for the Native Windows milestone.
 - `codex-radar-helper diagnose` checks the local runtime, stable shims, compatibility metadata, and hook wiring, but does not query remote release availability. `codex-radar doctor` remains focused on Radar state/cache.
 - The extension requires the separately installed host-local helper/indexer and explicit hook setup.

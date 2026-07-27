@@ -183,7 +183,7 @@
 
 #### R10c: native Windows runtime foundation
 
-- Status: confirmed direction, platform/helper foundation implemented, native Codex hook smoke pending
+- Status: confirmed direction, platform/helper foundation implemented, helper `0.4.8` + VSIX `0.4.18` Native Windows real-host smoke completed
 - Requirement: Native Windows에서 관리자 권한이나 symlink 권한을 기본 전제로 삼지 않고 Codex lifecycle hook event를 동시성 안전하게 `sessions.json`으로 변환하고, VS Code extension이 같은 host-local state를 읽을 수 있어야 한다.
 - Rationale: POSIX helper의 symlink, XDG path, `fcntl`, eager `curses` import를 그대로 전제하면 Windows에서 hook producer와 기본 CLI가 시작되지 않거나 upgrade 경로가 불안정해진다.
 - Failure prevented: 동시 hook update의 session loss, Windows import failure, symlink 권한 때문에 설치가 막히는 문제, upgrade/rollback 중 stable hook command가 깨지는 문제, 실제 smoke 없이 Windows 지원 완료를 과장하는 문제.
