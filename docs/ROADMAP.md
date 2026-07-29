@@ -31,7 +31,7 @@ Task admission rules:
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
 | M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
 | M4B | Android personal-device pilot | complete | Reopen for a pilot regression; UX or distribution work requires a separate proposal and trigger |
-| M4C | Android foreground cockpit UX productization | active | Produce the integrated automated candidate, then stop before separate physical-device validation |
+| M4C | Android foreground cockpit UX productization | complete | Reopen for a UX regression; physical-device validation remains separately authorized work |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -137,7 +137,7 @@ Task admission rules:
 
 ## M4C: Android Foreground Cockpit UX Productization
 
-- Status: `active` under UX-EXEC-1; implementation and automated candidate validation are in scope, physical-device validation is not.
+- Status: `complete` under UX-EXEC-1; the integrated automated candidate passed, while physical-device validation remains separate and unclaimed.
 - Root outcome: preserve the accepted foreground/read-only/trust/privacy boundary while replacing the validation control panel with an ordinary Radar product navigation surface.
 - Work package:
   - expose one state-aware primary connection action, explicit foreground `연결 재개`, privacy-separated connection details, and a blocking unknown-host review;

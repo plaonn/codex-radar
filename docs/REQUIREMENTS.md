@@ -144,7 +144,7 @@
 
 ### R9: foreground mobile cockpit over SSH
 
-- Status: confirmed direction, Android foreground cockpit MVP accepted and UX productization active
+- Status: confirmed direction, Android foreground cockpit MVP and UX productization accepted
 - Requirement: 장기 모바일 surface는 별도 remote HTTP server를 먼저 열기보다 Android app이 SSH 연결 위에서 host-local `codex-radar` machine-readable protocol을 실행해 프로젝트별 thread list, 상태, bounded transcript preview, foreground attention event를 받아볼 수 있어야 한다.
 - Rationale: 모바일에서의 주요 문제는 공식 ChatGPT app의 project/thread switching depth와 멀티태스킹 제약이다. 사용자가 앱을 열고 여러 프로젝트의 Codex thread를 집중적으로 전환하는 상황에서는 SSH trust boundary와 host-local sanitized model을 재사용하는 편이 server auth, port exposure, push infrastructure보다 단순하다.
 - Failure prevented: 모바일 UX를 위해 별도 server/auth/push stack을 먼저 설계하면서 scope가 커지거나, 반대로 CLI/TUI를 사람용 terminal UI로만 키워 Android/PWA가 재사용할 안정된 contract가 없는 문제.
