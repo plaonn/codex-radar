@@ -49,6 +49,10 @@ This evidence proves one personal foreground read-only pilot on the tested
 device, host, network, and source commit. It does not establish release
 signing, APK/AAB/store delivery, public Android support, background execution,
 push/notification behavior, multi-host support, durable migration or backup,
-remote writes, Ed25519 support, or a public release. A5.1 completion still
-requires the user's explicit acceptance that this workflow is useful enough
-to consider a separate distribution proposal.
+remote writes, Ed25519 support, or a public release.
+
+The user accepted the basic foreground workflow on 2026-07-29 while explicitly
+noting that its UX still needs improvement. That UX finding is a separate
+follow-up and does not weaken the accepted A5.1 trust, read-only, privacy, or
+foreground-function boundary. Signing, distribution, and UX implementation
+remain separately authorized work.

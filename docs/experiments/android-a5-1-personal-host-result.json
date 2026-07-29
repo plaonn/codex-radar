@@ -41,6 +41,6 @@
   },
   "ssh_client": "com.github.mwiede:jsch:2.28.5",
   "ssh_server": "OpenSSH_10.2p1",
-  "user_usefulness_acceptance": "pending",
+  "user_usefulness_acceptance": "accepted-basic-functionality-ux-follow-up-needed",
   "version": 1
 }

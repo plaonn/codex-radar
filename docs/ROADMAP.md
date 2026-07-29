@@ -30,7 +30,7 @@ Task admission rules:
 | M3 | Native Windows real-host validation | complete | Reopen for a Windows regression or a separately approved support/distribution expansion |
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
 | M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
-| M4B | Android personal-device pilot | active | Admit one user-selected existing POSIX SSH host and reconnect the authorized physical device for A5.1 |
+| M4B | Android personal-device pilot | complete | Reopen for a pilot regression; UX or distribution work requires a separate proposal and trigger |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -104,10 +104,11 @@ Task admission rules:
 
 ## M4B: Android Personal-Device Pilot
 
-- Status: `active`; A5.0 is explicitly accepted from one physical Android API
-  36 arm64-v8a run over paired wireless ADB. The user separately authorized
-  the bounded A5.1 stage on 2026-07-28, but no personal host or execution task
-  is admitted or claimed yet.
+- Status: `complete`; A5.0 and A5.1 are explicitly accepted. A5.1 proved the
+  bounded foreground read flow against one user-selected existing POSIX SSH
+  host on one physical Android device. The user accepted the basic
+  functionality on 2026-07-29 while identifying UX improvement as separate
+  follow-up work.
 - Root outcome: validate the accepted foreground cockpit on one actual Android device before introducing a personal host or Android signing boundary.
 - Design contract: [Android physical-device pilot A5](proposals/android-physical-device-pilot-a5.md).
 - Ordered packages:
@@ -115,6 +116,9 @@ Task admission rules:
   2. A5.1: only after explicit A5.0 acceptance and fresh user authorization, run the same read-only foreground workflow against one user-selected existing POSIX SSH host.
 - Evidence: [A5.0 physical-device smoke](experiments/android-a5-physical-device.md)
   tied to exact verified source `b90bba2cbc60418be2175b85e35ee9f89b4d5b60`.
+- A5.1 evidence: [personal-host pilot](experiments/android-a5-1-personal-host.md)
+  tied to exact source `4f758c2891298835587603be884c6573f0a32299`
+  and evidence commit `a23a78ad9404ee62f209ee043456383f5f85cc55`.
 - A5.0 disposition: accepted on 2026-07-27. This accepts physical-device
   compatibility only for the tested boundary and does not establish ordinary
   network SSH reachability or production update support.
@@ -126,6 +130,8 @@ Task admission rules:
   transport is harness control only and does not count as ordinary
   Wi-Fi/VPN/Internet SSH reachability evidence.
 - Exit criterion: A5.0 and A5.1 each have exact-commit evidence and separate explicit acceptance, and the personal-host pilot demonstrates useful foreground state, bounded preview, attention, disconnect, and reconnect without weakening trust, credential, privacy, or remote-write boundaries.
+- Exit disposition: met on 2026-07-29. UX improvement and any A6
+  signing/distribution proposal remain separate, unclaimed work.
 - Decision boundary: A5 does not authorize release signing, durable APK/AAB delivery, Play Store/public publication, background operation, push/notification, remote writes, Ed25519 support, automated host configuration, production credential capture, or public device-support claims. Signing and distribution require a later A6 proposal and explicit user decision.
 
 ## M5: Distribution Channel Expansion
