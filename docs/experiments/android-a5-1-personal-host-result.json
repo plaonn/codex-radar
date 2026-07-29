@@ -1,0 +1,46 @@
+{
+  "adb_transport": "usb",
+  "android_abi": "arm64-v8a",
+  "android_api": "36",
+  "android_app_version": "0.2.0-a3.1",
+  "attention_transition_artificially_induced": false,
+  "contract": "codex-radar.android-a5-1-personal-host-pilot",
+  "device_kind": "physical",
+  "helper_version": "0.4.12",
+  "normal_network_ssh_reachability_proven": true,
+  "observed_at": "2026-07-29T00:42:26Z",
+  "operating_system_family": "Darwin",
+  "privacy": {
+    "app_log_residue_after_containment": false,
+    "diagnostic_output_incident_contained": true,
+    "host_or_account_identifier_retained": false,
+    "private_key_exported": false,
+    "preview_or_session_state_persisted": false,
+    "raw_frames_or_remote_stderr_retained": false,
+    "session_content_committed": false,
+    "screenshots_retained": false
+  },
+  "repository_commit": "4f758c2891298835587603be884c6573f0a32299",
+  "retention": {
+    "approved_android_profile_pin_and_identity": true,
+    "approved_public_key_authorization": true,
+    "host_noninteractive_helper_path_fix": true
+  },
+  "scenarios": {
+    "attention_fresh_baseline_and_no_replay": "passed",
+    "attention_transition": "not-induced-read-only-boundary",
+    "bounded_memory_only_preview": "passed",
+    "explicit_disconnect": "passed",
+    "foreground_real_state_grouping": "passed",
+    "host_key_independent_review_and_exact_pin": "passed",
+    "key_authentication_without_password_fallback": "passed",
+    "ordinary_network_ssh_connection": "passed",
+    "persistent_preview_negative_check": "passed",
+    "production_profile_and_non_exportable_identity": "passed",
+    "reconnect_with_retained_trust_and_identity": "passed"
+  },
+  "ssh_client": "com.github.mwiede:jsch:2.28.5",
+  "ssh_server": "OpenSSH_10.2p1",
+  "user_usefulness_acceptance": "pending",
+  "version": 1
+}
