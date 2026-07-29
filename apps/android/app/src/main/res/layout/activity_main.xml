@@ -1,34 +1,269 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:padding="16dp">
-    <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Radar Cockpit" android:textSize="24sp" android:textStyle="bold" />
-    <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="8dp" />
-    <TextView android:id="@+id/profile" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="4dp" android:textIsSelectable="true" />
-    <TextView android:id="@+id/trust" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="4dp" android:textIsSelectable="true" />
-    <LinearLayout android:id="@+id/profile_form" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <EditText android:id="@+id/profile_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Profile label" />
-        <EditText android:id="@+id/profile_host" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Host" android:inputType="textUri" />
-        <EditText android:id="@+id/profile_port" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Port" android:inputType="number" android:text="22" />
-        <EditText android:id="@+id/profile_user" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="SSH user" />
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/connection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp" />
+
+    <Button
+        android:id="@+id/primary_action"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/refresh_feedback"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="4dp" />
+
+    <LinearLayout
+        style="?android:attr/buttonBarStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/back_action"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_back"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/connection_details_action"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_connection_details" />
+
+        <Button
+            android:id="@+id/archived_action"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_archived"
+            android:visibility="gone" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <Button android:id="@+id/create_profile" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Create profile" />
-        <Button android:id="@+id/delete_profile" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Delete profile" />
-        <Button android:id="@+id/repair_pin" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Repair pin" />
-        <Button android:id="@+id/replace_identity" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Replace missing key" />
-    </LinearLayout>
-    <Button android:id="@+id/approve_host" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Approve this exact host key" android:visibility="gone" />
-    <Button android:id="@+id/attention" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:visibility="gone" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="12dp">
-        <Button android:id="@+id/connect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connect" />
-        <Button android:id="@+id/reconnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Reconnect" />
-        <Button android:id="@+id/disconnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Disconnect" />
-    </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <Button android:id="@+id/poll_attention" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Poll attention" />
-        <Button android:id="@+id/fixture_error" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fixture error" android:visibility="gone" />
-    </LinearLayout>
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
-        <LinearLayout android:id="@+id/content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingTop="12dp" />
+
+    <Button
+        android:id="@+id/attention"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/screen_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <ListView
+        android:id="@+id/thread_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:dividerHeight="1dp" />
+
+    <ScrollView
+        android:id="@+id/thread_detail"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/thread_metadata"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="12dp"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/preview_boundary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="12dp"
+                android:text="@string/preview_boundary" />
+
+            <Button
+                android:id="@+id/preview_action"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_open_preview" />
+
+            <TextView
+                android:id="@+id/preview_feedback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp" />
+
+            <LinearLayout
+                android:id="@+id/preview_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="8dp" />
+        </LinearLayout>
     </ScrollView>
+
+    <ScrollView
+        android:id="@+id/connection_details"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/connection_detail_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="12dp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                android:id="@+id/public_key_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:textIsSelectable="true" />
+
+            <LinearLayout
+                android:id="@+id/profile_form"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <EditText
+                    android:id="@+id/profile_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_label_hint"
+                    android:importantForAutofill="no"
+                    android:inputType="textCapSentences" />
+
+                <EditText
+                    android:id="@+id/profile_host"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_host_hint"
+                    android:importantForAutofill="no"
+                    android:inputType="textUri" />
+
+                <EditText
+                    android:id="@+id/profile_port"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_port_hint"
+                    android:importantForAutofill="no"
+                    android:inputType="number"
+                    android:text="@string/default_ssh_port" />
+
+                <EditText
+                    android:id="@+id/profile_user"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_user_hint"
+                    android:importantForAutofill="no"
+                    android:inputType="text" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/create_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_create_profile" />
+
+            <Button
+                android:id="@+id/disconnect"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_disconnect" />
+
+            <Button
+                android:id="@+id/repair_pin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_repair_pin" />
+
+            <Button
+                android:id="@+id/replace_identity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_replace_identity" />
+
+            <Button
+                android:id="@+id/delete_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_delete_profile" />
+
+            <Button
+                android:id="@+id/fixture_error"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_fixture_error"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/host_review"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/host_review_explanation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:text="@string/host_review_explanation" />
+
+        <TextView
+            android:id="@+id/host_review_details"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:textIsSelectable="true" />
+
+        <Button
+            android:id="@+id/cancel_host_review"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_cancel_connection" />
+    </LinearLayout>
 </LinearLayout>

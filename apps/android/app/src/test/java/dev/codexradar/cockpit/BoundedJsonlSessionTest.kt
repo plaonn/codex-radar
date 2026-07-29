@@ -85,6 +85,27 @@ class BoundedJsonlSessionTest {
         assertEquals(2, session.call("attention/poll", allowAttentionEvents = true).events.size)
     }
 
+    @Test fun successful_attention_poll_is_followed_by_state_read_on_same_session() {
+        val inbound = listOf(
+            """{"event":"attention","params":{"sequence":1,"session_id":"s1","project":"p","status":"done"}}""",
+            """{"id":1,"result":{"events_emitted":1}}""",
+            """{"id":2,"result":{"contract":"codex-radar.display-state","version":1,"sessions":[{"session_id":"s1"}]}}""",
+        ).joinToString("\n", postfix = "\n")
+        val output = ByteArrayOutputStream()
+        val session = BoundedJsonlSession(
+            ByteArrayInputStream(inbound.toByteArray()),
+            output,
+        )
+        val result = session.pollAttentionAndReadState()
+        assertEquals(1, result.poll.events.size)
+        assertEquals("s1", result.state.getJSONArray("sessions").getJSONObject(0).getString("session_id"))
+        val methods = output.toString(Charsets.UTF_8.name()).lineSequence()
+            .filter { it.isNotBlank() }
+            .map { org.json.JSONObject(it).getString("method") }
+            .toList()
+        assertEquals(listOf("attention/poll", "state/read"), methods)
+    }
+
     @Test fun duplicate_id_mixed_event_response_and_malformed_error_poison_connection() {
         fun violation(frame: String): ProtocolViolation {
             val session = BoundedJsonlSession(

@@ -31,6 +31,7 @@ Task admission rules:
 | M4 | Mobile SSH read-protocol Stage 0 | complete | Reopen only for protocol-contract regression |
 | M4A | Android foreground cockpit MVP | complete | Reopen only for MVP regression; physical-device, signing, or publication work requires a separate trigger |
 | M4B | Android personal-device pilot | complete | Reopen for a pilot regression; UX or distribution work requires a separate proposal and trigger |
+| M4C | Android foreground cockpit UX productization | active | Produce the integrated automated candidate, then stop before separate physical-device validation |
 | M5 | Distribution channel expansion | trigger-based | A concrete install/update problem justifies one channel proposal |
 | M6 | Notification expansion | trigger-based | A foreground cockpit cannot satisfy an evidenced attention use case |
 | M7 | Experimental foreground thread orchestration | operating | A real client requires broader lifecycle or write capability |
@@ -133,6 +134,17 @@ Task admission rules:
 - Exit disposition: met on 2026-07-29. UX improvement and any A6
   signing/distribution proposal remain separate, unclaimed work.
 - Decision boundary: A5 does not authorize release signing, durable APK/AAB delivery, Play Store/public publication, background operation, push/notification, remote writes, Ed25519 support, automated host configuration, production credential capture, or public device-support claims. Signing and distribution require a later A6 proposal and explicit user decision.
+
+## M4C: Android Foreground Cockpit UX Productization
+
+- Status: `active` under UX-EXEC-1; implementation and automated candidate validation are in scope, physical-device validation is not.
+- Root outcome: preserve the accepted foreground/read-only/trust/privacy boundary while replacing the validation control panel with an ordinary Radar product navigation surface.
+- Work package:
+  - expose one state-aware primary connection action, explicit foreground `연결 재개`, privacy-separated connection details, and a blocking unknown-host review;
+  - use virtualized `확인 필요 → 진행 중 → 프로젝트` home navigation, separate Archived filtering, dedicated thread detail, and explicit bounded/redacted/memory-only preview;
+  - serialize foreground attention polling and same-owner `state/read` reconciliation, close polling plus SSH/RPC on background, invalidate stale callback generations, and provide resource-backed loading/error/no-change/last-refresh copy and production naming.
+- Exit criterion: repository-required Python and Android checks, focused 100+ row virtualization/privacy/state-owner tests, and clean-emulator/disposable-host smoke pass on one focused integrated candidate. The candidate stops before any new physical-device discovery, connection, install, ADB action, personal host/credential use, signing, or publication.
+- Decision boundary: Codex may make conservative implementation decisions within UX-EXEC-1. Physical-device validation, distribution, background behavior, trust relaxation, remote writes, personal host/credential use, real sensitive capture, and support expansion require separate authority.
 
 ## M5: Distribution Channel Expansion
 

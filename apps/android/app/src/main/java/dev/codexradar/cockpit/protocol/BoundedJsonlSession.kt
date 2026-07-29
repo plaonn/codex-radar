@@ -14,6 +14,7 @@ private const val MAX_EVENTS_PER_CALL = 256
 class ProtocolViolation(val code: String) : Exception(code)
 class RemoteMethodError : Exception()
 data class RpcCallResult(val result: JSONObject, val events: List<JSONObject>)
+data class PollStateResult(val poll: RpcCallResult, val state: JSONObject)
 
 /**
  * Strict JSONL request/response boundary. Framing and contract failures poison
@@ -46,12 +47,25 @@ class BoundedJsonlSession(
             initialized.optString("attention_delivery") != "foreground-poll"
         ) fail("protocol_incompatible")
         previewContractVersion = selectedPreview
+        return readState()
+    }
+
+    fun readState(): JSONObject {
         val state = call("state/read").result
         if (
             state.optString("contract") != "codex-radar.display-state" ||
             state.optInt("version", -1) != 1
         ) fail("protocol_incompatible")
         return state
+    }
+
+    /**
+     * The foreground owner must reconcile the display state immediately after
+     * each successful attention poll on this same protocol connection.
+     */
+    fun pollAttentionAndReadState(): PollStateResult {
+        val poll = call("attention/poll", allowAttentionEvents = true)
+        return PollStateResult(poll, readState())
     }
 
     fun call(

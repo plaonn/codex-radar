@@ -66,23 +66,37 @@ def wait_for_boot(serial: str, timeout: float = 180.0) -> None:
     raise RuntimeError("emulator_boot_timeout")
 
 
+def emulator_ports_available(console_port: int) -> bool:
+    for candidate in (console_port, console_port + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(("127.0.0.1", candidate))
+            except OSError:
+                return False
+    return True
+
+
 def start_emulator(temp: Path) -> tuple[subprocess.Popen[str], str, object]:
-    if subprocess.run(
-        ["adb", "devices"], capture_output=True, text=True, timeout=5
-    ).stdout.strip() != "List of devices attached":
-        raise RuntimeError("shared_android_device_detected")
     emulator = shutil.which("emulator")
     if not emulator:
         raise RuntimeError("android_emulator_unavailable")
+    emulator_port = next(
+        (port for port in range(5554, 5682, 2) if emulator_ports_available(port)),
+        None,
+    )
+    if emulator_port is None:
+        raise RuntimeError("android_emulator_port_unavailable")
     log = (temp / "emulator.log").open("w+", encoding="utf-8")
     process: subprocess.Popen[str] | None = None
-    serial = ""
+    serial = f"emulator-{emulator_port}"
     try:
         process = subprocess.Popen(
             [
                 emulator,
                 "-avd",
                 AVD,
+                "-port",
+                str(emulator_port),
                 "-no-window",
                 "-no-audio",
                 "-no-boot-anim",
@@ -97,25 +111,18 @@ def start_emulator(temp: Path) -> tuple[subprocess.Popen[str], str, object]:
         )
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
-            devices = subprocess.run(
-                ["adb", "devices"],
+            connected = subprocess.run(
+                ["adb", "-s", serial, "get-state"],
                 capture_output=True,
                 text=True,
-                check=True,
                 timeout=5,
-            ).stdout.splitlines()[1:]
-            serials = [
-                line.split()[0]
-                for line in devices
-                if line.strip() and line.startswith("emulator-")
-            ]
-            if len(serials) == 1:
-                serial = serials[0]
+            )
+            if connected.returncode == 0 and connected.stdout.strip() == "device":
                 break
             if process.poll() is not None:
                 raise RuntimeError("emulator_start_failed")
             time.sleep(0.5)
-        if not serial:
+        else:
             raise RuntimeError("emulator_serial_unavailable")
         wait_for_boot(serial)
         return process, serial, log
@@ -395,6 +402,7 @@ def instrument_with_transitions(
     output: list[str] = []
     lines: queue.Queue[str | None] = queue.Queue()
     reader: threading.Thread | None = None
+    last_step = "startup"
 
     def read_output() -> None:
         try:
@@ -418,6 +426,9 @@ def instrument_with_transitions(
             if line is None:
                 break
             output.append(line)
+            step_match = re.search(r"a4_step=([a-z0-9_]+)", line)
+            if step_match:
+                last_step = step_match.group(1)
             if "a4_step=waiting_ready" in line:
                 sessions["opaque-preview"]["status"] = "waiting_approval"
                 sessions["opaque-preview"]["display_state"] = "waiting_approval"
@@ -436,7 +447,7 @@ def instrument_with_transitions(
             raise RuntimeError("a4_foreground_instrumentation_timeout") from exception
         text = "".join(output)
         if returncode != 0 or "OK (1 test)" not in text:
-            raise RuntimeError("a4_foreground_instrumentation_failed")
+            raise RuntimeError(f"a4_foreground_instrumentation_failed:{last_step}")
         return text
     finally:
         if process.poll() is None:
@@ -508,6 +519,7 @@ def main() -> int:
     emulator_process: subprocess.Popen[str] | None = None
     emulator_serial = ""
     emulator_log: object | None = None
+    previous_android_serial = os.environ.get("ANDROID_SERIAL")
     servers: list[tuple[subprocess.Popen[str], object]] = []
     results: dict[str, str] = {}
     temp_path = ""
@@ -518,6 +530,7 @@ def main() -> int:
         try:
             stage = "emulator"
             emulator_process, emulator_serial, emulator_log = start_emulator(temp)
+            os.environ["ANDROID_SERIAL"] = emulator_serial
             stage = "packaged-helper"
             bin_dir, helper_version = build_and_install_helper(temp)
             stage = "connected-android-tests"
@@ -699,7 +712,7 @@ def main() -> int:
                 "version": 1,
                 "repository_commit": source_commit,
                 "helper_version": helper_version,
-                "android_app_version": "0.2.0-a3.1",
+                "android_app_version": "0.3.0-ux1",
                 "android_api": api_level,
                 "emulator": emulator_version,
                 "avd": AVD,
@@ -730,6 +743,10 @@ def main() -> int:
                 handle.close()
             if emulator_process is not None:
                 stop_emulator(emulator_process, emulator_serial, emulator_log)
+            if previous_android_serial is None:
+                os.environ.pop("ANDROID_SERIAL", None)
+            else:
+                os.environ["ANDROID_SERIAL"] = previous_android_serial
     if Path(temp_path).exists():
         raise RuntimeError("a4_temporary_directory_cleanup_failed")
     return 0

@@ -17,17 +17,25 @@ import org.json.JSONArray
  * A2-only transport. It replays the checked-in golden exchange and deliberately
  * has no socket, process, credential, or persistence capability.
  */
-class FixtureProtocolClient(private val context: Context) : CockpitProtocolClient {
+class FixtureProtocolClient(
+    private val context: Context,
+    private val syntheticThreadCount: Int = 0,
+) : CockpitProtocolClient {
     private val maxRequestFrameBytes = 1_048_576
+    private val handler = Handler(Looper.getMainLooper())
     private var attentionBaselineEstablished = false
     private var connectedSessions: List<RadarSession> = emptyList()
+    private var generation = 0L
 
     private val profile = HostProfile("Fixture host", "fixture.invalid", 22, "fixture")
 
     override fun connect(emit: (CockpitEvent) -> Unit) {
+        generation += 1
+        val token = generation
         emit(CockpitEvent.Connect(profile))
         attentionBaselineEstablished = false
-        Handler(Looper.getMainLooper()).post {
+        handler.post {
+            if (token != generation) return@post
             try {
                 val root = loadFixture()
                 check(root.getString("fixture_contract") == "codex-radar.read-protocol")
@@ -40,8 +48,9 @@ class FixtureProtocolClient(private val context: Context) : CockpitProtocolClien
                 val state = resultFor(root, "state/read")
                 check(state.getString("contract") == "codex-radar.display-state")
                 check(state.getInt("version") == 1)
-                connectedSessions = MobileProtocolParser.parseSessions(state.getJSONArray("sessions"))
-                emit(CockpitEvent.Connected(connectedSessions))
+                connectedSessions = MobileProtocolParser.parseSessions(state.getJSONArray("sessions")) +
+                    syntheticSessions(syntheticThreadCount)
+                emit(CockpitEvent.Connected(connectedSessions, System.currentTimeMillis()))
             } catch (_: Exception) {
                 emit(CockpitEvent.Failed("fixture_unavailable"))
             }
@@ -61,18 +70,27 @@ class FixtureProtocolClient(private val context: Context) : CockpitProtocolClien
         }
     }
 
-    /** First poll establishes a baseline. A later fixture poll emits one foreground-only event. */
+    /** First poll establishes a baseline. A later poll atomically reconciles state and attention. */
     override fun pollAttention(emit: (CockpitEvent) -> Unit) {
-        if (!attentionBaselineEstablished) {
+        val notice = if (!attentionBaselineEstablished) {
             attentionBaselineEstablished = true
-            return
+            null
+        } else {
+            connectedSessions.firstOrNull { it.requiresAttention }?.let {
+                Attention(it.id, it.project, it.status)
+            }
         }
-        connectedSessions.firstOrNull { it.requiresAttention }?.let {
-            emit(CockpitEvent.AttentionReceived(Attention(it.id, it.project, it.status)))
-        }
+        emit(
+            CockpitEvent.RefreshReconciled(
+                connectedSessions,
+                notice,
+                System.currentTimeMillis(),
+            ),
+        )
     }
 
     override fun disconnect() {
+        generation += 1
         attentionBaselineEstablished = false
         connectedSessions = emptyList()
     }
@@ -99,5 +117,15 @@ class FixtureProtocolClient(private val context: Context) : CockpitProtocolClien
             RadarSession(SessionId("opaque-archived"), "Alpha", "Prior run", ThreadStatus.DONE, archived = true),
         )
         fun scriptedAttention(): Attention = Attention(SessionId("opaque-done"), "Beta", ThreadStatus.DONE)
+
+        private fun syntheticSessions(count: Int): List<RadarSession> =
+            (0 until count.coerceAtLeast(0)).map { index ->
+                RadarSession(
+                    SessionId("synthetic-$index"),
+                    "Synthetic ${index % 8}",
+                    "Synthetic thread $index",
+                    if (index % 3 == 0) ThreadStatus.RUNNING else ThreadStatus.DONE,
+                )
+            }
     }
 }

@@ -13,6 +13,7 @@ import dev.codexradar.cockpit.profile.HostKeyPin
 import dev.codexradar.cockpit.profile.PersistedHostProfile
 import dev.codexradar.cockpit.protocol.BoundedJsonlSession
 import dev.codexradar.cockpit.protocol.ProtocolViolation
+import dev.codexradar.cockpit.protocol.PollStateResult
 import dev.codexradar.cockpit.protocol.RemoteMethodError
 import dev.codexradar.cockpit.protocol.RpcCallResult
 import org.json.JSONObject
@@ -267,6 +268,12 @@ class JschForegroundTransport(
         validateAttentionPoll(
             requireProtocol().call("attention/poll", allowAttentionEvents = true),
         )
+
+    fun pollAttentionAndReadState(): PollStateResult {
+        val result = requireProtocol().pollAttentionAndReadState()
+        validateAttentionPoll(result.poll)
+        return result
+    }
 
     fun requestRemoteShutdown(): Boolean = try {
         requireProtocol().call("shutdown").result.optBoolean("shutdown")

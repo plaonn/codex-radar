@@ -11,8 +11,8 @@ android {
         applicationId = "dev.codexradar.cockpit"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.2.0-a3.1"
+        versionCode = 2
+        versionName = "0.3.0-ux1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

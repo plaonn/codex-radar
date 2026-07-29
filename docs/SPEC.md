@@ -155,6 +155,28 @@ reviewed host pin만 저장하며 protocol state/preview/diagnostic은 저장하
 log하지 않는다. Background component, notification, provider mutation,
 remote write, signing/publication은 범위 밖이다.
 
+Android UX-EXEC-1 product surface는 Kotlin/platform-Views를 유지하면서
+명시적인 `CockpitState`, `CockpitScreen`, `CockpitRow` model과 platform
+`ListView` virtualization을 사용한다. 기본 홈은 `확인 필요`, `진행 중`,
+`프로젝트` 순서의 row model만 표시하고 Archived는 별도 filter surface로
+분리한다. Thread row는 dedicated detail로만 이동하며 bounded/redacted
+preview는 사용자가 detail의 action을 명시적으로 누른 뒤에만 가져와
+foreground memory에 렌더링한다. 기본 홈의 rendered/accessibility tree에는
+endpoint, SSH public key, saved fingerprint를 넣지 않고 이 값과 profile
+repair/delete/disconnect action은 연결 상세 또는 blocking unknown-host review에만
+둔다.
+
+연결 phase는 항상 하나의 state-aware primary action으로 표현한다. 첫 연결은
+`연결`, `onStop` 뒤 foreground 복귀는 `연결 재개`이며 어느 경로도 자동
+reconnect하지 않는다. Connected foreground에서는 bounded timer가 single-thread
+connection owner에 poll을 요청한다. Owner는 성공한 `attention/poll` 직후 같은
+JSONL session에서 `state/read`를 실행하고, parsed attention과 refreshed session
+list를 하나의 reducer event로 전달한다. Preview도 같은 owner queue를 사용한다.
+`disconnect`와 `onStop`은 timer와 SSH/RPC를 닫고 generation을 증가시켜 이미
+posted된 이전 callback이 UI state를 갱신하지 못하게 한다. Loading, no-change,
+last-refresh, sanitized connection/preview failures는 Android string resources의
+사용자용 copy로 표시한다.
+
 - Display state schema: [schemas/display-state-v1.schema.json](schemas/display-state-v1.schema.json).
 - Transcript preview schemas: immutable [v1](schemas/transcript-preview-v1.schema.json) and timestamped [v2](schemas/transcript-preview-v2.schema.json).
 - Display state는 raw `cwd`, transcript/rollout/state DB path, raw payload/content, HTML, UI copy/order, client-local read/unread state를 포함하지 않는다.

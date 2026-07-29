@@ -1,1 +1,102 @@
-<resources><string name="app_name">Radar Cockpit (fixtures)</string></resources>
+<resources>
+    <string name="app_name">Codex Radar</string>
+    <string name="home_title">홈</string>
+    <string name="project_title">프로젝트 · %1$s</string>
+    <string name="archived_title">보관됨</string>
+    <string name="thread_detail_title">Thread 상세</string>
+    <string name="connection_details_title">연결 상세</string>
+    <string name="host_review_title">호스트 확인 필요</string>
+
+    <string name="connection_disconnected">연결되지 않음 · foreground에서만 동작합니다</string>
+    <string name="connection_connecting">%1$s에 연결하는 중…</string>
+    <string name="connection_review_required">인증 전에 호스트 확인이 필요합니다</string>
+    <string name="connection_connected">연결됨 · 읽기 전용 · foreground 전용</string>
+    <string name="connection_error">연결할 수 없음 · %1$s</string>
+    <string name="host_fallback">호스트</string>
+
+    <string name="action_connection_setup">연결 설정</string>
+    <string name="action_connect">연결</string>
+    <string name="action_resume_connection">연결 재개</string>
+    <string name="action_connecting">연결 중…</string>
+    <string name="action_approve_host">이 호스트 키 승인</string>
+    <string name="action_refresh">새로 고침</string>
+    <string name="action_retry">다시 연결</string>
+    <string name="action_back">뒤로</string>
+    <string name="action_connection_details">연결 상세</string>
+    <string name="action_archived">보관됨</string>
+    <string name="action_open_preview">미리보기 열기</string>
+    <string name="action_create_profile">프로필 만들기</string>
+    <string name="action_disconnect">연결 끊기</string>
+    <string name="action_repair_pin">저장된 호스트 키 다시 확인</string>
+    <string name="action_replace_identity">누락된 키 다시 만들기</string>
+    <string name="action_delete_profile">프로필과 키 삭제</string>
+    <string name="action_fixture_error">테스트 오류</string>
+    <string name="action_cancel_connection">연결 취소</string>
+
+    <string name="refresh_idle">연결 후 foreground에서 자동으로 확인합니다</string>
+    <string name="refresh_loading">새 상태 확인 중…</string>
+    <string name="refresh_no_change">변경 없음 · 마지막 확인 %1$s</string>
+    <string name="refresh_updated">업데이트됨 · 마지막 확인 %1$s</string>
+    <string name="refresh_error">새 상태를 확인하지 못했습니다 · 연결 상태를 확인하세요</string>
+    <string name="refresh_time_unknown">확인 전</string>
+
+    <string name="section_attention">확인 필요 · %1$d</string>
+    <string name="section_running">진행 중 · %1$d</string>
+    <string name="section_projects">프로젝트 · %1$d</string>
+    <string name="section_archived">보관됨 · %1$d</string>
+    <string name="project_row">%1$s\nThread %2$d개</string>
+    <string name="thread_row">%1$s\n%2$s</string>
+    <string name="open_project_description">%1$s 프로젝트 열기</string>
+    <string name="open_thread_description">%1$s thread 상세 열기</string>
+    <string name="empty_list">표시할 thread가 없습니다</string>
+    <string name="status_waiting_approval">확인 필요</string>
+    <string name="status_running">진행 중</string>
+    <string name="status_done">완료</string>
+    <string name="status_unknown">상태 확인 불가</string>
+    <string name="attention_banner">%1$s · %2$s · 상세 열기</string>
+
+    <string name="thread_metadata">%1$s\n프로젝트: %2$s\n상태: %3$s</string>
+    <string name="preview_boundary">명시적으로 열 때만 최근 메시지를 최대 20개 가져옵니다. 내용은 redacted·bounded이며 현재 foreground 메모리에만 둡니다.</string>
+    <string name="preview_explicit">미리보기는 아직 요청하지 않았습니다</string>
+    <string name="preview_loading">redacted 미리보기 불러오는 중…</string>
+    <string name="preview_loaded">미리보기 %1$d/%2$d개 · memory-only</string>
+    <string name="preview_error">미리보기를 열 수 없음 · %1$s</string>
+
+    <string name="fixture_profile_detail">합성 fixture 연결 · 실제 endpoint나 credential을 사용하지 않습니다</string>
+    <string name="connection_detail_value">프로필: %1$s\n사용자: %2$s\nEndpoint: %3$s:%4$d\nHost-key algorithm: %5$s\nFingerprint: %6$s</string>
+    <string name="public_key_value">SSH public key:\n%1$s</string>
+    <string name="profile_required_detail">연결할 호스트 프로필을 만드세요</string>
+    <string name="identity_missing_detail">AndroidKeyStore identity가 없습니다. 명시적으로 새 키를 만든 뒤 호스트 authorization을 갱신하세요.</string>
+    <string name="not_reviewed">확인 전</string>
+    <string name="profile_label_hint">프로필 이름</string>
+    <string name="profile_host_hint">호스트</string>
+    <string name="profile_port_hint">포트</string>
+    <string name="profile_user_hint">SSH 사용자</string>
+    <string name="default_ssh_port">22</string>
+
+    <string name="host_review_explanation">표시된 키가 연결하려는 호스트의 키인지 다른 경로로 확인하세요. 승인 전에는 SSH 인증과 Radar RPC가 시작되지 않습니다.</string>
+    <string name="host_review_details">Algorithm: %1$s\nFingerprint: %2$s</string>
+
+    <string name="repair_pin_title">저장된 호스트 키를 지울까요?</string>
+    <string name="repair_pin_message">다음 연결에서 새 algorithm과 SHA-256 fingerprint를 다시 확인해야 합니다.</string>
+    <string name="remove_saved_pin">저장된 키 지우기</string>
+    <string name="replace_identity_title">새 identity를 만들까요?</string>
+    <string name="replace_identity_message">내보낼 수 없는 새 키를 만듭니다. 연결 전에 표시되는 public key를 호스트에 추가해야 합니다.</string>
+    <string name="create_key">키 만들기</string>
+    <string name="delete_profile_title">프로필과 키를 삭제할까요?</string>
+    <string name="delete_profile_message">Endpoint, 저장된 host pin, 내보낼 수 없는 AndroidKeyStore identity를 삭제합니다.</string>
+    <string name="delete">삭제</string>
+    <string name="cancel">취소</string>
+
+    <string name="error_profile">연결 프로필을 확인하세요</string>
+    <string name="error_identity_missing">연결 상세에서 identity를 복구하세요</string>
+    <string name="error_host_key_mismatch">저장된 호스트 키와 다릅니다</string>
+    <string name="error_unsupported_host_key">지원하지 않는 호스트 키입니다</string>
+    <string name="error_authentication">키 인증에 실패했습니다</string>
+    <string name="error_ssh_connection">SSH 연결을 확인하세요</string>
+    <string name="error_process_launch">호스트의 Radar runtime을 확인하세요</string>
+    <string name="error_fixture">합성 테스트 연결에 실패했습니다</string>
+    <string name="error_preview">이 thread의 미리보기를 사용할 수 없습니다</string>
+    <string name="error_refresh">새 상태를 확인할 수 없습니다</string>
+    <string name="error_protocol">읽기 전용 Radar 연결을 확인하세요</string>
+</resources>

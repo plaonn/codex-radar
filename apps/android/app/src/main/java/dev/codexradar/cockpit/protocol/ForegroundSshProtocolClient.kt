@@ -63,6 +63,7 @@ class ForegroundSshProtocolClient(
                 is TransportConnectResult.Connected -> try {
                     CockpitEvent.Connected(
                         MobileProtocolParser.parseSessions(result.state.getJSONArray("sessions")),
+                        System.currentTimeMillis(),
                     )
                 } catch (_: Exception) {
                     fresh.close()
@@ -110,15 +111,29 @@ class ForegroundSshProtocolClient(
 
     override fun pollAttention(emit: (CockpitEvent) -> Unit) {
         val (token, owned) = synchronized(lock) { generation to transport }
-        if (owned == null) return
+        if (owned == null) {
+            emit(CockpitEvent.RefreshFailed("connection_unavailable"))
+            return
+        }
         work = executor.submit {
             try {
-                val result = owned.pollAttention()
-                result.events.map {
-                    CockpitEvent.AttentionReceived(MobileProtocolParser.parseAttention(it))
-                }.forEach { post(token, emit, it) }
+                val result = owned.pollAttentionAndReadState()
+                val attention = result.poll.events.lastOrNull()?.let {
+                    MobileProtocolParser.parseAttention(it)
+                }
+                post(
+                    token,
+                    emit,
+                    CockpitEvent.RefreshReconciled(
+                        sessions = MobileProtocolParser.parseSessions(
+                            result.state.getJSONArray("sessions"),
+                        ),
+                        attention = attention,
+                        refreshedAtMillis = System.currentTimeMillis(),
+                    ),
+                )
             } catch (_: RemoteMethodError) {
-                Unit
+                post(token, emit, CockpitEvent.RefreshFailed("refresh_unavailable"))
             } catch (_: Exception) {
                 owned.close()
                 post(token, emit, CockpitEvent.Failed("protocol_failed"))

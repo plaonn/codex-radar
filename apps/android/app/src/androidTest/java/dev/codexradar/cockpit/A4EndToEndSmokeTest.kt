@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.TextView
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
@@ -12,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.codexradar.cockpit.profile.SharedPreferencesHostProfileStore
 import dev.codexradar.cockpit.protocol.RemoteMethodError
+import dev.codexradar.cockpit.domain.CockpitRow
 import dev.codexradar.cockpit.transport.AndroidKeystoreP256Identity
 import dev.codexradar.cockpit.transport.JschForegroundTransport
 import dev.codexradar.cockpit.transport.TransportConnectResult
@@ -67,74 +69,94 @@ class A4EndToEndSmokeTest {
         seedUnpinnedProfile(host!!, port!!, user!!)
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.findViewById<Button>(R.id.connect).performClick() }
-            waitFor(scenario) { it.findViewById<TextView>(R.id.connection).text.contains("review required") }
+            scenario.onActivity { it.findViewById<Button>(R.id.primary_action).performClick() }
+            waitFor(scenario) {
+                it.findViewById<TextView>(R.id.connection).text.contains("호스트 확인")
+            }
             scenario.onActivity { activity ->
-                val trust = activity.findViewById<TextView>(R.id.trust).text.toString()
-                assertTrue(trust.contains(host))
-                assertTrue(trust.contains(port.toString()))
+                val trust = activity.findViewById<TextView>(R.id.host_review_details).text.toString()
                 assertTrue(trust.contains("Algorithm: ecdsa-sha2-nistp256"))
                 assertTrue(trust.contains("Fingerprint: SHA256:"))
-                assertEquals(View.VISIBLE, activity.findViewById<Button>(R.id.approve_host).visibility)
-                activity.findViewById<Button>(R.id.approve_host).performClick()
+                assertFalse(trust.contains(host))
+                assertEquals("이 호스트 키 승인", activity.findViewById<Button>(R.id.primary_action).text)
+                signalHarness("host_review_ready")
+                activity.findViewById<Button>(R.id.primary_action).performClick()
             }
-            waitFor(scenario) { it.findViewById<TextView>(R.id.connection).text.contains("Connected") }
+            waitFor(scenario) { it.findViewById<TextView>(R.id.connection).text.contains("연결됨") }
             scenario.onActivity { activity ->
-                val content = activity.findViewById<LinearLayout>(R.id.content)
-                val rendered = renderedText(content)
-                assertTrue(rendered.first().contains("Attention"))
-                assertTrue(rendered.any { it.contains("Project: alpha") })
-                assertTrue(rendered.any { it.contains("Project: beta") })
-                assertTrue(rendered.any { it == "Archived" })
-                findSession(content, "opaque-preview").performClick()
+                val list = activity.findViewById<ListView>(R.id.thread_list)
+                val headers = (0 until list.adapter.count)
+                    .map { list.adapter.getItem(it) }
+                    .filterIsInstance<CockpitRow.Header>()
+                    .map { it.section }
+                assertEquals(
+                    listOf(
+                        CockpitRow.Section.ATTENTION,
+                        CockpitRow.Section.RUNNING,
+                        CockpitRow.Section.PROJECTS,
+                    ),
+                    headers,
+                )
+                clickRow(list, "alpha")
+                clickRow(activity.findViewById(R.id.thread_list), "opaque-preview")
+                activity.findViewById<Button>(R.id.preview_action).performClick()
+                signalHarness("connected_navigation_ready")
             }
-            waitFor(scenario) { renderedText(it.findViewById(R.id.content)).any { text -> text.contains("Preview (") } }
+            waitFor(scenario) {
+                it.findViewById<TextView>(R.id.preview_feedback).text.contains("memory-only")
+            }
             scenario.onActivity { activity ->
-                val rendered = renderedText(activity.findViewById(R.id.content)).joinToString("\n")
+                val rendered = renderedText(activity.findViewById(R.id.preview_content)).joinToString("\n")
                 assertTrue(rendered.contains("synthetic bounded preview"))
                 assertTrue(rendered.contains("[REDACTED]"))
                 PROHIBITED_UI_CANARIES.forEach { assertFalse(rendered.contains(it)) }
-                activity.findViewById<Button>(R.id.poll_attention).performClick()
+                signalHarness("preview_ready")
+                activity.requestRefreshForTest()
                 assertEquals(View.GONE, activity.findViewById<Button>(R.id.attention).visibility)
             }
 
             signalHarness("waiting_ready")
-            waitFor(scenario, action = { it.findViewById<Button>(R.id.poll_attention).performClick() }) {
+            waitFor(scenario, action = { it.requestRefreshForTest() }) {
                 it.findViewById<Button>(R.id.attention).visibility == View.VISIBLE &&
-                    it.findViewById<Button>(R.id.attention).text.contains("waiting_approval")
+                    it.findViewById<Button>(R.id.attention).text.contains("확인 필요")
             }
             scenario.onActivity { activity ->
                 val banner = activity.findViewById<Button>(R.id.attention)
                 assertTrue(banner.text.contains("alpha"))
+                signalHarness("waiting_attention_ready")
                 banner.performClick()
+                activity.findViewById<Button>(R.id.preview_action).performClick()
             }
             waitFor(scenario) {
-                renderedText(it.findViewById(R.id.content)).any { text ->
-                    text.contains("Preview (") && text.contains("messages, memory only")
-                }
+                it.findViewById<TextView>(R.id.preview_feedback).text.contains("memory-only")
             }
 
             signalHarness("running_done")
-            waitFor(scenario, action = { it.findViewById<Button>(R.id.poll_attention).performClick() }) {
+            waitFor(scenario, action = { it.requestRefreshForTest() }) {
                 val banner = it.findViewById<Button>(R.id.attention)
-                banner.visibility == View.VISIBLE && banner.text.contains("beta") && banner.text.contains("done")
+                banner.visibility == View.VISIBLE && banner.text.contains("beta") &&
+                    banner.text.contains("완료")
             }
+            signalHarness("done_attention_ready")
 
             scenario.moveToState(Lifecycle.State.CREATED)
             signalHarness("backgrounded")
             Thread.sleep(500)
             scenario.moveToState(Lifecycle.State.RESUMED)
             scenario.onActivity { activity ->
-                assertTrue(activity.findViewById<TextView>(R.id.connection).text.contains("Disconnected"))
+                assertTrue(activity.findViewById<TextView>(R.id.connection).text.contains("연결되지 않음"))
                 assertEquals(View.GONE, activity.findViewById<Button>(R.id.attention).visibility)
-                activity.findViewById<Button>(R.id.reconnect).performClick()
+                assertEquals("연결 재개", activity.findViewById<Button>(R.id.primary_action).text)
+                signalHarness("foreground_resume_ready")
+                activity.findViewById<Button>(R.id.primary_action).performClick()
             }
-            waitFor(scenario) { it.findViewById<TextView>(R.id.connection).text.contains("Connected") }
+            waitFor(scenario) { it.findViewById<TextView>(R.id.connection).text.contains("연결됨") }
             scenario.onActivity { activity ->
-                activity.findViewById<Button>(R.id.poll_attention).performClick()
+                activity.requestRefreshForTest()
                 assertEquals(View.GONE, activity.findViewById<Button>(R.id.attention).visibility)
+                activity.findViewById<Button>(R.id.connection_details_action).performClick()
                 activity.findViewById<Button>(R.id.disconnect).performClick()
-                assertTrue(activity.findViewById<TextView>(R.id.connection).text.contains("Disconnected"))
+                assertTrue(activity.findViewById<TextView>(R.id.connection).text.contains("연결되지 않음"))
             }
         }
 
@@ -217,11 +239,14 @@ class A4EndToEndSmokeTest {
         throw AssertionError("A4 UI condition timed out")
     }
 
-    private fun findSession(content: LinearLayout, sessionId: String): Button =
-        (0 until content.childCount)
-            .map { content.getChildAt(it) }
-            .filterIsInstance<Button>()
-            .first { it.text.contains(sessionId) }
+    private fun clickRow(list: ListView, token: String) {
+        val position = (0 until list.adapter.count).first { index ->
+            val row = list.adapter.getItem(index)
+            row is CockpitRow.Thread && row.session.title.contains(token) ||
+                row is CockpitRow.Project && row.name.contains(token)
+        }
+        list.adapter.getView(position, null, list).performClick()
+    }
 
     private fun renderedText(content: LinearLayout): List<String> =
         (0 until content.childCount).map { content.getChildAt(it) }

@@ -38,18 +38,19 @@ class A4HarnessCleanupTest(unittest.TestCase):
             return subprocess.CompletedProcess(
                 args[0],
                 0,
-                stdout="List of devices attached\n",
+                stdout="offline\n",
                 stderr="",
             )
 
         def close_owned_process(process, serial, log):
             self.assertIs(process, fake_process)
-            self.assertEqual("", serial)
+            self.assertEqual("emulator-5554", serial)
             log.close()
 
         with tempfile.TemporaryDirectory() as raw:
             with (
                 mock.patch.object(A4.shutil, "which", return_value="/emulator"),
+                mock.patch.object(A4, "emulator_ports_available", return_value=True),
                 mock.patch.object(A4.subprocess, "run", side_effect=adb_result),
                 mock.patch.object(A4.subprocess, "Popen", return_value=fake_process),
                 mock.patch.object(A4.time, "monotonic", side_effect=[0, 31]),
@@ -62,6 +63,27 @@ class A4HarnessCleanupTest(unittest.TestCase):
                 ):
                     A4.start_emulator(Path(raw))
         stop.assert_called_once()
+
+    def test_emulator_start_uses_exact_serial_without_device_enumeration(self):
+        fake_process = mock.Mock()
+        fake_process.poll.return_value = None
+
+        def adb_result(args, **kwargs):
+            self.assertEqual(["adb", "-s", "emulator-5554", "get-state"], args)
+            return subprocess.CompletedProcess(args, 0, stdout="device\n", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw:
+            with (
+                mock.patch.object(A4.shutil, "which", return_value="/emulator"),
+                mock.patch.object(A4, "emulator_ports_available", return_value=True),
+                mock.patch.object(A4.subprocess, "run", side_effect=adb_result),
+                mock.patch.object(A4.subprocess, "Popen", return_value=fake_process),
+                mock.patch.object(A4, "wait_for_boot"),
+            ):
+                process, serial, log = A4.start_emulator(Path(raw))
+                self.assertIs(process, fake_process)
+                self.assertEqual("emulator-5554", serial)
+                log.close()
 
     def test_sshd_start_failure_releases_owned_process_and_log(self):
         fake_process = mock.Mock(pid=12345)

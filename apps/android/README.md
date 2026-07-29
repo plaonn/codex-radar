@@ -1,4 +1,4 @@
-# Android foreground cockpit (A3.1)
+# Codex Radar for Android
 
 This native Android cockpit owns one foreground-only SSH connection to one
 immutable selected profile and launches the exact non-PTY command
@@ -24,6 +24,24 @@ cap before protocol initialization. Backgrounding, disconnect, EOF, and SSH
 loss close all resources. Reconnect creates fresh SSH/RPC state and does not
 replay missed attention events.
 
+The UX-EXEC-1 product surface keeps one state-aware primary connection action:
+first use is explicit `연결`, and returning after `onStop` is explicit
+`연결 재개`. It never reconnects automatically. Endpoint, public key,
+fingerprint, identity recovery, profile deletion, and disconnect live in
+connection details or the blocking unknown-host review rather than the default
+home accessibility structure.
+
+Home uses a virtualized platform `ListView` with explicit rows ordered
+`확인 필요 → 진행 중 → 프로젝트`; Archived is a separate filter surface.
+Selecting a row opens a dedicated thread detail. Preview remains bounded,
+redacted, memory-only, and is fetched only after the explicit preview action.
+
+While connected and visible, automatic attention polling runs through the
+single serialized connection owner. Every successful `attention/poll` is
+immediately followed by `state/read` on the same JSONL session; the resulting
+banner and session list are reduced together. `onStop` closes polling, SSH, and
+RPC and invalidates earlier callback generations.
+
 The deterministic A2 fixture remains available only through the explicit
 instrumentation intent extra `dev.codexradar.FIXTURE_MODE`.
 
@@ -48,9 +66,11 @@ python3 tools/run_a4_smoke.py
 ```
 
 It requires the `Medium_Phone_API_36.1` AVD, `adb`, `emulator`, `uv`,
-`ssh-keygen`, and `/usr/sbin/sshd`. It refuses to share an already-running
-Android device and always removes its emulator, SSH processes, keys, installed
-helper, and synthetic state.
+`ssh-keygen`, and `/usr/sbin/sshd`. It launches a wiped emulator on an
+individually selected console port, binds all Gradle/ADB work to that exact
+emulator serial without enumerating or operating other Android devices, and
+always removes its emulator, SSH processes, keys, installed helper, and
+synthetic state.
 
 The bounded A5.0 physical-device harness accepts exactly one explicitly
 authorized hardware device over USB ADB or an existing paired wireless ADB
