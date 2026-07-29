@@ -8,14 +8,12 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.codexradar.cockpit.domain.CockpitRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicBoolean
@@ -24,19 +22,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MainActivityTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
-    @get:Rule val activityRule = ActivityScenarioRule<MainActivity>(fixtureIntent())
-
     @Test fun fixture_ui_covers_product_home_detail_preview_attention_error_and_resume() {
-        activityRule.scenario.onActivity { activity ->
+        ActivityScenario.launch<MainActivity>(fixtureIntent()).use { scenario ->
+        scenario.onActivity { activity ->
             assertEquals("연결", activity.findViewById<Button>(R.id.primary_action).text)
             assertDefaultHomeHasNoConnectionSecrets(activity)
             activity.findViewById<Button>(R.id.primary_action).performClick()
             assertEquals("연결 중…", activity.findViewById<Button>(R.id.primary_action).text)
         }
-        waitFor(activityRule.scenario) {
+        waitFor(scenario) {
             it.findViewById<TextView>(R.id.connection).text.contains("연결됨")
         }
-        activityRule.scenario.onActivity { activity ->
+        scenario.onActivity { activity ->
             val list = activity.findViewById<ListView>(R.id.thread_list)
             val headers = (0 until list.adapter.count)
                 .map { list.adapter.getItem(it) }
@@ -60,16 +57,16 @@ class MainActivityTest {
             activity.findViewById<Button>(R.id.preview_action).performClick()
         }
         instrumentation.waitForIdleSync()
-        activityRule.scenario.onActivity { activity ->
+        scenario.onActivity { activity ->
             val rendered = visibleText(activity.findViewById(R.id.preview_content))
             assertTrue(rendered.contains("show summary"))
             assertTrue(rendered.contains("done [REDACTED]"))
             activity.findViewById<Button>(R.id.back_action).performClick()
         }
-        waitFor(activityRule.scenario, timeoutMillis = 3_000) {
+        waitFor(scenario, timeoutMillis = 3_000) {
             it.findViewById<Button>(R.id.attention).visibility == View.VISIBLE
         }
-        activityRule.scenario.onActivity { activity ->
+        scenario.onActivity { activity ->
             val banner = activity.findViewById<Button>(R.id.attention)
             assertTrue(banner.text.contains("radar"))
             banner.performClick()
@@ -83,14 +80,14 @@ class MainActivityTest {
             assertEquals("다시 연결", activity.findViewById<Button>(R.id.primary_action).text)
             activity.findViewById<Button>(R.id.primary_action).performClick()
         }
-        waitFor(activityRule.scenario) {
+        waitFor(scenario) {
             it.findViewById<TextView>(R.id.connection).text.contains("연결됨")
         }
 
-        activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        scenario.moveToState(Lifecycle.State.CREATED)
         instrumentation.waitForIdleSync()
-        activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-        activityRule.scenario.onActivity { activity ->
+        scenario.moveToState(Lifecycle.State.RESUMED)
+        scenario.onActivity { activity ->
             assertTrue(activity.findViewById<TextView>(R.id.connection).text.contains("연결되지 않음"))
             assertEquals("연결 재개", activity.findViewById<Button>(R.id.primary_action).text)
         }
@@ -109,6 +106,7 @@ class MainActivityTest {
             prohibited.forEach { token ->
                 assertFalse("$token persisted in ${file.name}", persisted.contains(token))
             }
+        }
         }
     }
 
